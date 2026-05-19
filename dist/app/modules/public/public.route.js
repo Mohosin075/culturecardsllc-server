@@ -1,0 +1,24 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PublicRoutes = void 0;
+const express_1 = __importDefault(require("express"));
+const public_controller_1 = require("./public.controller");
+const validateRequest_1 = __importDefault(require("../../middleware/validateRequest"));
+const public_validation_1 = require("./public.validation");
+const user_1 = require("../../../enum/user");
+const auth_1 = __importDefault(require("../../middleware/auth"));
+const router = express_1.default.Router();
+router.post('/', (0, validateRequest_1.default)(public_validation_1.PublicValidation.create), public_controller_1.PublicController.createPublic);
+router.get('/:type', public_controller_1.PublicController.getAllPublics);
+router.delete('/:id', public_controller_1.PublicController.deletePublic);
+router.patch('/update/:id', public_controller_1.PublicController.updatePublic);
+router.post('/contact', (0, validateRequest_1.default)(public_validation_1.PublicValidation.contactZodSchema), public_controller_1.PublicController.createContact);
+router.post('/faq', (0, auth_1.default)(user_1.USER_ROLES.ADMIN), (0, validateRequest_1.default)(public_validation_1.FaqValidations.create), public_controller_1.PublicController.createFaq);
+router.patch('/faq/:id', (0, auth_1.default)(user_1.USER_ROLES.ADMIN), (0, validateRequest_1.default)(public_validation_1.FaqValidations.update), public_controller_1.PublicController.updateFaq);
+router.get('/faq/single/:id', public_controller_1.PublicController.getSingleFaq);
+router.get('/faq/all', public_controller_1.PublicController.getAllFaqs);
+router.delete('/faq/:id', (0, auth_1.default)(user_1.USER_ROLES.ADMIN), public_controller_1.PublicController.deleteFaq);
+exports.PublicRoutes = router;

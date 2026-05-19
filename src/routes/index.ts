@@ -13,6 +13,10 @@ import { CategoryRoutes } from '../app/modules/category/category.route'
 import { FavouriteRoutes } from '../app/modules/favourite/favourite.route'
 import { SubscriptionRoutes } from '../app/modules/subscription/subscription.route'
 import { LocationRoutes } from '../app/modules/location/location.route'
+import { ProductRoutes } from '../app/modules/product/product.route'
+import { AuctionRoutes } from '../app/modules/auction/auction.route'
+import { TradeRoutes } from '../app/modules/trade/trade.route'
+import { OrderRoutes } from '../app/modules/order/order.route'
 
 const router = express.Router()
 
@@ -41,6 +45,10 @@ const apiRoutes: { path: string; route: Router }[] = [
   { path: '/favourite', route: FavouriteRoutes },
   { path: '/public', route: PublicRoutes },
   { path: '/locations', route: LocationRoutes },
+  { path: '/products', route: ProductRoutes },
+  { path: '/auctions', route: AuctionRoutes },
+  { path: '/trades', route: TradeRoutes },
+  { path: '/orders', route: OrderRoutes },
 ]
 
 apiRoutes.forEach(route => {

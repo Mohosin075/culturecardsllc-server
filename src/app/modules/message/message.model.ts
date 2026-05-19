@@ -29,6 +29,18 @@ const messageSchema = new Schema<IMessage, MessageModel>(
       type: Boolean,
       default: false,
     },
+    messageType: {
+      type: String,
+      enum: ['text', 'order_update', 'trade_proposal'],
+      default: 'text',
+    },
+    metadata: {
+      orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
+      tradeOfferId: { type: Schema.Types.ObjectId, ref: 'TradeOffer' },
+      statusLabel: { type: String },
+      trackingNumber: { type: String },
+      eta: { type: String },
+    },
   },
   {
     timestamps: true,
