@@ -7,38 +7,60 @@ import { StatusCodes } from 'http-status-codes'
 import { User } from '../user/user.model'
 import { Chat } from '../chat/chat.model'
 
-const sendMessageToDB = async (payload: any): Promise<IMessage> => {
-  console.log(payload)
+const sendMessageToDB = async (
+  userId: string,
+  payload: any,
+): Promise<IMessage> => {
+  const chat = await Chat.findById(payload.chatId).populate('participants')
+  if (!chat) throw new ApiError(StatusCodes.NOT_FOUND, 'Chat not found')
 
-  if (!mongoose.Types.ObjectId.isValid(payload.receiver)) {
+  // find the receiver (the participant that is NOT the sender)
+  const receiver = chat.participants.find(
+    (p: any) => p._id.toString() !== userId.toString(),
+  )
+
+  if (!receiver)
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No receiver found')
+
+  const receiverId = (receiver as any)._id
+
+  const data = {
+    ...payload,
+    image: payload?.images ? payload.images[0] : null,
+    file: payload?.documents ? payload.documents[0] : null,
+    sender: userId,
+    receiver: receiverId,
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(data.receiver)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Receiver ID')
   }
 
-  const sender = await User.findById(payload.sender).select('name')
+  const sender = await User.findById(data.sender).select('name')
 
   // save to DB
-  const response = await Message.create(payload)
+  const response = await Message.create(data)
 
   // Update Chat's updatedAt to bring it to the top
-  await Chat.findByIdAndUpdate(payload.chatId, {
+  await Chat.findByIdAndUpdate(data.chatId, {
     $set: { updatedAt: new Date() },
   })
 
   //@ts-ignore
   const io = global.io
   if (io) {
-    io.emit(`getMessage::${payload?.chatId}`, response)
-    io.emit(`updateChatList::${payload?.sender}`)
-    io.emit(`updateChatList::${payload?.receiver}`)
+    io.emit(`getMessage::${data?.chatId}`, response)
+    io.emit(`updateChatList::${data?.sender}`)
+    io.emit(`updateChatList::${data?.receiver}`)
 
-    const data = {
+    const notificationData = {
       text: `${sender?.name} send you message.`,
       title: 'Received Message',
-      link: payload?.chatId,
+      link: data?.chatId,
       direction: 'message',
-      receiver: payload.receiver,
+      receiver: data.receiver,
     }
-    // await sendNotifications(data);
+    // await sendNotifications(notificationData);
   }
 
   return response
