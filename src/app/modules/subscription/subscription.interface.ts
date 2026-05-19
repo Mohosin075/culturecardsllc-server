@@ -1,0 +1,118 @@
+import { Model, Types } from 'mongoose'
+
+// Subscription Plan Interface
+export type ISubscriptionPlan = {
+  _id?: Types.ObjectId
+  name: string
+  description: string
+  price: number
+  currency: string
+  interval: 'month' | 'year'
+  intervalCount: number
+  trialPeriodDays: number
+  features: string[]
+  maxTeamMembers: number
+  maxServices: number
+  isActive: boolean
+  stripePriceId: string
+  stripeProductId: string
+  userTypes: ('user' | 'professional' | 'admin' | 'super_admin')[]
+  priority: number
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export type SubscriptionPlanModel = Model<ISubscriptionPlan>
+
+// Subscription Interface
+export type ISubscription = {
+  _id?: Types.ObjectId
+  userId: Types.ObjectId
+  planId: Types.ObjectId
+  stripeCustomerId: string
+  stripeSubscriptionId: string
+  stripePriceId: string
+  status:
+    | 'incomplete'
+    | 'incomplete_expired'
+    | 'trialing'
+    | 'active'
+    | 'past_due'
+    | 'canceled'
+    | 'unpaid'
+    | 'paused'
+  currentPeriodStart: Date
+  currentPeriodEnd: Date
+  trialStart?: Date | null
+  trialEnd?: Date | null
+  canceledAt?: Date | null
+  pausedAt?: Date | null
+  resumedAt?: Date | null
+  lastSyncedAt?: Date | null
+  cancelAtPeriodEnd: boolean
+  endedAt?: Date | null
+  hasUsedTrial: boolean
+  metadata: Map<string, string>
+  lastPaymentDate?: Date | null
+  nextPaymentDate?: Date | null
+  paymentFailureCount: number
+  fraudFlags?: string
+  lastWebhookEventId?: string | null
+  riskScore?: number
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export type SubscriptionModel = {
+  findActiveByUserId(userId: string): Promise<ISubscription | null>
+  findByStripeId(stripeSubscriptionId: string): Promise<ISubscription | null>
+} & Model<ISubscription>
+
+// Request/Response Types
+export type CreateSubscriptionRequest = {
+  planId: string
+  paymentMethodId?: string
+  couponId?: string
+}
+
+export type UpdateSubscriptionRequest = {
+  planId?: string
+  cancelAtPeriodEnd?: boolean
+}
+
+export type SubscriptionResponse = {
+  subscription: ISubscription
+  clientSecret?: string
+}
+
+export type PlanResponse = {
+  plans: ISubscriptionPlan[]
+}
+
+// Webhook Event Types
+export type StripeWebhookEvent = {
+  id: string
+  type: string
+  data: {
+    object: any
+  }
+  created: number
+}
+
+// Trial Management
+export type TrialInfo = {
+  isEligible: boolean
+  hasUsedTrial: boolean
+  trialDays: number
+  reason?: string
+}
+
+// Subscription Status Check
+export type SubscriptionStatus = {
+  isActive: boolean
+  isTrialing: boolean
+  isPastDue: boolean
+  isCanceled: boolean
+  daysUntilExpiry: number
+  currentPlan?: ISubscriptionPlan
+}

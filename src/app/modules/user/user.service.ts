@@ -1,0 +1,385 @@
+import { StatusCodes } from 'http-status-codes'
+import ApiError from '../../../errors/ApiError'
+import { IUser, IUserFilterables } from './user.interface'
+import { Secret } from 'jsonwebtoken'
+import { User } from './user.model'
+import { FilterQuery } from 'mongoose'
+
+import { USER_ROLES, USER_STATUS } from '../../../enum/user'
+
+import { JwtPayload } from 'jsonwebtoken'
+import { paginationHelper } from '../../../helpers/paginationHelper'
+import { IPaginationOptions } from '../../../interfaces/pagination'
+import config from '../../../config'
+import { userFilterableFields } from './user.constants'
+import { jwtHelper } from '../../../helpers/jwtHelper'
+
+const updateProfile = async (user: JwtPayload, payload: Partial<IUser>) => {
+  console.log({ payload })
+  const isUserExist = await User.findOne({
+    _id: user.userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  })
+
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  // if (isUserExist.profile) {
+  //   const url = new URL(isUserExist.profile)
+  //   const key = url.pathname.substring(1)
+  //   await S3Helper.deleteFromS3(key)
+  // }
+
+  const updatedProfile = await User.findOneAndUpdate(
+    { _id: user.userId, status: { $nin: [USER_STATUS.DELETED] } },
+    {
+      $set: payload,
+    },
+    { new: true },
+  )
+
+  if (!updatedProfile) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to update profile.')
+  }
+
+  return 'Profile updated successfully.'
+}
+
+const createAdmin = async (): Promise<Partial<IUser> | null> => {
+  const email = config.super_admin.email?.toLowerCase().trim()
+  const name = config.super_admin.name?.trim()
+  const password = config.super_admin.password
+
+  if (!email || !password) {
+    console.warn(
+      '⚠️ SUPER_ADMIN_EMAIL or SUPER_ADMIN_PASSWORD not set. Skipping admin creation.',
+    )
+    return null
+  }
+
+  const isAdminExist = await User.findOne({
+    email,
+    status: { $nin: [USER_STATUS.DELETED] },
+  })
+
+  if (isAdminExist) {
+    console.log('Admin account already exist, skipping creation.🦥')
+    return isAdminExist
+  }
+
+  const admin: Partial<IUser> = {
+    email,
+    name: name || 'Super Admin',
+    password,
+    roles: [USER_ROLES.SUPER_ADMIN],
+    activeRole: USER_ROLES.SUPER_ADMIN,
+    status: USER_STATUS.ACTIVE,
+    verified: true,
+    authentication: {
+      oneTimeCode: '',
+      restrictionLeftAt: null,
+      expiresAt: null,
+      latestRequestAt: new Date(),
+      authType: 'createAccount',
+      resetPassword: false,
+      wrongLoginAttempts: 0,
+    } as unknown as IUser['authentication'],
+  }
+
+  // Use single-document create to trigger pre-save hooks (for password hashing)
+  const result = await User.create(admin as IUser)
+  if (!result) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create admin')
+  }
+  return result.toObject()
+}
+
+const getAllUsers = async (
+  paginationOptions: IPaginationOptions,
+  filterables: IUserFilterables = {},
+) => {
+  const { searchTerm, ...filterData } = filterables
+  const { page, skip, limit, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(paginationOptions)
+
+  let whereConditions: FilterQuery<IUser> = {}
+
+  // 🔥 FIXED: Properly typed arrays
+  const searchConditions: FilterQuery<IUser>[] = []
+  const filterConditions: FilterQuery<IUser>[] = []
+
+  // Search functionality
+  if (searchTerm && searchTerm.trim() !== '') {
+    searchConditions.push({
+      $or: userFilterableFields.map(field => ({
+        [field]: {
+          $regex: searchTerm.trim(),
+          $options: 'i',
+        },
+      })),
+    })
+  }
+
+  // Filter functionality
+  if (Object.keys(filterData).length > 0) {
+    Object.entries(filterData).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') {
+        filterConditions.push({ [key]: value })
+      }
+    })
+  }
+
+  // Always exclude deleted users
+  filterConditions.push({
+    status: { $nin: [USER_STATUS.DELETED, null] },
+  })
+
+  // Combine conditions
+  if (searchConditions.length > 0 && filterConditions.length > 0) {
+    whereConditions = {
+      $and: [...searchConditions, ...filterConditions],
+    }
+  } else if (searchConditions.length > 0) {
+    whereConditions = { $and: searchConditions }
+  } else if (filterConditions.length > 0) {
+    whereConditions = { $and: filterConditions }
+  }
+
+  const [users, total] = await Promise.all([
+    User.find(whereConditions)
+      .skip(skip)
+      .limit(limit)
+      .sort(sortBy ? { [sortBy]: sortOrder } : { createdAt: -1 })
+      .select('-password -authentication -__v')
+      .lean(),
+    User.countDocuments(whereConditions),
+  ])
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: users,
+  }
+}
+
+const deleteUser = async (userId: string): Promise<string> => {
+  const isUserExist = await User.findOne({
+    _id: userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  })
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  const deletedUser = await User.findOneAndUpdate(
+    { _id: userId, status: { $nin: [USER_STATUS.DELETED] } },
+    { $set: { status: USER_STATUS.DELETED } },
+    { new: true },
+  )
+
+  if (!deletedUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to delete user.')
+  }
+
+  return 'User deleted successfully.'
+}
+
+const deleteProfile = async (
+  userId: string,
+  password: string,
+): Promise<string> => {
+  const isUserExist = await User.findOne({
+    _id: userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  }).select('+password')
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+  const isPasswordMatched = await User.isPasswordMatched(
+    password,
+    isUserExist.password,
+  )
+
+  if (!isPasswordMatched) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Password is incorrect.')
+  }
+
+  const deletedUser = await User.findOneAndUpdate(
+    { _id: userId, status: { $nin: [USER_STATUS.DELETED] } },
+    { $set: { status: USER_STATUS.DELETED } },
+    { new: true },
+  )
+
+  if (!deletedUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to delete user.')
+  }
+
+  return 'User deleted successfully.'
+}
+
+const deactivateProfile = async (
+  userId: string,
+  password: string,
+): Promise<string> => {
+  const isUserExist = await User.findOne({
+    _id: userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  }).select('+password')
+
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  const isPasswordMatched = await User.isPasswordMatched(
+    password,
+    isUserExist.password,
+  )
+
+  if (!isPasswordMatched) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Password is incorrect.')
+  }
+
+  const deactivatedUser = await User.findOneAndUpdate(
+    { _id: userId, status: { $nin: [USER_STATUS.DELETED] } },
+    { $set: { status: USER_STATUS.INACTIVE } },
+    { new: true },
+  )
+
+  if (!deactivatedUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to deactivate user.')
+  }
+
+  return 'User deactivated successfully.'
+}
+
+const getUserById = async (userId: string): Promise<IUser> => {
+  const isUserExist = await User.findOne({
+    _id: userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  })
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  return isUserExist
+}
+
+const updateUserStatus = async (userId: string, status: USER_STATUS) => {
+  const isUserExist = await User.findOne({
+    _id: userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  })
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  const updatedUser = await User.findOneAndUpdate(
+    { _id: userId, status: { $nin: [USER_STATUS.DELETED] } },
+    { $set: { status } },
+    { new: true },
+  )
+
+  if (!updatedUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to update user status.')
+  }
+
+  return 'User status updated successfully.'
+}
+
+export const getProfile = async (user: JwtPayload) => {
+  // --- Fetch user ---
+  const isUserExist = await User.findOne({
+    _id: user.userId,
+    status: { $nin: [USER_STATUS.DELETED] },
+  }).select('-authentication -password -__v')
+
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  return isUserExist
+}
+
+const switchRole = async (user: JwtPayload, role: USER_ROLES) => {
+  const isUserExist = await User.findById(user.userId)
+  if (!isUserExist) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  // Special case: User wants to become professional but doesn't have the role yet
+  if (
+    role === USER_ROLES.PROFESSIONAL &&
+    !isUserExist.roles.includes(USER_ROLES.PROFESSIONAL)
+  ) {
+    // ProfessionalProfile logic removed
+
+    // Add the professional role to the user
+    await User.findByIdAndUpdate(user.userId, {
+      $addToSet: { roles: USER_ROLES.PROFESSIONAL },
+    })
+  } else if (!isUserExist.roles.includes(role)) {
+    // For other roles, they must already have it
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `User does not have the ${role} role.`,
+    )
+  }
+
+  const result = await User.findByIdAndUpdate(
+    user.userId,
+    { activeRole: role },
+    { new: true },
+  )
+
+  if (!result) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to switch role.')
+  }
+
+  // Generate new tokens with updated activeRole
+
+  const accessToken = jwtHelper.createToken(
+    {
+      userId: result._id.toString(),
+      authId: result._id.toString(),
+      role: result.roles[0],
+      activeRole: result.activeRole,
+    },
+    config.jwt.jwt_secret as Secret,
+    config.jwt.jwt_expire_in as string,
+  )
+
+  const refreshToken = jwtHelper.createToken(
+    {
+      userId: result._id.toString(),
+      authId: result._id.toString(),
+      role: result.roles[0],
+      activeRole: result.activeRole,
+    },
+    config.jwt.jwt_refresh_secret as Secret,
+    config.jwt.jwt_refresh_expire_in as string,
+  )
+
+  return {
+    // user: result,
+    accessToken,
+    refreshToken,
+  }
+}
+
+export const UserServices = {
+  updateProfile,
+  createAdmin,
+  getAllUsers,
+  deleteUser,
+  getUserById,
+  updateUserStatus,
+  getProfile,
+  deleteProfile,
+  deactivateProfile,
+  switchRole,
+}
