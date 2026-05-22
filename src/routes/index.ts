@@ -17,6 +17,7 @@ import { ProductRoutes } from '../app/modules/product/product.route'
 import { AuctionRoutes } from '../app/modules/auction/auction.route'
 import { TradeRoutes } from '../app/modules/trade/trade.route'
 import { OrderRoutes } from '../app/modules/order/order.route'
+import { DashboardRoutes } from '../app/modules/dashboard/dashboard.route'
 
 const router = express.Router()
 
@@ -49,6 +50,7 @@ const apiRoutes: { path: string; route: Router }[] = [
   { path: '/auctions', route: AuctionRoutes },
   { path: '/trades', route: TradeRoutes },
   { path: '/orders', route: OrderRoutes },
+  { path: '/dashboard', route: DashboardRoutes },
 ]
 
 apiRoutes.forEach(route => {

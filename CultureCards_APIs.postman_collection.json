@@ -1,0 +1,2662 @@
+{
+  "info": {
+    "_postman_id": "4b5d2f66-cccd-4f51-b84d-ecf7f185abcd",
+    "name": "Culture Cards LLC - Complete Verified APIs",
+    "description": "Enterprise-grade verified Postman collection for Culture Cards LLC containing all active route handlers: Auth onboarding, Profiles, Messages, Chats, Product catalog, Agora Live streams, Escrow Barter swaps, Order tracking, Notifications, Support, Category, Favourite, Location, Public, and Payments.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth Module",
+      "description": "User onboarding, multi-role registration, session management, secure custom/OAuth logins, verification, and credentials management.",
+      "item": [
+        {
+          "name": "Register User (Sign Up)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"CardBuyer007\",\n  \"fullName\": \"Alice Buyer\",\n  \"email\": \"alice.buyer@example.com\",\n  \"password\": \"SecurePassword123\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "signup"]
+            }
+          }
+        },
+        {
+          "name": "Login User (Custom)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice.buyer@example.com\",\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@culturecards.com\",\n  \"password\": \"AdminSecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/admin-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "admin-login"]
+            }
+          }
+        },
+        {
+          "name": "Verify Account (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice.buyer@example.com\",\n  \"oneTimeCode\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-account"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice.buyer@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forget-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "forget-password"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tempToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NewSecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "reset-password"]
+            }
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice.buyer@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "resend-otp"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"SecurePassword123\",\n  \"newPassword\": \"BrandNewSecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Social Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"googleuser@example.com\",\n  \"name\": \"Google User\",\n  \"avatar\": \"https://lh3.googleusercontent.com/a/avatar\",\n  \"platform\": \"google\",\n  \"platformId\": \"109876543210987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/social-login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "social-login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh-token"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"SecurePassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/delete-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "delete-account"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Profile Module",
+      "description": "User profiles details fetch, updates, role switches, account deactivations, and administrative user controls.",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Alice Buyer Updated\",\n  \"phone\": \"+15555555555\",\n  \"description\": \"Sports cards trading expert.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Switch Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"professional\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/switch-role",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "switch-role"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/deactivate-profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "deactivate-profile"]
+            }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Update User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"blocked\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat Module",
+      "description": "Establish real-time communication channels between users, professionals, and support/admin staff.",
+      "item": [
+        {
+          "name": "Create Chat Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Contact Admin Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat/contact-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "contact-admin"]
+            }
+          }
+        },
+        {
+          "name": "Get My Chat Rooms",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Message Module",
+      "description": "Send individual chat messages (including attachments) and retrieve messages inside rooms.",
+      "item": [
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"{{chatId}}\",\n  \"text\": \"Hey, are you willing to trade Pikachu?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/message",
+              "host": ["{{baseUrl}}"],
+              "path": ["message"]
+            }
+          }
+        },
+        {
+          "name": "Get Messages in Chat Room",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/message/{{chatId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["message", "{{chatId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Module",
+      "description": "Create and manage product listings, details page, listings queries, category filters, and trade allowances.",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Pikachu Illustrator Holographic 1998\",\n  \"description\": \"PSA Graded Mint condition 9. Ultra collectible.\",\n  \"images\": [\"https://example.com/pikachu.jpg\"],\n  \"category\": \"TCG\",\n  \"condition\": \"Mint\",\n  \"estValue\": 450000,\n  \"buyNowPrice\": 450000,\n  \"allowTrade\": true,\n  \"sellerId\": \"607f1f77bcf86cd799439011\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"]
+            }
+          }
+        },
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?category=TCG&condition=Mint&allowTrade=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "TCG"
+                },
+                {
+                  "key": "condition",
+                  "value": "Mint"
+                },
+                {
+                  "key": "allowTrade",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Product Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"condition\": \"Near Mint\",\n  \"estValue\": 420000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["products", "{{productId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auction Module",
+      "description": "Establish real-time interactive audio/video Agora streams, create stream schedules, add products to live bids, and cast secure bids.",
+      "item": [
+        {
+          "name": "Generate Agora Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auctions/token?channelName=collectibles-stream&uid=1234&role=publisher",
+              "host": ["{{baseUrl}}"],
+              "path": ["auctions", "token"],
+              "query": [
+                {
+                  "key": "channelName",
+                  "value": "collectibles-stream"
+                },
+                {
+                  "key": "uid",
+                  "value": "1234"
+                },
+                {
+                  "key": "role",
+                  "value": "publisher"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Start Live Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Mega Card Break Stream\",\n  \"description\": \"Opening rare boosters live!\",\n  \"sellerId\": \"607f1f77bcf86cd799439011\",\n  \"agoraChannelName\": \"collectibles-stream\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auctions/stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["auctions", "stream"]
+            }
+          }
+        },
+        {
+          "name": "Get Live Streams list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auctions/streams?status=live",
+              "host": ["{{baseUrl}}"],
+              "path": ["auctions", "streams"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "live"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Auction Item to Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"streamId\": \"607f1f77bcf86cd799439022\",\n  \"productId\": \"607f1f77bcf86cd799439033\",\n  \"startingBid\": 1500,\n  \"bidIncrement\": 100,\n  \"timerDuration\": 60\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auctions/item",
+              "host": ["{{baseUrl}}"],
+              "path": ["auctions", "item"]
+            }
+          }
+        },
+        {
+          "name": "Place Secure Bid (REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auctionItemId\": \"607f1f77bcf86cd799439044\",\n  \"bidderId\": \"607f1f77bcf86cd799439055\",\n  \"bidAmount\": 2200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auctions/bid",
+              "host": ["{{baseUrl}}"],
+              "path": ["auctions", "bid"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trade Module",
+      "description": "Propose barter exchanges of products (item-for-item swaps), get trade offer history, and accept/decline transactions securely.",
+      "item": [
+        {
+          "name": "Propose Barter Offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": \"607f1f77bcf86cd799439055\",\n  \"receiverId\": \"607f1f77bcf86cd799439011\",\n  \"senderProductId\": \"607f1f77bcf86cd7994390bb\",\n  \"receiverProductId\": \"607f1f77bcf86cd7994390aa\",\n  \"cashSupplement\": 250000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trades/offer",
+              "host": ["{{baseUrl}}"],
+              "path": ["trades", "offer"]
+            }
+          }
+        },
+        {
+          "name": "Get Trade Offers List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trades/offers?userId=607f1f77bcf86cd799439011&type=received",
+              "host": ["{{baseUrl}}"],
+              "path": ["trades", "offers"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "607f1f77bcf86cd799439011"
+                },
+                {
+                  "key": "type",
+                  "value": "received"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Accept Trade Offer (Escrow)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trades/accept/{{tradeOfferId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trades", "accept", "{{tradeOfferId}}"]
+            }
+          }
+        },
+        {
+          "name": "Decline Trade Offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trades/decline/{{tradeOfferId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trades", "decline", "{{tradeOfferId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Order Module",
+      "description": "Handle e-commerce buy-now orders, calculate shipping/tax fees, track shipment checkpoint logs, and trace order journeys.",
+      "item": [
+        {
+          "name": "Checkout Buy Now Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerId\": \"607f1f77bcf86cd799439055\",\n  \"sellerId\": \"607f1f77bcf86cd799439011\",\n  \"productId\": \"607f1f77bcf86cd7994390aa\",\n  \"purchaseType\": \"buy_now\",\n  \"amountDetails\": {\n    \"itemSubtotal\": 450000,\n    \"shipping\": 50,\n    \"taxes\": 35000,\n    \"processingFee\": 12000,\n    \"charityContribution\": 100,\n    \"totalPaid\": 497150\n  },\n  \"shippingAddress\": {\n    \"street\": \"123 Collectors Lane\",\n    \"city\": \"Metropolis\",\n    \"state\": \"NY\",\n    \"postalCode\": \"10001\",\n    \"country\": \"US\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Orders List for User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/user?userId=607f1f77bcf86cd799439055&role=buyer",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "user"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "607f1f77bcf86cd799439055"
+                },
+                {
+                  "key": "role",
+                  "value": "buyer"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order Details & Journey",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Shipment Checkpoint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"In Transit\",\n  \"description\": \"Arrived at Jersey City Distribution Center\",\n  \"location\": \"Jersey City, NJ\",\n  \"deliveryStatus\": \"shipped\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/journey/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "journey", "{{orderId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification Module",
+      "description": "Send alerts, check personal notification histories, fetch count analytics, and perform read/archive/delete events.",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "my"]
+            }
+          }
+        },
+        {
+          "name": "Get Notification Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get All Notifications (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            }
+          }
+        },
+        {
+          "name": "Get Notification By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Special Collectors Event\",\n  \"text\": \"Join us for a rare live trade stream starting in 1 hour!\",\n  \"receiver\": \"607f1f77bcf86cd799439055\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark All As Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification As Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Archive Notification",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/archive",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}", "archive"]
+            }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Send Test Email (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.recipient@example.com\",\n  \"subject\": \"Postman Test Email\",\n  \"html\": \"<p>Hi, this is a test email sent from the Culture Cards Postman verification flow.</p>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/test-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "test-email"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscription Module",
+      "description": "Manage Stripe premium pricing subscription plans, available tiers, client checkout sessions, usage analytics, trial eligibilities, and pauses/resumptions.",
+      "item": [
+        {
+          "name": "Get Available Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/plans?limit=10&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "plans"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Plan By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/plans/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "plans", "{{planId}}"]
+            }
+          }
+        },
+        {
+          "name": "Check Trial Eligibility",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/trial-eligibility/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "trial-eligibility", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subscription/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "create"]
+            }
+          }
+        },
+        {
+          "name": "Get My Subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/my-subscription",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "my-subscription"]
+            }
+          }
+        },
+        {
+          "name": "Update Subscription Plan",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subscription/{{subscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "{{subscriptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/{{subscriptionId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "{{subscriptionId}}", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "status"]
+            }
+          }
+        },
+        {
+          "name": "Create Stripe Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"successUrl\": \"http://localhost:5007/privacy-policy\",\n  \"cancelUrl\": \"http://localhost:5007/privacy-policy\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subscription/checkout-session",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "checkout-session"]
+            }
+          }
+        },
+        {
+          "name": "Reactivate Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/{{subscriptionId}}/reactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "{{subscriptionId}}", "reactivate"]
+            }
+          }
+        },
+        {
+          "name": "Pause Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/{{subscriptionId}}/pause",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "{{subscriptionId}}", "pause"]
+            }
+          }
+        },
+        {
+          "name": "Resume Paused Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/{{subscriptionId}}/resume",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "{{subscriptionId}}", "resume"]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Usage Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/usage",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "usage"]
+            }
+          }
+        },
+        {
+          "name": "Get Usage Warnings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/usage/warnings",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "usage", "warnings"]
+            }
+          }
+        },
+        {
+          "name": "Create Customer Billing Portal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"returnUrl\": \"http://localhost:5007/privacy-policy\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subscription/billing-portal",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "billing-portal"]
+            }
+          }
+        },
+        {
+          "name": "Create Subscription Plan (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Professional Collector Monthly\",\n  \"amount\": 1999,\n  \"interval\": \"month\",\n  \"description\": \"Full access to live streams, zero barter fees, and advanced analytics.\",\n  \"features\": [\"live_streams\", \"zero_barter_fees\", \"unlimited_listings\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subscription/admin/plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "admin", "plans"]
+            }
+          }
+        },
+        {
+          "name": "Update Plan Features (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated features details for pro collector plan.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/subscription/admin/plans/{{planId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "admin", "plans", "{{planId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Plans List (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/admin/plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "admin", "plans"]
+            }
+          }
+        },
+        {
+          "name": "Get All Customers Subscriptions (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/admin/all-subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "admin", "all-subscriptions"]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Analytics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/admin/analytics?startDate=2026-01-01&endDate=2026-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "admin", "analytics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-12-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Retry Failed Subscription Payment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/admin/{{subscriptionId}}/retry-payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["subscription", "admin", "{{subscriptionId}}", "retry-payment"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Category Module",
+      "description": "Establish classification segments for listing cards, popular highlights, and specific subcategories configurations.",
+      "item": [
+        {
+          "name": "Get Popular Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/popular-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "popular-categories"]
+            }
+          }
+        },
+        {
+          "name": "Get Trending Subcategories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/trending-subcategories",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "trending-subcategories"]
+            }
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category",
+              "host": ["{{baseUrl}}"],
+              "path": ["category"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Category By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Category (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pokémon Cards\",\n  \"description\": \"All collectible Pokémon trading card game items.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/category",
+              "host": ["{{baseUrl}}"],
+              "path": ["category"]
+            }
+          }
+        },
+        {
+          "name": "Update Category Details (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Expanded collectibles Pokémon trading card group.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/category/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Category (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "{{categoryId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favourite Module",
+      "description": "Add, remove, and manage cards/products to personalized bookmark lists.",
+      "item": [
+        {
+          "name": "Toggle Favorite Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/favourite/toggle",
+              "host": ["{{baseUrl}}"],
+              "path": ["favourite", "toggle"]
+            }
+          }
+        },
+        {
+          "name": "Get My Favourites List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/favourite/my-favourites",
+              "host": ["{{baseUrl}}"],
+              "path": ["favourite", "my-favourites"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location Module",
+      "description": "Search address suggestions, fetch geolocation coordinates, and resolve postal regions.",
+      "item": [
+        {
+          "name": "Address Search Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/search?input=123 Collectors Lane",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "search"],
+              "query": [
+                {
+                  "key": "input",
+                  "value": "123 Collectors Lane"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Geocode Address",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/geocode?address=Jersey City, NJ",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "geocode"],
+              "query": [
+                {
+                  "key": "address",
+                  "value": "Jersey City, NJ"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment Module",
+      "description": "Handle payment method registrations, Setup Intents, Stripe checkout sessions verification, custom payment intents, ephemeral keys, invoices generation, and refunds.",
+      "item": [
+        {
+          "name": "Get My Payment Methods",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/methods",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "methods"]
+            }
+          }
+        },
+        {
+          "name": "Create Setup Intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/create-setup-intent",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "create-setup-intent"]
+            }
+          }
+        },
+        {
+          "name": "Set Default Payment Method",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/methods/{{paymentMethodId}}/default",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "methods", "{{paymentMethodId}}", "default"]
+            }
+          }
+        },
+        {
+          "name": "Delete Payment Method",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/methods/{{paymentMethodId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "methods", "{{paymentMethodId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 450000,\n  \"currency\": \"usd\",\n  \"productName\": \"Pikachu Illustrator 1998\",\n  \"quantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payment/create-checkout-session",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "create-checkout-session"]
+            }
+          }
+        },
+        {
+          "name": "Verify Checkout Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/verify-checkout/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "verify-checkout", "{{sessionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Payment Intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 450000,\n  \"currency\": \"usd\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payment/create-payment-intent",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "create-payment-intent"]
+            }
+          }
+        },
+        {
+          "name": "Create Ephemeral Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/ephemeral-key",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "ephemeral-key"]
+            }
+          }
+        },
+        {
+          "name": "Get All Payments List (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment"]
+            }
+          }
+        },
+        {
+          "name": "Get My Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/my-payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "my-payments"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Payment By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/{{paymentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "{{paymentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Generate Invoice PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/{{paymentId}}/invoice",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "{{paymentId}}", "invoice"]
+            }
+          }
+        },
+        {
+          "name": "Refund Payment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/{{paymentId}}/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "{{paymentId}}", "refund"]
+            }
+          }
+        },
+        {
+          "name": "Update Payment Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payment/{{paymentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "{{paymentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Review Module",
+      "description": "Leave card listings and user ratings/reviews, query feedback by booking or provider, update or delete entries.",
+      "item": [
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"607f1f77bcf86cd7994390ee\",\n  \"providerId\": \"607f1f77bcf86cd799439011\",\n  \"rating\": 5,\n  \"comment\": \"Smooth barter swap! Pikachu card was exactly as described.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["review"]
+            }
+          }
+        },
+        {
+          "name": "Get All Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["review"]
+            }
+          }
+        },
+        {
+          "name": "Get Reviews by Booking ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/review/{{bookingId}}/booking",
+              "host": ["{{baseUrl}}"],
+              "path": ["review", "{{bookingId}}", "booking"]
+            }
+          }
+        },
+        {
+          "name": "Get Reviews by Provider ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/review/provider/{{providerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["review", "provider", "{{providerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Review By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/review/{{reviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["review", "{{reviewId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Review (Author Only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Very good, minor logistics delay.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review/{{reviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["review", "{{reviewId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Review (Author/Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/review/{{reviewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["review", "{{reviewId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Module",
+      "description": "Access public content types (such as Privacy Policies or T&C), issue contact form entries, and construct dynamic FAQS lists.",
+      "item": [
+        {
+          "name": "Create Public Document (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Privacy Policy v2\",\n  \"content\": \"We respect and protect your collectibles trading data...\",\n  \"type\": \"privacy-policy\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/public",
+              "host": ["{{baseUrl}}"],
+              "path": ["public"]
+            }
+          }
+        },
+        {
+          "name": "Get Public Document By Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/privacy-policy",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "privacy-policy"]
+            }
+          }
+        },
+        {
+          "name": "Update Public Document (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated contents of policy details.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/public/update/{{publicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "update", "{{publicId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Public Document (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/{{publicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "{{publicId}}"]
+            }
+          }
+        },
+        {
+          "name": "Submit Contact Form",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"message\": \"I need help verifying a custom Stripe payment method.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/public/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "contact"]
+            }
+          }
+        },
+        {
+          "name": "Create FAQ (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How does the Escrow barter system protect buyers?\",\n  \"answer\": \"Culture Cards holds both products in secure transition until both parties confirm delivery checkpoint reviews.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/public/faq",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "faq"]
+            }
+          }
+        },
+        {
+          "name": "Update FAQ Details (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"Escrow securely holds both items and release funds or confirm trade release only upon mutual delivery confirmation.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/public/faq/{{faqId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "faq", "{{faqId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Single FAQ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/faq/single/{{faqId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "faq", "single", "{{faqId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All FAQs List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/faq/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "faq", "all"]
+            }
+          }
+        },
+        {
+          "name": "Delete FAQ (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/public/faq/{{faqId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "faq", "{{faqId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Support Module",
+      "description": "Establish ticket creation for user customer services support, administrative views, state patches, and resolution details.",
+      "item": [
+        {
+          "name": "Create Support Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Escrow Hold Issue\",\n  \"description\": \"My Pikachu barter is stuck in transit, receiver has not updated delivery state.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/support",
+              "host": ["{{baseUrl}}"],
+              "path": ["support"]
+            }
+          }
+        },
+        {
+          "name": "Get My Support Ticket Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/support/{{supportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["support", "{{supportId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Support Ticket Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"resolved\",\n  \"feedback\": \"Admin intervention completed successfully.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/support/{{supportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["support", "{{supportId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Support Tickets (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/support",
+              "host": ["{{baseUrl}}"],
+              "path": ["support"]
+            }
+          }
+        },
+        {
+          "name": "Delete Support Ticket (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/support/{{supportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["support", "{{supportId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload Module",
+      "description": "Acquire AWS S3 secure signed URLs to directly push custom media files without exposing raw credentials.",
+      "item": [
+        {
+          "name": "AWS S3 Presign Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"holographic-charizard.jpg\",\n  \"contentType\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/upload/presign",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "presign"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5007/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "your-jwt-access-token-here",
+      "type": "string"
+    },
+    {
+      "key": "tempToken",
+      "value": "your-jwt-reset-token-here",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "your-jwt-refresh-token-here",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "607f1f77bcf86cd7994390aa",
+      "type": "string"
+    },
+    {
+      "key": "tradeOfferId",
+      "value": "607f1f77bcf86cd7994390cc",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "607f1f77bcf86cd7994390dd",
+      "type": "string"
+    },
+    {
+      "key": "chatId",
+      "value": "607f1f77bcf86cd7994390ee",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "607f1f77bcf86cd7994390ff",
+      "type": "string"
+    },
+    {
+      "key": "planId",
+      "value": "price_12345",
+      "type": "string"
+    },
+    {
+      "key": "subscriptionId",
+      "value": "sub_12345",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "607f1f77bcf86cd799439011",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "607f1f77bcf86cd799439022",
+      "type": "string"
+    },
+    {
+      "key": "paymentMethodId",
+      "value": "pm_12345",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "607f1f77bcf86cd799439033",
+      "type": "string"
+    },
+    {
+      "key": "reviewId",
+      "value": "607f1f77bcf86cd799439044",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "607f1f77bcf86cd799439055",
+      "type": "string"
+    },
+    {
+      "key": "providerId",
+      "value": "607f1f77bcf86cd799439066",
+      "type": "string"
+    },
+    {
+      "key": "publicId",
+      "value": "607f1f77bcf86cd799439077",
+      "type": "string"
+    },
+    {
+      "key": "faqId",
+      "value": "607f1f77bcf86cd799439088",
+      "type": "string"
+    },
+    {
+      "key": "supportId",
+      "value": "607f1f77bcf86cd799439099",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "cs_test_12345",
+      "type": "string"
+    }
+  ]
+}
