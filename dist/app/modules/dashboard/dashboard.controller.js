@@ -17,6 +17,56 @@ const getOverviewData = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const getUsersData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getUsersData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Users management data retrieved successfully.',
+        data: result,
+    });
+});
+const getSellerVerificationsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getSellerVerificationsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Seller verifications retrieved successfully.',
+        data: result,
+    });
+});
+const getListingsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getListingsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Listings management data retrieved successfully.',
+        data: result,
+    });
+});
+const getLiveStreamsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getLiveStreamsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Live streams data retrieved successfully.',
+        data: result,
+    });
+});
+const getTradesData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getTradesData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Trades data retrieved successfully.',
+        data: result,
+    });
+});
 exports.dashboardController = {
     getOverviewData,
+    getUsersData,
+    getSellerVerificationsData,
+    getListingsData,
+    getLiveStreamsData,
+    getTradesData,
 };
