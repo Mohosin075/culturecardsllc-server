@@ -2525,6 +2525,292 @@
           }
         }
       ]
+    },
+    {
+      "name": "Dashboard Module",
+      "description": "Enterprise-grade real-time metrics, analytics, live audits, and administrative dashboard controllers.",
+      "item": [
+        {
+          "name": "Get Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "overview"]
+            }
+          }
+        },
+        {
+          "name": "Get Users Management Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get Seller Verification Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/seller-verifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "seller-verifications"]
+            }
+          }
+        },
+        {
+          "name": "Get Listings Management Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/listings",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "listings"]
+            }
+          }
+        },
+        {
+          "name": "Get Live Auctions Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/live-streams",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "live-streams"]
+            }
+          }
+        },
+        {
+          "name": "Get Trades & Swaps Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/trades",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "trades"]
+            }
+          }
+        },
+        {
+          "name": "Get Orders & Purchases Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Disputes Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/disputes",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "disputes"]
+            }
+          }
+        },
+        {
+          "name": "Get Payments & Revenue Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Get Boosted Listings Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/boosted-listings",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "boosted-listings"]
+            }
+          }
+        },
+        {
+          "name": "Get Categories Management Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get System Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/notifications/mark-all-read",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "notifications", "mark-all-read"]
+            }
+          }
+        },
+        {
+          "name": "Get Reports & Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "reports"]
+            }
+          }
+        },
+        {
+          "name": "Get Platform Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Update Platform Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commissionSettings\": {\n    \"purchaseCommission\": 6.5,\n    \"tradeCommission\": 3.0\n  },\n  \"notificationSettings\": {\n    \"newOrderNotifications\": true,\n    \"disputeAlerts\": true,\n    \"systemAlerts\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "settings"]
+            }
+          }
+        }
+      ]
     }
   ],
   "event": [
