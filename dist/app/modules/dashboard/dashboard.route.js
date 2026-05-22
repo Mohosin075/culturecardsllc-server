@@ -15,5 +15,10 @@ router.get('/seller-verifications', (0, auth_1.default)(user_1.USER_ROLES.ADMIN,
 router.get('/listings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getListingsData);
 router.get('/live-streams', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getLiveStreamsData);
 router.get('/trades', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getTradesData);
+router.get('/orders', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getOrdersData);
+router.get('/disputes', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getDisputesData);
+router.get('/payments', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getPaymentsData);
+router.get('/boosted-listings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getBoostedListingsData);
+router.get('/categories', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getCategoriesData);
 exports.DashboardRoutes = router;
 exports.default = exports.DashboardRoutes;

@@ -52,7 +52,7 @@ export type IDashboardOverviewResponse = {
   flaggedActivities: IFlaggedActivity[];
 };
 
-// --- NEW SUB-MODULE INTERFACES ---
+// --- SUB-MODULE INTERFACES ---
 
 export type IUserManagementItem = {
   userId: string;
@@ -116,4 +116,65 @@ export type ITradeOverviewItem = {
   valueMatch: number; // percentage e.g. 95
   verification: 'Verified' | 'Direct';
   status: 'Pending' | 'Accepted' | 'Completed' | 'Disputed';
+};
+
+// --- NEW 5 SCREENS INTERFACES ---
+
+export type IDashboardOrderItem = {
+  orderId: string;
+  buyer: string;
+  seller: string;
+  item: string;
+  totalPrice: number;
+  status: 'Shipped' | 'Pending' | 'Delivered' | 'Cancelled';
+  deliveryDate: string; // e.g. '2026-04-26' or '-'
+};
+
+export type IDashboardDisputeItem = {
+  disputeId: string;
+  status: 'Open' | 'Reviewing' | 'Resolved' | 'Rejected';
+  severity: 'Low' | 'Medium' | 'High';
+  openedOn: string; // date e.g. '2026-04-22'
+  usersInvolved: string[]; // e.g. ['John Doe', 'SneakerKing']
+  orderOrTradeId: string; // e.g. 'ORD-1234'
+  issueType: string; // e.g. 'Item not as described'
+  description: string;
+};
+
+export type ITransactionItem = {
+  transactionId: string;
+  user: string;
+  type: 'Purchase' | 'Trade' | 'Boost';
+  amount: number;
+  commission: number;
+  date: string;
+  status: 'Completed' | 'Pending' | 'Failed';
+};
+
+export type IDashboardPaymentsResponse = {
+  summary: {
+    totalRevenue: number;
+    commissionEarned: number;
+    pendingPayouts: number;
+    completedPayouts: number;
+  };
+  recentTransactions: ITransactionItem[];
+};
+
+export type IBoostedListingItem = {
+  boostId: string;
+  listingName: string;
+  seller: string;
+  boostLevel: 'Premium' | 'Standard';
+  duration: string; // e.g. '7 days'
+  period: string; // e.g. '2026-04-20 to 2026-04-27'
+  impressions: number;
+  feePaid: number;
+  status: 'Active' | 'Expiring Soon' | 'Expired';
+};
+
+export type ICategoryManagementItem = {
+  name: string;
+  listingsCount: number;
+  subcategories: string[];
 };

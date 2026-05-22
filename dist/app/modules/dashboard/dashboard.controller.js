@@ -62,6 +62,51 @@ const getTradesData = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const getOrdersData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getOrdersData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Orders data retrieved successfully.',
+        data: result,
+    });
+});
+const getDisputesData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getDisputesData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Disputes data retrieved successfully.',
+        data: result,
+    });
+});
+const getPaymentsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getPaymentsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Payments and revenue data retrieved successfully.',
+        data: result,
+    });
+});
+const getBoostedListingsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getBoostedListingsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Boosted listings data retrieved successfully.',
+        data: result,
+    });
+});
+const getCategoriesData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getCategoriesData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Categories management data retrieved successfully.',
+        data: result,
+    });
+});
 exports.dashboardController = {
     getOverviewData,
     getUsersData,
@@ -69,4 +114,9 @@ exports.dashboardController = {
     getListingsData,
     getLiveStreamsData,
     getTradesData,
+    getOrdersData,
+    getDisputesData,
+    getPaymentsData,
+    getBoostedListingsData,
+    getCategoriesData,
 };

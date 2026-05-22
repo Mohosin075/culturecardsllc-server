@@ -41,5 +41,35 @@ router.get(
   dashboardController.getTradesData
 );
 
+router.get(
+  '/orders',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getOrdersData
+);
+
+router.get(
+  '/disputes',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getDisputesData
+);
+
+router.get(
+  '/payments',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getPaymentsData
+);
+
+router.get(
+  '/boosted-listings',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getBoostedListingsData
+);
+
+router.get(
+  '/categories',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getCategoriesData
+);
+
 export const DashboardRoutes = router;
 export default DashboardRoutes;

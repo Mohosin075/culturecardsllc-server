@@ -64,6 +64,56 @@ const getTradesData = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getOrdersData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getOrdersData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Orders data retrieved successfully.',
+    data: result,
+  });
+});
+
+const getDisputesData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getDisputesData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Disputes data retrieved successfully.',
+    data: result,
+  });
+});
+
+const getPaymentsData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getPaymentsData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Payments and revenue data retrieved successfully.',
+    data: result,
+  });
+});
+
+const getBoostedListingsData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getBoostedListingsData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Boosted listings data retrieved successfully.',
+    data: result,
+  });
+});
+
+const getCategoriesData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getCategoriesData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Categories management data retrieved successfully.',
+    data: result,
+  });
+});
+
 export const dashboardController = {
   getOverviewData,
   getUsersData,
@@ -71,4 +121,9 @@ export const dashboardController = {
   getListingsData,
   getLiveStreamsData,
   getTradesData,
+  getOrdersData,
+  getDisputesData,
+  getPaymentsData,
+  getBoostedListingsData,
+  getCategoriesData,
 };
