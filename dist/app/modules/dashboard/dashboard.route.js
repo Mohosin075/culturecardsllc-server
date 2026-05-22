@@ -20,5 +20,10 @@ router.get('/disputes', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER
 router.get('/payments', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getPaymentsData);
 router.get('/boosted-listings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getBoostedListingsData);
 router.get('/categories', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getCategoriesData);
+router.get('/notifications', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getNotificationsData);
+router.patch('/notifications/mark-all-read', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.markAllNotificationsAsRead);
+router.get('/reports', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getReportsData);
+router.get('/settings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getSettingsData);
+router.patch('/settings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.updateSettingsData);
 exports.DashboardRoutes = router;
 exports.default = exports.DashboardRoutes;

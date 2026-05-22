@@ -71,5 +71,35 @@ router.get(
   dashboardController.getCategoriesData
 );
 
+router.get(
+  '/notifications',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getNotificationsData
+);
+
+router.patch(
+  '/notifications/mark-all-read',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.markAllNotificationsAsRead
+);
+
+router.get(
+  '/reports',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getReportsData
+);
+
+router.get(
+  '/settings',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getSettingsData
+);
+
+router.patch(
+  '/settings',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.updateSettingsData
+);
+
 export const DashboardRoutes = router;
 export default DashboardRoutes;

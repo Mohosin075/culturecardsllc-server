@@ -114,6 +114,56 @@ const getCategoriesData = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getNotificationsData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getNotificationsData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Notifications retrieved successfully.',
+    data: result,
+  });
+});
+
+const markAllNotificationsAsRead = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.markAllNotificationsAsRead();
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'All notifications marked as read.',
+    data: result,
+  });
+});
+
+const getReportsData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getReportsData(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Reports and analytics data retrieved successfully.',
+    data: result,
+  });
+});
+
+const getSettingsData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getSettingsData();
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Platform settings retrieved successfully.',
+    data: result,
+  });
+});
+
+const updateSettingsData = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.updateSettingsData(req.body);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Platform settings updated successfully.',
+    data: result,
+  });
+});
+
 export const dashboardController = {
   getOverviewData,
   getUsersData,
@@ -126,4 +176,9 @@ export const dashboardController = {
   getPaymentsData,
   getBoostedListingsData,
   getCategoriesData,
+  getNotificationsData,
+  markAllNotificationsAsRead,
+  getReportsData,
+  getSettingsData,
+  updateSettingsData,
 };

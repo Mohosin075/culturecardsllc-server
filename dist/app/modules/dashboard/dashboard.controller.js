@@ -107,6 +107,51 @@ const getCategoriesData = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const getNotificationsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getNotificationsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Notifications retrieved successfully.',
+        data: result,
+    });
+});
+const markAllNotificationsAsRead = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.markAllNotificationsAsRead();
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'All notifications marked as read.',
+        data: result,
+    });
+});
+const getReportsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getReportsData(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Reports and analytics data retrieved successfully.',
+        data: result,
+    });
+});
+const getSettingsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.getSettingsData();
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Platform settings retrieved successfully.',
+        data: result,
+    });
+});
+const updateSettingsData = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.updateSettingsData(req.body);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Platform settings updated successfully.',
+        data: result,
+    });
+});
 exports.dashboardController = {
     getOverviewData,
     getUsersData,
@@ -119,4 +164,9 @@ exports.dashboardController = {
     getPaymentsData,
     getBoostedListingsData,
     getCategoriesData,
+    getNotificationsData,
+    markAllNotificationsAsRead,
+    getReportsData,
+    getSettingsData,
+    updateSettingsData,
 };

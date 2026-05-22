@@ -118,7 +118,7 @@ export type ITradeOverviewItem = {
   status: 'Pending' | 'Accepted' | 'Completed' | 'Disputed';
 };
 
-// --- NEW 5 SCREENS INTERFACES ---
+// --- PREVIOUS SCREENS INTERFACES ---
 
 export type IDashboardOrderItem = {
   orderId: string;
@@ -177,4 +177,70 @@ export type ICategoryManagementItem = {
   name: string;
   listingsCount: number;
   subcategories: string[];
+};
+
+// --- NEW 3 SCREENS INTERFACES ---
+
+export type ISystemNotificationItem = {
+  id: string;
+  title: string;
+  category: 'Order Update' | 'Trade Update' | 'Dispute' | 'System Alert';
+  message: string;
+  timeAgo: string; // e.g. '5 minutes ago'
+  isRead: boolean;
+};
+
+export type IDashboardNotificationsResponse = {
+  unreadCount: number;
+  notifications: ISystemNotificationItem[];
+};
+
+export type IReportsAndAnalyticsResponse = {
+  summary: {
+    totalSales: number;
+    totalSalesChange: string; // e.g. '+12.5%'
+    activeUsers: number;
+    activeUsersChange: string; // e.g. '+19.4%'
+    avgTransaction: number;
+    avgTransactionChange: string; // e.g. '+5.2%'
+  };
+  salesByCategory: {
+    category: string;
+    amount: number;
+  }[];
+  topSellers: {
+    name: string;
+    salesAmount: number;
+  }[];
+  mostTradedItems: {
+    category: string;
+    percentage: number;
+  }[];
+  userEngagement: {
+    month: string;
+    activeUsers: number;
+    newUsers: number;
+  }[];
+};
+
+export type IPlatformSettings = {
+  commissionSettings: {
+    purchaseCommission: number;
+    tradeCommission: number;
+  };
+  paymentGateway: {
+    primaryProcessor: string;
+    apiKey: string;
+    enableTestMode: boolean;
+  };
+  notificationSettings: {
+    newOrderNotifications: boolean;
+    disputeAlerts: boolean;
+    systemAlerts: boolean;
+  };
+  securitySettings: {
+    twoFactorAuthentication: boolean;
+    ipWhitelist: boolean;
+    sessionTimeout: number;
+  };
 };
