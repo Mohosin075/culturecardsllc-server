@@ -13,11 +13,10 @@ export type IMessage = {
   metadata?: {
     orderId?: string
     tradeOfferId?: string
-    statusLabel?: string; // e.g. "ORDER SHIPPED 🚚" or "NEW TRADE OFFER 🎁"
+    statusLabel?: string // e.g. "ORDER SHIPPED 🚚" or "NEW TRADE OFFER 🎁"
     trackingNumber?: string
     eta?: string
   }
 }
 
 export type MessageModel = Model<IMessage, Record<string, unknown>>
-

@@ -31,8 +31,8 @@ export class EmailTemplates {
 
   private static footer = `
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Photopya. All rights reserved.</p>
-      <p>This email was sent by Photopya. If you have any questions, contact us at support@Photopya.com</p>
+      <p>© ${new Date().getFullYear()} Aries. All rights reserved.</p>
+      <p>This email was sent by Aries. If you have any questions, contact us at support@aries.com</p>
       <p>
         <a href="{{unsubscribeLink}}" style="color: #667eea; text-decoration: none;">Unsubscribe</a> | 
         <a href="{{privacyLink}}" style="color: #667eea; text-decoration: none;">Privacy Policy</a> | 
@@ -79,9 +79,8 @@ export class EmailTemplates {
   private static templates = {
     // Welcome Email
     [NOTIFICATION_TEMPLATES.WELCOME]: {
-      getTitle: (data: TemplateData) =>
-        `Welcome to Photopya, ${data.userName}!`,
-      getSubject: (data: TemplateData) => `Welcome to Photopya!`,
+      getTitle: (data: TemplateData) => `Welcome to Aries, ${data.userName}!`,
+      getSubject: (data: TemplateData) => `Welcome to Aries!`,
       getBody: (data: TemplateData) => `
         <h2>Welcome aboard, ${data.userName}!</h2>
         <p>We're excited to have you join our community of event enthusiasts. Here's what you can do:</p>
@@ -184,7 +183,7 @@ export class EmailTemplates {
         <ul>
           <li>Secure your account</li>
           <li>Receive important event notifications</li>
-          <li>Access all features of Photopya</li>
+          <li>Access all features of Aries</li>
           <li>Get personalized event recommendations</li>
         </ul>
 

@@ -1,105 +1,105 @@
-import express from 'express';
-import { dashboardController } from './dashboard.controller';
-import auth from '../../middleware/auth';
-import { USER_ROLES } from '../../../enum/user';
+import express from 'express'
+import { dashboardController } from './dashboard.controller'
+import auth from '../../middleware/auth'
+import { USER_ROLES } from '../../../enum/user'
 
-const router = express.Router();
+const router = express.Router()
 
 router.get(
   '/overview',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getOverviewData
-);
+  dashboardController.getOverviewData,
+)
 
 router.get(
   '/users',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getUsersData
-);
+  dashboardController.getUsersData,
+)
 
 router.get(
   '/seller-verifications',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getSellerVerificationsData
-);
+  dashboardController.getSellerVerificationsData,
+)
 
 router.get(
   '/listings',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getListingsData
-);
+  dashboardController.getListingsData,
+)
 
 router.get(
   '/live-streams',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getLiveStreamsData
-);
+  dashboardController.getLiveStreamsData,
+)
 
 router.get(
   '/trades',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getTradesData
-);
+  dashboardController.getTradesData,
+)
 
 router.get(
   '/orders',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getOrdersData
-);
+  dashboardController.getOrdersData,
+)
 
 router.get(
   '/disputes',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getDisputesData
-);
+  dashboardController.getDisputesData,
+)
 
 router.get(
   '/payments',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getPaymentsData
-);
+  dashboardController.getPaymentsData,
+)
 
 router.get(
   '/boosted-listings',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getBoostedListingsData
-);
+  dashboardController.getBoostedListingsData,
+)
 
 router.get(
   '/categories',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getCategoriesData
-);
+  dashboardController.getCategoriesData,
+)
 
 router.get(
   '/notifications',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getNotificationsData
-);
+  dashboardController.getNotificationsData,
+)
 
 router.patch(
   '/notifications/mark-all-read',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.markAllNotificationsAsRead
-);
+  dashboardController.markAllNotificationsAsRead,
+)
 
 router.get(
   '/reports',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getReportsData
-);
+  dashboardController.getReportsData,
+)
 
 router.get(
   '/settings',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.getSettingsData
-);
+  dashboardController.getSettingsData,
+)
 
 router.patch(
   '/settings',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
-  dashboardController.updateSettingsData
-);
+  dashboardController.updateSettingsData,
+)
 
-export const DashboardRoutes = router;
-export default DashboardRoutes;
+export const DashboardRoutes = router
+export default DashboardRoutes

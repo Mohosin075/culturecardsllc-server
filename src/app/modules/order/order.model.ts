@@ -1,33 +1,33 @@
-import { Schema, model } from 'mongoose';
-import { IOrder } from './order.interface';
+import { Schema, model } from 'mongoose'
+import { IOrder } from './order.interface'
 
 const OrderSchema = new Schema<IOrder>(
   {
-    buyerId: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'User', 
-      required: true, 
-      index: true 
+    buyerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    sellerId: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'User', 
-      required: true, 
-      index: true 
+    sellerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    productId: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Product', 
-      required: true 
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true,
     },
-    tradeOfferId: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'TradeOffer' 
+    tradeOfferId: {
+      type: Schema.Types.ObjectId,
+      ref: 'TradeOffer',
     },
-    purchaseType: { 
-      type: String, 
-      enum: ['auction_win', 'buy_now', 'trade_swap'], 
-      required: true 
+    purchaseType: {
+      type: String,
+      enum: ['auction_win', 'buy_now', 'trade_swap'],
+      required: true,
     },
     amountDetails: {
       itemSubtotal: { type: Number, required: true, min: 0 },
@@ -35,29 +35,29 @@ const OrderSchema = new Schema<IOrder>(
       taxes: { type: Number, default: 0, min: 0 },
       processingFee: { type: Number, default: 0, min: 0 },
       charityContribution: { type: Number, default: 0, min: 0 },
-      totalPaid: { type: Number, required: true, min: 0 }
+      totalPaid: { type: Number, required: true, min: 0 },
     },
-    paymentStatus: { 
-      type: String, 
-      enum: ['pending', 'paid', 'failed', 'refunded'], 
-      default: 'pending', 
-      index: true 
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed', 'refunded'],
+      default: 'pending',
+      index: true,
     },
-    paymentIntentId: { 
-      type: String 
+    paymentIntentId: {
+      type: String,
     },
     shippingAddress: {
       street: { type: String, required: true },
       city: { type: String, required: true },
       state: { type: String, required: true },
       postalCode: { type: String, required: true },
-      country: { type: String, required: true }
+      country: { type: String, required: true },
     },
-    deliveryStatus: { 
-      type: String, 
-      enum: ['pending', 'shipped', 'delivered', 'cancelled'], 
-      default: 'pending', 
-      index: true 
+    deliveryStatus: {
+      type: String,
+      enum: ['pending', 'shipped', 'delivered', 'cancelled'],
+      default: 'pending',
+      index: true,
     },
     trackingDetails: {
       carrier: { type: String },
@@ -68,17 +68,17 @@ const OrderSchema = new Schema<IOrder>(
           status: { type: String, required: true },
           description: { type: String, required: true },
           location: { type: String },
-          timestamp: { type: Date, default: Date.now }
-        }
-      ]
-    }
+          timestamp: { type: Date, default: Date.now },
+        },
+      ],
+    },
   },
-  { 
+  {
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
-  }
-);
+    toObject: { virtuals: true },
+  },
+)
 
-export const Order = model<IOrder>('Order', OrderSchema);
-export default Order;
+export const Order = model<IOrder>('Order', OrderSchema)
+export default Order

@@ -77,7 +77,8 @@ const handleCheckoutSessionCompleted = async (
       mongoSession.endSession()
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Checkout processing failed: ${errorMessage}`,
@@ -85,7 +86,9 @@ const handleCheckoutSessionCompleted = async (
   }
 }
 
-const handleCheckoutSessionExpired = async (session: Record<string, unknown> & { id: string }): Promise<void> => {
+const handleCheckoutSessionExpired = async (
+  session: Record<string, unknown> & { id: string },
+): Promise<void> => {
   const mongoSession = await Payment.startSession()
   mongoSession.startTransaction()
 
@@ -112,7 +115,12 @@ const handleCheckoutSessionExpired = async (session: Record<string, unknown> & {
   }
 }
 
-const handlePaymentSuccess = async (paymentIntent: Record<string, unknown> & { id: string; metadata?: Record<string, string> }): Promise<void> => {
+const handlePaymentSuccess = async (
+  paymentIntent: Record<string, unknown> & {
+    id: string
+    metadata?: Record<string, string>
+  },
+): Promise<void> => {
   const mongoSession = await Payment.startSession()
   mongoSession.startTransaction()
 
@@ -186,7 +194,12 @@ const handlePaymentSuccess = async (paymentIntent: Record<string, unknown> & { i
   }
 }
 
-const handlePaymentFailure = async (paymentIntent: Record<string, unknown> & { id: string; metadata?: Record<string, string> }): Promise<void> => {
+const handlePaymentFailure = async (
+  paymentIntent: Record<string, unknown> & {
+    id: string
+    metadata?: Record<string, string>
+  },
+): Promise<void> => {
   const mongoSession = await Payment.startSession()
   mongoSession.startTransaction()
 
@@ -222,7 +235,10 @@ const handlePaymentFailure = async (paymentIntent: Record<string, unknown> & { i
 }
 
 export const WebhookService = {
-  handleWebhook: async (payload: { body: string | Buffer; headers?: any }): Promise<void> => {
+  handleWebhook: async (payload: {
+    body: string | Buffer
+    headers?: any
+  }): Promise<void> => {
     try {
       const event = JSON.parse(payload.body.toString())
       console.log(`Processing webhook: ${event.type}`)
@@ -244,7 +260,8 @@ export const WebhookService = {
           console.log(`Unhandled event type: ${event.type}`)
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
       console.error('Webhook processing error:', errorMessage)
       throw new ApiError(
         StatusCodes.INTERNAL_SERVER_ERROR,

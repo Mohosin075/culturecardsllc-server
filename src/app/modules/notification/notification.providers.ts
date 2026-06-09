@@ -61,7 +61,7 @@ export class EmailProvider {
       )
 
       const mailOptions: nodemailer.SendMailOptions = {
-        from: `Photopya <${config.email.from}>`,
+        from: `Aries <${config.email.from}>`,
         to: Array.isArray(data.to) ? data.to.join(',') : data.to,
         subject,
         html,

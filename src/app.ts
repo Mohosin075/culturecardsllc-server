@@ -113,10 +113,10 @@ app.get('/', (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'Welcome to the Photopya API',
+    message: 'Welcome to the Aries API',
     data: {
       timestamp: new Date().toISOString(),
-      projectName: 'Photopya',
+      projectName: 'Aries',
       version: '1.0.0',
     },
   })

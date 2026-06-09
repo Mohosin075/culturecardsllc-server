@@ -1583,7 +1583,12 @@
             "url": {
               "raw": "{{baseUrl}}/subscription/admin/{{subscriptionId}}/retry-payment",
               "host": ["{{baseUrl}}"],
-              "path": ["subscription", "admin", "{{subscriptionId}}", "retry-payment"]
+              "path": [
+                "subscription",
+                "admin",
+                "{{subscriptionId}}",
+                "retry-payment"
+              ]
             }
           }
         }
@@ -2818,18 +2823,14 @@
       "listen": "prerequest",
       "script": {
         "type": "text/javascript",
-        "exec": [
-          ""
-        ]
+        "exec": [""]
       }
     },
     {
       "listen": "test",
       "script": {
         "type": "text/javascript",
-        "exec": [
-          ""
-        ]
+        "exec": [""]
       }
     }
   ],

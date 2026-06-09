@@ -247,11 +247,15 @@ class WebhookService {
       // In newer Stripe API versions (like 2025-08-27.basil), current_period_start/end are moved to items.data[0]
       const subscriptionItem = stripeSubscription.items.data[0]
       const currentPeriodStart =
-        (stripeSubscription as unknown as { current_period_start?: number }).current_period_start ||
-        (subscriptionItem as unknown as { current_period_start?: number }).current_period_start
+        (stripeSubscription as unknown as { current_period_start?: number })
+          .current_period_start ||
+        (subscriptionItem as unknown as { current_period_start?: number })
+          .current_period_start
       const currentPeriodEnd =
-        (stripeSubscription as unknown as { current_period_end?: number }).current_period_end ||
-        (subscriptionItem as unknown as { current_period_end?: number }).current_period_end
+        (stripeSubscription as unknown as { current_period_end?: number })
+          .current_period_end ||
+        (subscriptionItem as unknown as { current_period_end?: number })
+          .current_period_end
 
       const subscription = new Subscription({
         userId: new Types.ObjectId(userId),
@@ -327,11 +331,15 @@ class WebhookService {
       // In newer Stripe API versions (like 2025-08-27.basil), current_period_start/end are moved to items.data[0]
       const subscriptionItem = stripeSubscription.items.data[0]
       const currentPeriodStart =
-        (stripeSubscription as unknown as { current_period_start?: number }).current_period_start ||
-        (subscriptionItem as unknown as { current_period_start?: number }).current_period_start
+        (stripeSubscription as unknown as { current_period_start?: number })
+          .current_period_start ||
+        (subscriptionItem as unknown as { current_period_start?: number })
+          .current_period_start
       const currentPeriodEnd =
-        (stripeSubscription as unknown as { current_period_end?: number }).current_period_end ||
-        (subscriptionItem as unknown as { current_period_end?: number }).current_period_end
+        (stripeSubscription as unknown as { current_period_end?: number })
+          .current_period_end ||
+        (subscriptionItem as unknown as { current_period_end?: number })
+          .current_period_end
 
       const updateData: Record<string, unknown> = {
         status: stripeSubscription.status,
@@ -387,7 +395,11 @@ class WebhookService {
         subscriptionStatus: stripeSubscription.status,
         subscriptionExpiresAt: currentPeriodEnd
           ? new Date(currentPeriodEnd * 1000)
-          : new Date(((stripeSubscription as unknown as { current_period_end?: number }).current_period_end || 0) * 1000),
+          : new Date(
+              ((
+                stripeSubscription as unknown as { current_period_end?: number }
+              ).current_period_end || 0) * 1000,
+            ),
         trialUsed: !!stripeSubscription.trial_start,
       }
 
@@ -500,7 +512,9 @@ class WebhookService {
     eventId: string,
   ): Promise<void> {
     try {
-      const invoiceWithSubscription = invoice as unknown as { subscription?: string }
+      const invoiceWithSubscription = invoice as unknown as {
+        subscription?: string
+      }
 
       if (!invoiceWithSubscription.subscription) {
         console.log('Invoice not related to subscription')
@@ -558,7 +572,9 @@ class WebhookService {
     eventId: string,
   ): Promise<void> {
     try {
-      const invoiceWithSubscription = invoice as unknown as { subscription?: string }
+      const invoiceWithSubscription = invoice as unknown as {
+        subscription?: string
+      }
 
       if (!invoiceWithSubscription.subscription) {
         console.log('Invoice not related to subscription')
@@ -624,7 +640,9 @@ class WebhookService {
     eventId: string,
   ): Promise<void> {
     try {
-      const invoiceWithSubscription = invoice as unknown as { subscription?: string }
+      const invoiceWithSubscription = invoice as unknown as {
+        subscription?: string
+      }
 
       if (!invoiceWithSubscription.subscription) {
         console.log('Invoice not related to subscription')
@@ -988,7 +1006,9 @@ class WebhookService {
     _eventId: string,
   ): Promise<void> {
     try {
-      const invoiceWithSubscription = invoice as unknown as { subscription?: string }
+      const invoiceWithSubscription = invoice as unknown as {
+        subscription?: string
+      }
       if (!invoiceWithSubscription.subscription) return
 
       const subscription = await Subscription.findOne({
@@ -1016,7 +1036,9 @@ class WebhookService {
     eventId: string,
   ): Promise<void> {
     try {
-      const invoiceWithSubscription = invoice as unknown as { subscription?: string }
+      const invoiceWithSubscription = invoice as unknown as {
+        subscription?: string
+      }
       if (!invoiceWithSubscription.subscription) return
 
       const subscription = await Subscription.findOne({

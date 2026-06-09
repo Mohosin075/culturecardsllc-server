@@ -1,7 +1,11 @@
 import { USER_ROLES } from '../../../enum/user'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
-import { IPaymentFilterables, IPayment, IPaymentPayload } from './payment.interface'
+import {
+  IPaymentFilterables,
+  IPayment,
+  IPaymentPayload,
+} from './payment.interface'
 import { Payment } from './payment.model'
 import { JwtPayload } from 'jsonwebtoken'
 import { IPaginationOptions } from '../../../interfaces/pagination'
@@ -69,7 +73,8 @@ const createCheckoutSession = async (
       url: session.url!,
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Checkout session creation failed: ${errorMessage}`,
@@ -116,7 +121,10 @@ const verifyCheckoutSession = async (sessionId: string): Promise<IPayment> => {
 
         // Send confirmation email
         const user = await payment.populate('userId')
-        const userData = user.userId as unknown as { name: string; email: string }
+        const userData = user.userId as unknown as {
+          name: string
+          email: string
+        }
 
         if (userData) {
           await emailHelper.sendEmail({
@@ -143,7 +151,8 @@ const verifyCheckoutSession = async (sessionId: string): Promise<IPayment> => {
 
     return payment
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Payment verification failed: ${errorMessage}`,
@@ -179,9 +188,8 @@ const createPaymentIntent = async (
     }
 
     // Determine payable amount from payload (as Booking is missing)
-    const payableAmount = typeof payload.amount === 'number'
-      ? Number(payload.amount.toFixed(2))
-      : 0;
+    const payableAmount =
+      typeof payload.amount === 'number' ? Number(payload.amount.toFixed(2)) : 0
 
     if (payableAmount <= 0) {
       throw new ApiError(
@@ -259,7 +267,8 @@ const createPaymentIntent = async (
     }
   } catch (error: unknown) {
     if (error instanceof ApiError) throw error
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Payment Intent creation failed: ${errorMessage}`,
@@ -309,7 +318,8 @@ const createEphemeralKey = async (
       ephemeralKey: ephemeralKey.secret!,
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Ephemeral key creation failed: ${errorMessage}`,
@@ -361,7 +371,8 @@ const handlePaymentIntentWebhook = async (
       session.endSession()
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     console.error(`Webhook processing failed: ${errorMessage}`)
     throw error
   }
@@ -509,8 +520,9 @@ const refundPayment = async (
 
     // For checkout payments, paymentIntentId may hold session ID in older records.
     if (checkoutSessionId) {
-      const checkoutSession =
-        await stripe.checkout.sessions.retrieve(checkoutSessionId as string)
+      const checkoutSession = await stripe.checkout.sessions.retrieve(
+        checkoutSessionId as string,
+      )
       if (typeof checkoutSession.payment_intent === 'string') {
         refundPaymentIntentId = checkoutSession.payment_intent
       }
@@ -550,7 +562,8 @@ const refundPayment = async (
 
     return result!
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Refund failed: ${errorMessage}`,

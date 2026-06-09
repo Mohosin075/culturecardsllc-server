@@ -1,12 +1,12 @@
 import { Model, Types } from 'mongoose'
 
 export interface IPaymentPayload {
-  amount: number;
-  bookingId: string;
-  productName?: string;
-  description?: string;
-  metadata?: Record<string, unknown>;
-  paymentMethodId?: string;
+  amount: number
+  bookingId: string
+  productName?: string
+  description?: string
+  metadata?: Record<string, unknown>
+  paymentMethodId?: string
 }
 
 export type IPaymentFilterables = {

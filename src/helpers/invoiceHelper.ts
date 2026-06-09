@@ -28,9 +28,9 @@ export const generatePDFInvoice = async (
     doc
       .fillColor('#444444')
       .fontSize(20)
-      .text('PHOTOPYA', 50, 57)
+      .text('ARIES', 50, 57)
       .fontSize(10)
-      .text('Photopya Marketplace', 200, 50, { align: 'right' })
+      .text('Aries Marketplace', 200, 50, { align: 'right' })
       .text('123 Digital Square', 200, 65, { align: 'right' })
       .text('Tech City, TC 10101', 200, 80, { align: 'right' })
       .moveDown()
@@ -127,7 +127,7 @@ export const generatePDFInvoice = async (
       .fontSize(10)
       .fillColor('#aaaaaa')
       .text(
-        'Thank you for choosing Photopya. For assistance, contact support@photopya.com',
+        'Thank you for choosing Aries. For assistance, contact support@aries.com',
         50,
         700,
         { align: 'center', width: 500 },

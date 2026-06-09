@@ -15,7 +15,7 @@ const myFormat = printf(({ level, message, label, timestamp }) => {
 
 const logger = createLogger({
   level: 'info',
-  format: combine(label({ label: 'Photopya' }), timestamp(), myFormat),
+  format: combine(label({ label: 'Aries' }), timestamp(), myFormat),
   transports: [
     new transports.Console(),
     new DailyRotateFile({
@@ -24,7 +24,7 @@ const logger = createLogger({
         'logs',
         'winston',
         'successes',
-        'ph-%DATE%-success.log',
+        'aries-%DATE%-success.log',
       ),
       datePattern: 'YYYY-DD-MM-HH',
       zippedArchive: true,
@@ -36,7 +36,7 @@ const logger = createLogger({
 
 const errorLogger = createLogger({
   level: 'error',
-  format: combine(label({ label: 'Photopya' }), timestamp(), myFormat),
+  format: combine(label({ label: 'Aries' }), timestamp(), myFormat),
   transports: [
     new transports.Console(),
     new DailyRotateFile({
@@ -45,7 +45,7 @@ const errorLogger = createLogger({
         'logs',
         'winston',
         'errors',
-        'ph-%DATE%-error.log',
+        'aries-%DATE%-error.log',
       ),
       datePattern: 'YYYY-DD-MM-HH',
       zippedArchive: true,

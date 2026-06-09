@@ -1,46 +1,46 @@
-import { Schema, Document } from 'mongoose';
+import { Schema, Document } from 'mongoose'
 
-export type IPurchaseType = 'auction_win' | 'buy_now' | 'trade_swap';
+export type IPurchaseType = 'auction_win' | 'buy_now' | 'trade_swap'
 
-export type IDeliveryStatus = 'pending' | 'shipped' | 'delivered' | 'cancelled';
+export type IDeliveryStatus = 'pending' | 'shipped' | 'delivered' | 'cancelled'
 
 export interface IJourneyUpdate {
-  status: string;
-  description: string;
-  location?: string;
-  timestamp: Date;
+  status: string
+  description: string
+  location?: string
+  timestamp: Date
 }
 
 export interface IOrder extends Document {
-  buyerId: Schema.Types.ObjectId;
-  sellerId: Schema.Types.ObjectId;
-  productId: Schema.Types.ObjectId;
-  tradeOfferId?: Schema.Types.ObjectId;
-  purchaseType: IPurchaseType;
+  buyerId: Schema.Types.ObjectId
+  sellerId: Schema.Types.ObjectId
+  productId: Schema.Types.ObjectId
+  tradeOfferId?: Schema.Types.ObjectId
+  purchaseType: IPurchaseType
   amountDetails: {
-    itemSubtotal: number;
-    shipping: number;
-    taxes: number;
-    processingFee: number;
-    charityContribution: number;
-    totalPaid: number;
-  };
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  paymentIntentId?: string;
+    itemSubtotal: number
+    shipping: number
+    taxes: number
+    processingFee: number
+    charityContribution: number
+    totalPaid: number
+  }
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
+  paymentIntentId?: string
   shippingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-  deliveryStatus: IDeliveryStatus;
+    street: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+  deliveryStatus: IDeliveryStatus
   trackingDetails: {
-    carrier?: string;
-    trackingNumber?: string;
-    estimatedDelivery?: Date;
-    journeyUpdates: IJourneyUpdate[];
-  };
-  createdAt: Date;
-  updatedAt: Date;
+    carrier?: string
+    trackingNumber?: string
+    estimatedDelivery?: Date
+    journeyUpdates: IJourneyUpdate[]
+  }
+  createdAt: Date
+  updatedAt: Date
 }

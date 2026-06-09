@@ -5,8 +5,8 @@ Endpoint for presigned AWS S3 uploads, used to offload large media directly from
 ## Endpoint
 
 - POST `/upload/presign` (requires auth: USER, ADMIN, SUPER_ADMIN)
-- Route: [`upload.route.ts`](file:///d:/Mohosin/Mohosin/projects/Photopya-ayoubouajj/src/app/modules/upload/upload.route.ts)
-- Controller: [`upload.controller.ts`](file:///d:/Mohosin/Mohosin/projects/Photopya-ayoubouajj/src/app/modules/upload/upload.controller.ts)
+- Route: [`upload.route.ts`](./upload.route.ts)
+- Controller: [`upload.controller.ts`](./upload.controller.ts)
 
 ## Request
 

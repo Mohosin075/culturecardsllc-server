@@ -6,9 +6,9 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Photopya API Documentation',
+      title: 'Aries API Documentation',
       version: '1.0.0',
-      description: 'API documentation for Photopya backend',
+      description: 'API documentation for Aries backend',
     },
     servers: [
       {

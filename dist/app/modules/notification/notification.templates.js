@@ -1,38 +1,38 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.EmailTemplates = void 0;
-const notification_constant_1 = require("./notification.constant");
+'use strict'
+Object.defineProperty(exports, '__esModule', { value: true })
+exports.EmailTemplates = void 0
+const notification_constant_1 = require('./notification.constant')
 class EmailTemplates {
-    static getTemplate(templateName, data) {
-        const template = this.templates[templateName];
-        if (!template) {
-            throw new Error(`Template ${templateName} not found`);
-        }
-        let html = this.baseStyles;
-        html += `<div class="container">`;
-        html += this.header(template.getTitle(data));
-        html += `<div class="content">`;
-        html += template.getBody(data);
-        if (data.actionUrl && data.actionText) {
-            html += `<div style="text-align: center; margin-top: 30px;">
+  static getTemplate(templateName, data) {
+    const template = this.templates[templateName]
+    if (!template) {
+      throw new Error(`Template ${templateName} not found`)
+    }
+    let html = this.baseStyles
+    html += `<div class="container">`
+    html += this.header(template.getTitle(data))
+    html += `<div class="content">`
+    html += template.getBody(data)
+    if (data.actionUrl && data.actionText) {
+      html += `<div style="text-align: center; margin-top: 30px;">
                 <a href="${data.actionUrl}" class="button">${data.actionText}</a>
-              </div>`;
-        }
-        html += `</div>`;
-        html += this.footer;
-        html += `</div>`;
-        return {
-            subject: template.getSubject(data),
-            html: this.replacePlaceholders(html, data),
-        };
+              </div>`
     }
-    static replacePlaceholders(html, data) {
-        return html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-            return data[key] !== undefined ? data[key] : match;
-        });
+    html += `</div>`
+    html += this.footer
+    html += `</div>`
+    return {
+      subject: template.getSubject(data),
+      html: this.replacePlaceholders(html, data),
     }
+  }
+  static replacePlaceholders(html, data) {
+    return html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return data[key] !== undefined ? data[key] : match
+    })
+  }
 }
-exports.EmailTemplates = EmailTemplates;
+exports.EmailTemplates = EmailTemplates
 EmailTemplates.baseStyles = `
     <style>
       * { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
@@ -49,29 +49,29 @@ EmailTemplates.baseStyles = `
       .ticket-qr { text-align: center; margin: 20px 0; }
       .qr-code { max-width: 200px; height: auto; }
     </style>
-  `;
-EmailTemplates.header = (title) => `
+  `
+EmailTemplates.header = title => `
     <div class="header">
       <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">${title}</h1>
     </div>
-  `;
+  `
 EmailTemplates.footer = `
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Photopya. All rights reserved.</p>
-      <p>This email was sent by Photopya. If you have any questions, contact us at support@Photopya.com</p>
+      <p>© ${new Date().getFullYear()} Aries. All rights reserved.</p>
+      <p>This email was sent by Aries. If you have any questions, contact us at support@aries.com</p>
       <p>
         <a href="{{unsubscribeLink}}" style="color: #667eea; text-decoration: none;">Unsubscribe</a> | 
         <a href="{{privacyLink}}" style="color: #667eea; text-decoration: none;">Privacy Policy</a> | 
         <a href="{{termsLink}}" style="color: #667eea; text-decoration: none;">Terms of Service</a>
       </p>
     </div>
-  `;
+  `
 EmailTemplates.templates = {
-    // Welcome Email
-    [notification_constant_1.NOTIFICATION_TEMPLATES.WELCOME]: {
-        getTitle: (data) => `Welcome to Photopya, ${data.userName}!`,
-        getSubject: (data) => `Welcome to Photopya!`,
-        getBody: (data) => `
+  // Welcome Email
+  [notification_constant_1.NOTIFICATION_TEMPLATES.WELCOME]: {
+    getTitle: data => `Welcome to Aries, ${data.userName}!`,
+    getSubject: data => `Welcome to Aries!`,
+    getBody: data => `
         <h2>Welcome aboard, ${data.userName}!</h2>
         <p>We're excited to have you join our community of event enthusiasts. Here's what you can do:</p>
         <ul>
@@ -82,12 +82,12 @@ EmailTemplates.templates = {
         </ul>
         <p>Start exploring now and find events that match your interests!</p>
       `,
-    },
-    // Payment Success
-    [notification_constant_1.NOTIFICATION_TEMPLATES.PAYMENT_SUCCESS]: {
-        getTitle: (data) => `Payment Successful!`,
-        getSubject: (data) => `Payment Successful - ${data.eventTitle}`,
-        getBody: (data) => `
+  },
+  // Payment Success
+  [notification_constant_1.NOTIFICATION_TEMPLATES.PAYMENT_SUCCESS]: {
+    getTitle: data => `Payment Successful!`,
+    getSubject: data => `Payment Successful - ${data.eventTitle}`,
+    getBody: data => `
         <h2>✅ Payment Successful</h2>
         <p>Your payment for <strong>${data.eventTitle}</strong> has been processed successfully.</p>
         
@@ -115,12 +115,12 @@ EmailTemplates.templates = {
         <p><strong>Need help?</strong></p>
         <p>If you have any questions about your purchase, please contact our support team.</p>
       `,
-    },
-    // Password Reset
-    [notification_constant_1.NOTIFICATION_TEMPLATES.PASSWORD_RESET]: {
-        getTitle: (data) => `Reset Your Password`,
-        getSubject: (data) => `Password Reset Request`,
-        getBody: (data) => `
+  },
+  // Password Reset
+  [notification_constant_1.NOTIFICATION_TEMPLATES.PASSWORD_RESET]: {
+    getTitle: data => `Reset Your Password`,
+    getSubject: data => `Password Reset Request`,
+    getBody: data => `
         <h2>Reset Your Password</h2>
         <p>We received a request to reset your password for your EventHub account.</p>
         
@@ -146,12 +146,12 @@ EmailTemplates.templates = {
 
         <p>If you didn't request this password reset, please ignore this email or contact support if you're concerned.</p>
       `,
-    },
-    // Account Verification
-    [notification_constant_1.NOTIFICATION_TEMPLATES.ACCOUNT_VERIFICATION]: {
-        getTitle: (data) => `Verify Your Account`,
-        getSubject: (data) => `Verify Your EventHub Account`,
-        getBody: (data) => `
+  },
+  // Account Verification
+  [notification_constant_1.NOTIFICATION_TEMPLATES.ACCOUNT_VERIFICATION]: {
+    getTitle: data => `Verify Your Account`,
+    getSubject: data => `Verify Your EventHub Account`,
+    getBody: data => `
         <h2>Verify Your Email Address</h2>
         <p>Thank you for signing up! Please verify your email address to complete your registration.</p>
         
@@ -169,11 +169,11 @@ EmailTemplates.templates = {
         <ul>
           <li>Secure your account</li>
           <li>Receive important event notifications</li>
-          <li>Access all features of Photopya</li>
+          <li>Access all features of Aries</li>
           <li>Get personalized event recommendations</li>
         </ul>
 
         <p>This verification link will expire in 24 hours.</p>
       `,
-    },
-};
+  },
+}
