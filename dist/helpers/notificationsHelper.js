@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 // import { INotification } from '../app/modules/notification/notification.interface'
 // import { Notification } from '../app/modules/notification/notification.model'
 // import { User } from '../app/modules/user/user.model'

@@ -1,95 +1,29 @@
-'use strict'
-var __importDefault =
-  (this && this.__importDefault) ||
-  function (mod) {
-    return mod && mod.__esModule ? mod : { default: mod }
-  }
-Object.defineProperty(exports, '__esModule', { value: true })
-exports.DashboardRoutes = void 0
-const express_1 = __importDefault(require('express'))
-const dashboard_controller_1 = require('./dashboard.controller')
-const auth_1 = __importDefault(require('../../middleware/auth'))
-const user_1 = require('../../../enum/user')
-const router = express_1.default.Router()
-router.get(
-  '/overview',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getOverviewData,
-)
-router.get(
-  '/users',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getUsersData,
-)
-router.get(
-  '/seller-verifications',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getSellerVerificationsData,
-)
-router.get(
-  '/listings',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getListingsData,
-)
-router.get(
-  '/live-streams',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getLiveStreamsData,
-)
-router.get(
-  '/trades',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getTradesData,
-)
-router.get(
-  '/orders',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getOrdersData,
-)
-router.get(
-  '/disputes',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getDisputesData,
-)
-router.get(
-  '/payments',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getPaymentsData,
-)
-router.get(
-  '/boosted-listings',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getBoostedListingsData,
-)
-router.get(
-  '/categories',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getCategoriesData,
-)
-router.get(
-  '/notifications',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getNotificationsData,
-)
-router.patch(
-  '/notifications/mark-all-read',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.markAllNotificationsAsRead,
-)
-router.get(
-  '/reports',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getReportsData,
-)
-router.get(
-  '/settings',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.getSettingsData,
-)
-router.patch(
-  '/settings',
-  (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN),
-  dashboard_controller_1.dashboardController.updateSettingsData,
-)
-exports.DashboardRoutes = router
-exports.default = exports.DashboardRoutes
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DashboardRoutes = void 0;
+const express_1 = __importDefault(require("express"));
+const dashboard_controller_1 = require("./dashboard.controller");
+const auth_1 = __importDefault(require("../../middleware/auth"));
+const user_1 = require("../../../enum/user");
+const router = express_1.default.Router();
+router.get('/overview', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getOverviewData);
+router.get('/users', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getUsersData);
+router.get('/seller-verifications', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getSellerVerificationsData);
+router.get('/listings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getListingsData);
+router.get('/live-streams', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getLiveStreamsData);
+router.get('/trades', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getTradesData);
+router.get('/orders', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getOrdersData);
+router.get('/disputes', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getDisputesData);
+router.get('/payments', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getPaymentsData);
+router.get('/boosted-listings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getBoostedListingsData);
+router.get('/categories', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getCategoriesData);
+router.get('/notifications', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getNotificationsData);
+router.patch('/notifications/mark-all-read', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.markAllNotificationsAsRead);
+router.get('/reports', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getReportsData);
+router.get('/settings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getSettingsData);
+router.patch('/settings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.updateSettingsData);
+exports.DashboardRoutes = router;
+exports.default = exports.DashboardRoutes;

@@ -1,84 +1,81 @@
-'use strict'
-Object.defineProperty(exports, '__esModule', { value: true })
-exports.Order = void 0
-const mongoose_1 = require('mongoose')
-const OrderSchema = new mongoose_1.Schema(
-  {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Order = void 0;
+const mongoose_1 = require("mongoose");
+const OrderSchema = new mongoose_1.Schema({
     buyerId: {
-      type: mongoose_1.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true,
     },
     sellerId: {
-      type: mongoose_1.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true,
     },
     productId: {
-      type: mongoose_1.Schema.Types.ObjectId,
-      ref: 'Product',
-      required: true,
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true,
     },
     tradeOfferId: {
-      type: mongoose_1.Schema.Types.ObjectId,
-      ref: 'TradeOffer',
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'TradeOffer',
     },
     purchaseType: {
-      type: String,
-      enum: ['auction_win', 'buy_now', 'trade_swap'],
-      required: true,
+        type: String,
+        enum: ['auction_win', 'buy_now', 'trade_swap'],
+        required: true,
     },
     amountDetails: {
-      itemSubtotal: { type: Number, required: true, min: 0 },
-      shipping: { type: Number, default: 0, min: 0 },
-      taxes: { type: Number, default: 0, min: 0 },
-      processingFee: { type: Number, default: 0, min: 0 },
-      charityContribution: { type: Number, default: 0, min: 0 },
-      totalPaid: { type: Number, required: true, min: 0 },
+        itemSubtotal: { type: Number, required: true, min: 0 },
+        shipping: { type: Number, default: 0, min: 0 },
+        taxes: { type: Number, default: 0, min: 0 },
+        processingFee: { type: Number, default: 0, min: 0 },
+        charityContribution: { type: Number, default: 0, min: 0 },
+        totalPaid: { type: Number, required: true, min: 0 },
     },
     paymentStatus: {
-      type: String,
-      enum: ['pending', 'paid', 'failed', 'refunded'],
-      default: 'pending',
-      index: true,
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'refunded'],
+        default: 'pending',
+        index: true,
     },
     paymentIntentId: {
-      type: String,
+        type: String,
     },
     shippingAddress: {
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      postalCode: { type: String, required: true },
-      country: { type: String, required: true },
+        street: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        postalCode: { type: String, required: true },
+        country: { type: String, required: true },
     },
     deliveryStatus: {
-      type: String,
-      enum: ['pending', 'shipped', 'delivered', 'cancelled'],
-      default: 'pending',
-      index: true,
+        type: String,
+        enum: ['pending', 'shipped', 'delivered', 'cancelled'],
+        default: 'pending',
+        index: true,
     },
     trackingDetails: {
-      carrier: { type: String },
-      trackingNumber: { type: String },
-      estimatedDelivery: { type: Date },
-      journeyUpdates: [
-        {
-          status: { type: String, required: true },
-          description: { type: String, required: true },
-          location: { type: String },
-          timestamp: { type: Date, default: Date.now },
-        },
-      ],
+        carrier: { type: String },
+        trackingNumber: { type: String },
+        estimatedDelivery: { type: Date },
+        journeyUpdates: [
+            {
+                status: { type: String, required: true },
+                description: { type: String, required: true },
+                location: { type: String },
+                timestamp: { type: Date, default: Date.now },
+            },
+        ],
     },
-  },
-  {
+}, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  },
-)
-exports.Order = (0, mongoose_1.model)('Order', OrderSchema)
-exports.default = exports.Order
+});
+exports.Order = (0, mongoose_1.model)('Order', OrderSchema);
+exports.default = exports.Order;

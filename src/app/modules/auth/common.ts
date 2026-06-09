@@ -17,7 +17,7 @@ const handleLoginLogic = async (
 ): Promise<IAuthResponse> => {
   const { authentication, verified, status, password } = isUserExist
 
-  const { restrictionLeftAt, wrongLoginAttempts } = authentication
+  const { restrictionLeftAt, wrongLoginAttempts = 0 } = authentication || {}
 
   if (!verified) {
     //send otp to user
@@ -81,9 +81,14 @@ const handleLoginLogic = async (
   )
 
   if (!isPasswordMatched) {
-    isUserExist.authentication.wrongLoginAttempts = wrongLoginAttempts + 1
+    if (!isUserExist.authentication) {
+      isUserExist.authentication = {} as any
+    }
+    const currentAttempts = wrongLoginAttempts || 0
+    const newAttempts = currentAttempts + 1
+    isUserExist.authentication.wrongLoginAttempts = newAttempts
 
-    if (isUserExist.authentication.wrongLoginAttempts >= 5) {
+    if (newAttempts >= 5) {
       isUserExist.status = USER_STATUS.INACTIVE
       isUserExist.authentication.restrictionLeftAt = new Date(
         Date.now() + 10 * 60 * 1000,
@@ -94,9 +99,8 @@ const handleLoginLogic = async (
       $set: {
         status: isUserExist.status,
         'authentication.restrictionLeftAt':
-          isUserExist.authentication.restrictionLeftAt,
-        'authentication.wrongLoginAttempts':
-          isUserExist.authentication.wrongLoginAttempts,
+          isUserExist.authentication.restrictionLeftAt || null,
+        'authentication.wrongLoginAttempts': newAttempts,
       },
     })
 
