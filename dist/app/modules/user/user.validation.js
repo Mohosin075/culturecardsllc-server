@@ -30,7 +30,9 @@ const pointSchema = zod_1.z.object({
 exports.updateUserSchema = zod_1.z.object({
     body: zod_1.z.object({
         name: zod_1.z.string().optional(),
+        username: zod_1.z.string().optional(),
         profile: zod_1.z.string().optional(),
+        coverPhoto: zod_1.z.string().optional(),
         phone: zod_1.z.string().optional(),
         description: zod_1.z.string().optional(),
         specialty: zod_1.z.string().optional(),

@@ -31,7 +31,9 @@ const pointSchema = z.object({
 export const updateUserSchema = z.object({
   body: z.object({
     name: z.string().optional(),
+    username: z.string().optional(),
     profile: z.string().optional(),
+    coverPhoto: z.string().optional(),
     phone: z.string().optional(),
     description: z.string().optional(),
     specialty: z.string().optional(),

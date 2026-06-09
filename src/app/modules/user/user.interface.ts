@@ -41,8 +41,10 @@ export type IUser = {
   _id: Types.ObjectId
   name?: string
   fullName?: string
+  username?: string
   email?: string
   profile?: string
+  coverPhoto?: string
   phone?: string
   description?: string
   interest?: InterestCategory[]

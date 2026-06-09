@@ -65,6 +65,7 @@ app.use((0, morgan_1.default)('dev'));
 // -------------------- Static Files --------------------
 // Serve uploads folder statically
 app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
+app.use(express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 // -------------------- API Routes --------------------
 app.use('/api/v1', routes_1.default);
 // Swagger Documentation

@@ -25,6 +25,33 @@ const updateProfile = async (user: JwtPayload, payload: Partial<IUser>) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
   }
 
+  if (payload.username) {
+    const trimmedUsername = payload.username.trim().toLowerCase()
+
+    // Validate username format (alphanumeric and underscores, 3-20 chars)
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(trimmedUsername)) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Username must be between 3 and 20 characters and contain only letters, numbers, and underscores.',
+      )
+    }
+
+    const isUsernameTaken = await User.findOne({
+      username: trimmedUsername,
+      _id: { $ne: user.userId },
+      status: { $nin: [USER_STATUS.DELETED] },
+    })
+
+    if (isUsernameTaken) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Username is already taken.',
+      )
+    }
+
+    payload.username = trimmedUsername
+  }
+
   // if (isUserExist.profile) {
   //   const url = new URL(isUserExist.profile)
   //   const key = url.pathname.substring(1)

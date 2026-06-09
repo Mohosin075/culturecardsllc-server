@@ -75,6 +75,7 @@ app.use(morgan('dev'))
 // -------------------- Static Files --------------------
 // Serve uploads folder statically
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
+app.use(express.static(path.join(process.cwd(), 'uploads')))
 
 // -------------------- API Routes --------------------
 app.use('/api/v1', router)

@@ -11,8 +11,10 @@ const user_1 = require("../../../enum/user");
 const UserSchema = new mongoose_1.Schema({
     name: { type: String, trim: true },
     fullName: { type: String, trim: true },
+    username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     email: { type: String, unique: true, lowercase: true, required: true },
     profile: { type: String, default: '/images/1767048629458-l94gk7.jpg' },
+    coverPhoto: { type: String, default: '' },
     phone: { type: String },
     description: { type: String },
     interest: { type: [String], enum: Object.values(user_1.InterestCategory) },
