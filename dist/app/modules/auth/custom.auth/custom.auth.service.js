@@ -84,11 +84,11 @@ const createUser = async (payload) => {
     // Extract role from payload (if provided)
     const { role, ...userData } = payload;
     // Initialize roles and activeRole based on signup choice
-    const roles = [user_1.USER_ROLES.USER];
-    let activeRole = user_1.USER_ROLES.USER;
-    if (role === user_1.USER_ROLES.PROFESSIONAL) {
-        roles.push(user_1.USER_ROLES.PROFESSIONAL);
-        activeRole = user_1.USER_ROLES.PROFESSIONAL;
+    const roles = [user_1.USER_ROLES.BUYER];
+    let activeRole = user_1.USER_ROLES.BUYER;
+    if (role === user_1.USER_ROLES.SELLER) {
+        roles.push(user_1.USER_ROLES.SELLER);
+        activeRole = user_1.USER_ROLES.SELLER;
     }
     const user = await user_model_1.User.create({
         ...userData,

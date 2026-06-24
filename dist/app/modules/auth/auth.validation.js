@@ -149,7 +149,7 @@ const createUserZodSchema = zod_1.z.object({
         }, { message: 'Invalid phone number' })
             .optional(),
         address: addressSchema.optional(),
-        role: zod_1.z.enum([user_1.USER_ROLES.USER, user_1.USER_ROLES.PROFESSIONAL]).optional(),
+        role: zod_1.z.enum([user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER]).optional(),
     }),
 });
 const socialLoginZodSchema = zod_1.z.object({

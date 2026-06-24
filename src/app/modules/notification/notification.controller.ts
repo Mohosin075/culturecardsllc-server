@@ -81,8 +81,8 @@ const updateNotification = catchAsync(async (req: Request, res: Response) => {
   const result = await NotificationServices.updateNotification(
     id,
     req.body,
-    user.activeRole === USER_ROLES.USER ||
-      user.activeRole === USER_ROLES.PROFESSIONAL
+    user.activeRole === USER_ROLES.BUYER ||
+      user.activeRole === USER_ROLES.SELLER
       ? user.userId
       : undefined,
   )

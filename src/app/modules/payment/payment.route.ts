@@ -8,32 +8,32 @@ import { USER_ROLES } from '../../../enum/user'
 const router = express.Router()
 
 // ============================================
-// 1. PAYMENT METHOD MANAGEMENT (USER ONLY)
+// 1. PAYMENT METHOD MANAGEMENT (BUYER ONLY)
 // ============================================
 
 // GET /methods must be before GET /:id
 router.get(
   '/methods',
-  auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.getMyPaymentMethods,
 )
 
 router.post(
   '/create-setup-intent',
-  auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.createSetupIntent,
 )
 
 // Specific PATCH must be before generic PATCH /:id
 router.patch(
   '/methods/:id/default',
-  auth(USER_ROLES.USER),
+  auth(USER_ROLES.BUYER),
   PaymentController.setDefaultPaymentMethod,
 )
 
 router.delete(
   '/methods/:id',
-  auth(USER_ROLES.USER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.deletePaymentMethod,
 )
 
@@ -43,22 +43,22 @@ router.delete(
 
 router.post(
   '/create-checkout-session',
-  auth(USER_ROLES.PROFESSIONAL, USER_ROLES.USER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
   validateRequest(PaymentValidations.create),
   PaymentController.createCheckoutSession,
 )
 
 router.get(
   '/verify-checkout/:sessionId',
-  auth(USER_ROLES.PROFESSIONAL, USER_ROLES.USER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
   PaymentController.verifyCheckoutSession,
 )
 
 router.post(
   '/create-payment-intent',
   auth(
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
     USER_ROLES.ADMIN,
   ),
@@ -68,7 +68,7 @@ router.post(
 
 router.post(
   '/ephemeral-key',
-  auth(USER_ROLES.PROFESSIONAL, USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.SUPER_ADMIN),
   PaymentController.createEphemeralKey,
 )
 
@@ -79,8 +79,8 @@ router.post(
 router.get(
   '/',
   auth(
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
     USER_ROLES.ADMIN,
   ),
@@ -90,8 +90,8 @@ router.get(
 router.get(
   '/my-payments',
   auth(
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
     USER_ROLES.ADMIN,
   ),
@@ -102,8 +102,8 @@ router.get(
 router.get(
   '/:id/invoice',
   auth(
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
     USER_ROLES.ADMIN,
   ),
@@ -126,7 +126,7 @@ router.patch(
 
 router.get(
   '/:id',
-  auth(USER_ROLES.PROFESSIONAL, USER_ROLES.USER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
   PaymentController.getSinglePayment,
 )
 

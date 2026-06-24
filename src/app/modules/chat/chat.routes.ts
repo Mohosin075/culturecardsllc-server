@@ -6,26 +6,26 @@ const router = express.Router()
 
 router.post(
   '/contact-admin',
-  auth(USER_ROLES.USER, USER_ROLES.PROFESSIONAL),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
   ChatController.createAdminChat,
 )
 router.post(
   '/:id',
   auth(
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   ChatController.createChat,
 )
 router.get(
   '/',
   auth(
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   ChatController.getChat,
 )

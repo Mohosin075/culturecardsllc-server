@@ -53,11 +53,11 @@ class DashboardService {
       ] = await Promise.all([
         User.countDocuments({
           status: USER_STATUS.ACTIVE,
-          roles: USER_ROLES.USER,
+          roles: USER_ROLES.BUYER,
         }),
         User.countDocuments({
           status: USER_STATUS.ACTIVE,
-          roles: USER_ROLES.PROFESSIONAL,
+          roles: USER_ROLES.SELLER,
         }),
         LiveStream.countDocuments({ status: 'live' }),
         TradeOffer.countDocuments({ createdAt: { $gte: startOfToday } }),
@@ -305,11 +305,11 @@ class DashboardService {
 
           let displayRole: any = 'Buyer'
           if (
-            u.roles.includes(USER_ROLES.PROFESSIONAL) &&
-            u.roles.includes(USER_ROLES.USER)
+            u.roles.includes(USER_ROLES.SELLER) &&
+            u.roles.includes(USER_ROLES.BUYER)
           ) {
             displayRole = 'Buyer/Seller'
-          } else if (u.roles.includes(USER_ROLES.PROFESSIONAL)) {
+          } else if (u.roles.includes(USER_ROLES.SELLER)) {
             displayRole = 'Seller'
           } else if (u.roles.includes('trader')) {
             displayRole = 'Trader'
@@ -346,7 +346,7 @@ class DashboardService {
   ): Promise<ISellerVerificationRequest[]> {
     try {
       const pendingSellers = await User.find({
-        roles: USER_ROLES.PROFESSIONAL,
+        roles: USER_ROLES.SELLER,
         verified: false,
         status: USER_STATUS.ACTIVE,
       }).limit(20)

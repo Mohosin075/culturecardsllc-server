@@ -244,13 +244,13 @@ const switchRole = async (user, role) => {
     if (!isUserExist) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
-    // Special case: User wants to become professional but doesn't have the role yet
-    if (role === user_1.USER_ROLES.PROFESSIONAL &&
-        !isUserExist.roles.includes(user_1.USER_ROLES.PROFESSIONAL)) {
+    // Special case: User wants to become seller but doesn't have the role yet
+    if (role === user_1.USER_ROLES.SELLER &&
+        !isUserExist.roles.includes(user_1.USER_ROLES.SELLER)) {
         // ProfessionalProfile logic removed
-        // Add the professional role to the user
+        // Add the seller role to the user
         await user_model_1.User.findByIdAndUpdate(user.userId, {
-            $addToSet: { roles: user_1.USER_ROLES.PROFESSIONAL },
+            $addToSet: { roles: user_1.USER_ROLES.SELLER },
         });
     }
     else if (!isUserExist.roles.includes(role)) {

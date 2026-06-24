@@ -40,7 +40,7 @@ export const createSubscriptionPlanSchema = z.object({
       .default(1),
     userTypes: z
       .array(
-        z.enum(['user', 'professional', 'admin', 'super_admin'], {
+        z.enum(['buyer', 'seller', 'admin', 'super_admin'], {
           errorMap: () => ({ message: 'Invalid user type' }),
         }),
       )
@@ -110,7 +110,7 @@ export const createCheckoutSessionSchema = z.object({
 export const getPlansQuerySchema = z.object({
   query: z.object({
     userType: z
-      .enum(['user', 'professional', 'admin', 'super_admin'])
+      .enum(['buyer', 'seller', 'admin', 'super_admin'])
       .optional(),
   }),
 })

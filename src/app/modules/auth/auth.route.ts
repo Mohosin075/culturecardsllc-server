@@ -20,14 +20,6 @@ router.post(
   CustomAuthController.adminLogin,
 )
 
-// i disabled the local login route because it is not used in the app
-// router.post(
-//   '/login',
-//   validateRequest(AuthValidations.loginZodSchema),
-//   passport.authenticate('local', { session: false }),
-//   PassportAuthController.login,
-// )
-
 router.get(
   '/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }),
@@ -65,7 +57,6 @@ router.post(
 
 router.post(
   '/resend-otp',
-  // tempAuth(USER_ROLES.ADMIN, USER_ROLES.USER),
   validateRequest(AuthValidations.resendOtpZodSchema),
   CustomAuthController.resendOtp,
 )
@@ -74,8 +65,8 @@ router.post(
   '/change-password',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.SUPER_ADMIN,
   ),
   validateRequest(AuthValidations.changePasswordZodSchema),
@@ -84,7 +75,7 @@ router.post(
 
 router.delete(
   '/delete-account',
-  auth(USER_ROLES.ADMIN, USER_ROLES.USER),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER),
   validateRequest(AuthValidations.deleteAccount),
   CustomAuthController.deleteAccount,
 )
@@ -100,8 +91,8 @@ router.post(
   '/logout',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.SUPER_ADMIN,
   ),
   CustomAuthController.logout,

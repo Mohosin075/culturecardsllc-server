@@ -67,7 +67,7 @@ const subscriptionPlanSchema = new mongoose_1.Schema({
     userTypes: [
         {
             type: String,
-            enum: ['user', 'professional', 'admin', 'super_admin'],
+            enum: ['buyer', 'seller', 'admin', 'super_admin'],
             required: true,
         },
     ],

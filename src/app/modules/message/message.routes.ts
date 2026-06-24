@@ -9,8 +9,8 @@ router.post(
   '/',
   fileAndBodyProcessorUsingDiskStorage(),
   auth(
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
   ),
@@ -19,8 +19,8 @@ router.post(
 router.get(
   '/:id',
   auth(
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
   ),

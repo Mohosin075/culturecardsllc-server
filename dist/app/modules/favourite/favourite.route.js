@@ -11,6 +11,6 @@ const user_1 = require("../../../enum/user");
 const validateRequest_1 = __importDefault(require("../../middleware/validateRequest"));
 const favourite_validation_1 = require("./favourite.validation");
 const router = express_1.default.Router();
-router.post('/toggle', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.PROFESSIONAL, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(favourite_validation_1.FavouriteValidation.toggleFavouriteZodSchema), favourite_controller_1.FavouriteController.toggleFavourite);
-router.get('/my-favourites', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.PROFESSIONAL, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), favourite_controller_1.FavouriteController.getMyFavourites);
+router.post('/toggle', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(favourite_validation_1.FavouriteValidation.toggleFavouriteZodSchema), favourite_controller_1.FavouriteController.toggleFavourite);
+router.get('/my-favourites', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), favourite_controller_1.FavouriteController.getMyFavourites);
 exports.FavouriteRoutes = router;

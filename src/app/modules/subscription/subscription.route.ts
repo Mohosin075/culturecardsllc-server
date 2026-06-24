@@ -27,9 +27,9 @@ router.get(
   '/trial-eligibility/:userId?',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.checkTrialEligibility),
   SubscriptionController.checkTrialEligibility,
@@ -39,9 +39,9 @@ router.post(
   '/create',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.createSubscription),
   SubscriptionController.createSubscription,
@@ -51,9 +51,9 @@ router.get(
   '/my-subscription',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   SubscriptionController.getUserSubscription,
 )
@@ -62,9 +62,9 @@ router.patch(
   '/:subscriptionId',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.subscriptionParams),
   validateRequest(subscriptionValidation.updateSubscription),
@@ -75,9 +75,9 @@ router.delete(
   '/:subscriptionId/cancel',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.subscriptionParams),
   SubscriptionController.cancelSubscription,
@@ -87,9 +87,9 @@ router.get(
   '/status',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
 
   SubscriptionController.getSubscriptionStatus,
@@ -99,9 +99,9 @@ router.post(
   '/checkout-session',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.createCheckoutSession),
   SubscriptionController.createCheckoutSession,
@@ -111,9 +111,9 @@ router.post(
   '/:subscriptionId/reactivate',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.subscriptionParams),
   SubscriptionController.reactivateSubscription,
@@ -123,9 +123,9 @@ router.post(
   '/:subscriptionId/pause',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.subscriptionParams),
   SubscriptionController.pauseSubscription,
@@ -135,9 +135,9 @@ router.post(
   '/:subscriptionId/resume',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   validateRequest(subscriptionValidation.subscriptionParams),
   SubscriptionController.resumeSubscription,
@@ -147,9 +147,9 @@ router.get(
   '/usage',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
 
   SubscriptionController.getUsageData,
@@ -157,13 +157,13 @@ router.get(
 
 router.get(
   '/usage/warnings',
-  auth(USER_ROLES.ADMIN, USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SUPER_ADMIN),
   SubscriptionController.getUsageWarnings,
 )
 
 router.post(
   '/billing-portal',
-  auth(USER_ROLES.ADMIN, USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SUPER_ADMIN),
   validateRequest(subscriptionValidation.createBillingPortal),
   SubscriptionController.createBillingPortal,
 )

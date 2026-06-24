@@ -41,8 +41,8 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     passReqToCallback: true,
 }, async (req, accessToken, refreshToken, profile, done) => {
     req.body.profile = profile;
-    req.body.roles = [user_1.USER_ROLES.USER];
-    req.body.activeRole = user_1.USER_ROLES.USER;
+    req.body.roles = [user_1.USER_ROLES.BUYER];
+    req.body.activeRole = user_1.USER_ROLES.BUYER;
     try {
         return done(null, req.body);
     }

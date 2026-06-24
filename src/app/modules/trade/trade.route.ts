@@ -14,7 +14,7 @@ const router = express.Router()
 // POST /offer — Create new trade offer (authenticated users)
 router.post(
   '/offer',
-  auth(USER_ROLES.USER, USER_ROLES.PROFESSIONAL),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
   validateRequest(TradeValidations.createTradeOfferSchema),
   TradeControllers.createTradeOffer,
 )
@@ -22,21 +22,21 @@ router.post(
 // GET /offers — List sent or received trade offers
 router.get(
   '/offers',
-  auth(USER_ROLES.USER, USER_ROLES.PROFESSIONAL, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   TradeControllers.getTradeOffers,
 )
 
 // POST /accept/:id — Accept a trade offer (receiver only)
 router.post(
   '/accept/:id',
-  auth(USER_ROLES.USER, USER_ROLES.PROFESSIONAL),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
   TradeControllers.acceptTradeOffer,
 )
 
 // POST /decline/:id — Decline a trade offer (receiver only)
 router.post(
   '/decline/:id',
-  auth(USER_ROLES.USER, USER_ROLES.PROFESSIONAL),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
   TradeControllers.declineTradeOffer,
 )
 

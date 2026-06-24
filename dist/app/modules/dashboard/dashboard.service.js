@@ -27,11 +27,11 @@ class DashboardService {
             const [totalUsers, activeSellers, liveStreamsNow, totalTradesToday, pendingDisputes,] = await Promise.all([
                 user_model_1.User.countDocuments({
                     status: user_1.USER_STATUS.ACTIVE,
-                    roles: user_1.USER_ROLES.USER,
+                    roles: user_1.USER_ROLES.BUYER,
                 }),
                 user_model_1.User.countDocuments({
                     status: user_1.USER_STATUS.ACTIVE,
-                    roles: user_1.USER_ROLES.PROFESSIONAL,
+                    roles: user_1.USER_ROLES.SELLER,
                 }),
                 auction_model_1.LiveStream.countDocuments({ status: 'live' }),
                 trade_model_1.TradeOffer.countDocuments({ createdAt: { $gte: startOfToday } }),
@@ -248,11 +248,11 @@ class DashboardService {
                 ]);
                 const totalTransactions = ordersCount + tradesCount;
                 let displayRole = 'Buyer';
-                if (u.roles.includes(user_1.USER_ROLES.PROFESSIONAL) &&
-                    u.roles.includes(user_1.USER_ROLES.USER)) {
+                if (u.roles.includes(user_1.USER_ROLES.SELLER) &&
+                    u.roles.includes(user_1.USER_ROLES.BUYER)) {
                     displayRole = 'Buyer/Seller';
                 }
-                else if (u.roles.includes(user_1.USER_ROLES.PROFESSIONAL)) {
+                else if (u.roles.includes(user_1.USER_ROLES.SELLER)) {
                     displayRole = 'Seller';
                 }
                 else if (u.roles.includes('trader')) {
@@ -283,7 +283,7 @@ class DashboardService {
     async getSellerVerificationsData(query) {
         try {
             const pendingSellers = await user_model_1.User.find({
-                roles: user_1.USER_ROLES.PROFESSIONAL,
+                roles: user_1.USER_ROLES.SELLER,
                 verified: false,
                 status: user_1.USER_STATUS.ACTIVE,
             }).limit(20);

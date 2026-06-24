@@ -14,7 +14,7 @@ const router = express.Router()
 
 router.patch(
   '/switch-role',
-  auth(USER_ROLES.USER, USER_ROLES.PROFESSIONAL),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
   validateRequest(switchRoleSchema),
   UserController.switchRole,
 )
@@ -23,9 +23,9 @@ router.get(
   '/profile',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
   UserController.getProfile,
 )
@@ -34,9 +34,9 @@ router.patch(
   '/profile',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
+    USER_ROLES.BUYER,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.SELLER,
   ),
 
   fileAndBodyProcessorUsingDiskStorage(),
@@ -47,7 +47,7 @@ router.patch(
 
 router.delete(
   '/profile',
-  auth(USER_ROLES.ADMIN, USER_ROLES.USER),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER),
   UserController.deleteProfile,
 )
 
@@ -55,8 +55,8 @@ router.patch(
   '/deactivate-profile',
   auth(
     USER_ROLES.ADMIN,
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.SUPER_ADMIN,
   ),
   UserController.deactivateProfile,
@@ -65,14 +65,14 @@ router.patch(
 router
   .route('/')
   .get(
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.PROFESSIONAL),
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.SELLER),
     UserController.getAllUsers,
   )
 
 router
   .route('/:userId')
   .get(
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.BUYER),
     UserController.getUserById,
   )
   .delete(

@@ -51,8 +51,8 @@ passport.use(
     },
     async (req, accessToken, refreshToken, profile, done) => {
       req.body.profile = profile
-      req.body.roles = [USER_ROLES.USER]
-      req.body.activeRole = USER_ROLES.USER
+      req.body.roles = [USER_ROLES.BUYER]
+      req.body.activeRole = USER_ROLES.BUYER
 
       try {
         return done(null, req.body)

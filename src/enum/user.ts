@@ -6,8 +6,8 @@
 export enum USER_ROLES {
   SUPER_ADMIN = 'super_admin',
   ADMIN = 'admin',
-  USER = 'user',
-  PROFESSIONAL = 'professional',
+  BUYER = 'buyer',
+  SELLER = 'seller',
 }
 
 export enum USER_STATUS {

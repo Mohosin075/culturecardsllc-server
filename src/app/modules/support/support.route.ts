@@ -18,15 +18,15 @@ router.get(
   auth(
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
   ),
   SupportController.getSingleSupport,
 )
 
 router.post(
   '/',
-  auth(USER_ROLES.PROFESSIONAL, USER_ROLES.USER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
 
   validateRequest(createSupportSchema),
 
@@ -38,8 +38,8 @@ router.patch(
   auth(
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
   ),
 
   validateRequest(updateSupportSchema),
@@ -51,8 +51,8 @@ router.delete(
   auth(
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
-    USER_ROLES.PROFESSIONAL,
-    USER_ROLES.USER,
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
   ),
   SupportController.deleteSupport,
 )

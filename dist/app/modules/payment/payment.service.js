@@ -332,8 +332,8 @@ const getAllPayments = async (user, filterables, pagination) => {
         });
     }
     // Regular users can only see their own payments
-    if (user.activeRole === user_1.USER_ROLES.USER ||
-        user.activeRole === user_1.USER_ROLES.PROFESSIONAL) {
+    if (user.activeRole === user_1.USER_ROLES.BUYER ||
+        user.activeRole === user_1.USER_ROLES.SELLER) {
         andConditions.push({
             userId: new mongoose_1.Types.ObjectId(user.userId),
         });

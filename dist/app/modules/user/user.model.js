@@ -56,12 +56,12 @@ const UserSchema = new mongoose_1.Schema({
     roles: {
         type: [String],
         enum: Object.values(user_1.USER_ROLES),
-        default: [user_1.USER_ROLES.USER],
+        default: [user_1.USER_ROLES.BUYER],
     },
     activeRole: {
         type: String,
         enum: Object.values(user_1.USER_ROLES),
-        default: user_1.USER_ROLES.USER,
+        default: user_1.USER_ROLES.BUYER,
     },
     appId: { type: String },
     provider: { type: String },

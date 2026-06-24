@@ -315,8 +315,8 @@ const getAllNotifications = async (
 
   // User-specific filtering (unless admin)
   if (
-    (user as any).activeRole === USER_ROLES.USER ||
-    (user as any).activeRole === USER_ROLES.PROFESSIONAL
+    (user as any).activeRole === USER_ROLES.BUYER ||
+    (user as any).activeRole === USER_ROLES.SELLER
   ) {
     andConditions.push({
       userId: new Types.ObjectId((user as any).userId as string),
@@ -514,8 +514,8 @@ const getNotificationStats = async (
   const query: any = {}
 
   if (
-    user.activeRole === USER_ROLES.USER ||
-    user.activeRole === USER_ROLES.PROFESSIONAL
+    user.activeRole === USER_ROLES.BUYER ||
+    user.activeRole === USER_ROLES.SELLER
   ) {
     query.userId = user.userId
   }

@@ -59,12 +59,12 @@ const createUser = async (payload: IUser) => {
   const { role, ...userData } = payload as any
 
   // Initialize roles and activeRole based on signup choice
-  const roles = [USER_ROLES.USER]
-  let activeRole = USER_ROLES.USER
+  const roles = [USER_ROLES.BUYER]
+  let activeRole = USER_ROLES.BUYER
 
-  if (role === USER_ROLES.PROFESSIONAL) {
-    roles.push(USER_ROLES.PROFESSIONAL)
-    activeRole = USER_ROLES.PROFESSIONAL
+  if (role === USER_ROLES.SELLER) {
+    roles.push(USER_ROLES.SELLER)
+    activeRole = USER_ROLES.SELLER
   }
 
   const user = await User.create({

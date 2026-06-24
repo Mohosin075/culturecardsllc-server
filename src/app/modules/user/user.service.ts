@@ -338,16 +338,16 @@ const switchRole = async (user: JwtPayload, role: USER_ROLES) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
   }
 
-  // Special case: User wants to become professional but doesn't have the role yet
+  // Special case: User wants to become seller but doesn't have the role yet
   if (
-    role === USER_ROLES.PROFESSIONAL &&
-    !isUserExist.roles.includes(USER_ROLES.PROFESSIONAL)
+    role === USER_ROLES.SELLER &&
+    !isUserExist.roles.includes(USER_ROLES.SELLER)
   ) {
     // ProfessionalProfile logic removed
 
-    // Add the professional role to the user
+    // Add the seller role to the user
     await User.findByIdAndUpdate(user.userId, {
-      $addToSet: { roles: USER_ROLES.PROFESSIONAL },
+      $addToSet: { roles: USER_ROLES.SELLER },
     })
   } else if (!isUserExist.roles.includes(role)) {
     // For other roles, they must already have it

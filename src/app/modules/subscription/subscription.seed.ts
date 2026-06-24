@@ -20,7 +20,7 @@ const defaultPlans = [
     ],
     maxTeamMembers: 1,
     maxServices: 5,
-    userTypes: ['professional'],
+    userTypes: ['seller'],
     priority: 1,
   },
   {
@@ -40,7 +40,7 @@ const defaultPlans = [
     ],
     maxTeamMembers: 2,
     maxServices: 20,
-    userTypes: ['professional'],
+    userTypes: ['seller'],
     priority: 2,
   },
   {
@@ -61,7 +61,7 @@ const defaultPlans = [
     ],
     maxTeamMembers: 5,
     maxServices: 999,
-    userTypes: ['professional'],
+    userTypes: ['seller'],
     priority: 3,
   },
 ]

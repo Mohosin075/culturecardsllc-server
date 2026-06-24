@@ -41,7 +41,7 @@ exports.createSubscriptionPlanSchema = zod_1.z.object({
             .min(1, 'Max services must be at least 1')
             .default(1),
         userTypes: zod_1.z
-            .array(zod_1.z.enum(['user', 'professional', 'admin', 'super_admin'], {
+            .array(zod_1.z.enum(['buyer', 'seller', 'admin', 'super_admin'], {
             errorMap: () => ({ message: 'Invalid user type' }),
         }))
             .min(1, 'At least one user type is required'),
@@ -105,7 +105,7 @@ exports.createCheckoutSessionSchema = zod_1.z.object({
 exports.getPlansQuerySchema = zod_1.z.object({
     query: zod_1.z.object({
         userType: zod_1.z
-            .enum(['user', 'professional', 'admin', 'super_admin'])
+            .enum(['buyer', 'seller', 'admin', 'super_admin'])
             .optional(),
     }),
 });

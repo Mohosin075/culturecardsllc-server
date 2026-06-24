@@ -45,8 +45,8 @@ const handleGoogleLogin = async (
     // password: id,
     status: USER_STATUS.ACTIVE,
     appId: id,
-    roles: [USER_ROLES.USER],
-    activeRole: USER_ROLES.USER,
+    roles: [USER_ROLES.BUYER],
+    activeRole: USER_ROLES.BUYER,
   }
 
   try {

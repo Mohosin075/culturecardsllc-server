@@ -57,12 +57,12 @@ const UserSchema = new Schema<IUser, UserModel>(
     roles: {
       type: [String],
       enum: Object.values(USER_ROLES),
-      default: [USER_ROLES.USER],
+      default: [USER_ROLES.BUYER],
     },
     activeRole: {
       type: String,
       enum: Object.values(USER_ROLES),
-      default: USER_ROLES.USER,
+      default: USER_ROLES.BUYER,
     },
     appId: { type: String },
     provider: { type: String },

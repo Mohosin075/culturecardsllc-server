@@ -11,8 +11,8 @@ const router = express.Router()
 router.get(
   '/search',
   auth(
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
   ),
@@ -23,8 +23,8 @@ router.get(
 router.get(
   '/geocode',
   auth(
-    USER_ROLES.USER,
-    USER_ROLES.PROFESSIONAL,
+    USER_ROLES.BUYER,
+    USER_ROLES.SELLER,
     USER_ROLES.ADMIN,
     USER_ROLES.SUPER_ADMIN,
   ),

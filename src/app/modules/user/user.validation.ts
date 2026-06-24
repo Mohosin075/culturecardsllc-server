@@ -42,6 +42,6 @@ export const updateUserStatusSchema = z.object({
 
 export const switchRoleSchema = z.object({
   body: z.object({
-    role: z.enum([USER_ROLES.USER, USER_ROLES.PROFESSIONAL]),
+    role: z.enum([USER_ROLES.BUYER, USER_ROLES.SELLER]),
   }),
 })

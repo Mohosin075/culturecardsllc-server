@@ -12,6 +12,6 @@ const validateRequest_1 = __importDefault(require("../../middleware/validateRequ
 const location_validation_1 = require("./location.validation");
 const router = express_1.default.Router();
 // Allow authenticated users to search and geocode for bookings
-router.get('/search', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.PROFESSIONAL, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(location_validation_1.LocationValidation.searchSuggestionsSchema), location_controller_1.LocationController.searchSuggestions);
-router.get('/geocode', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.PROFESSIONAL, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(location_validation_1.LocationValidation.geocodeAddressSchema), location_controller_1.LocationController.geocodeAddress);
+router.get('/search', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(location_validation_1.LocationValidation.searchSuggestionsSchema), location_controller_1.LocationController.searchSuggestions);
+router.get('/geocode', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(location_validation_1.LocationValidation.geocodeAddressSchema), location_controller_1.LocationController.geocodeAddress);
 exports.LocationRoutes = router;

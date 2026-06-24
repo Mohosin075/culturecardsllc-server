@@ -38,6 +38,6 @@ exports.updateUserStatusSchema = zod_1.z.object({
 });
 exports.switchRoleSchema = zod_1.z.object({
     body: zod_1.z.object({
-        role: zod_1.z.enum([user_1.USER_ROLES.USER, user_1.USER_ROLES.PROFESSIONAL]),
+        role: zod_1.z.enum([user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER]),
     }),
 });

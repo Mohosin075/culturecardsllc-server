@@ -32,8 +32,8 @@ const handleGoogleLogin = async (payload) => {
         // password: id,
         status: user_1.USER_STATUS.ACTIVE,
         appId: id,
-        roles: [user_1.USER_ROLES.USER],
-        activeRole: user_1.USER_ROLES.USER,
+        roles: [user_1.USER_ROLES.BUYER],
+        activeRole: user_1.USER_ROLES.BUYER,
     };
     try {
         const user = await user_model_1.User.create([userData], { session });

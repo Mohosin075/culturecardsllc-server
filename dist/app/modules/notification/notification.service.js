@@ -242,8 +242,8 @@ const getAllNotifications = async (user, filterables, pagination) => {
         });
     }
     // User-specific filtering (unless admin)
-    if (user.activeRole === user_1.USER_ROLES.USER ||
-        user.activeRole === user_1.USER_ROLES.PROFESSIONAL) {
+    if (user.activeRole === user_1.USER_ROLES.BUYER ||
+        user.activeRole === user_1.USER_ROLES.SELLER) {
         andConditions.push({
             userId: new mongoose_1.Types.ObjectId(user.userId),
         });
@@ -377,8 +377,8 @@ const deleteNotification = async (id) => {
 };
 const getNotificationStats = async (user) => {
     const query = {};
-    if (user.activeRole === user_1.USER_ROLES.USER ||
-        user.activeRole === user_1.USER_ROLES.PROFESSIONAL) {
+    if (user.activeRole === user_1.USER_ROLES.BUYER ||
+        user.activeRole === user_1.USER_ROLES.SELLER) {
         query.userId = user.userId;
     }
     const [total, unread, byType, byChannel, byStatus] = await Promise.all([
