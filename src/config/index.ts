@@ -29,6 +29,7 @@ const envVarsSchema = z.object({
   SUPER_ADMIN_EMAIL: z.string().optional(),
   SUPER_ADMIN_PASSWORD: z.string().optional(),
   CORS_ORIGINS: z.string().optional(),
+  REDIS_URL: z.string().optional(),
 })
 
 const envVars = envVarsSchema.parse(process.env)
@@ -115,4 +116,5 @@ export default {
   },
   cors_origins:
     envVars.CORS_ORIGINS?.split(',').map(origin => origin.trim()) || [],
+  redis_url: envVars.REDIS_URL,
 }

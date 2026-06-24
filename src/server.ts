@@ -1,11 +1,12 @@
 import colors from 'colors'
 import mongoose from 'mongoose'
-import { Server } from 'socket.io'
+import { Server as SocketServer } from 'socket.io'
+import { createClient } from 'redis'
+import { createAdapter } from '@socket.io/redis-adapter'
 import app from './app'
 import config from './config'
 import os from 'os'
 
-import { Server as SocketServer } from 'socket.io'
 import { UserServices } from './app/modules/user/user.service'
 import { socketHelper } from './helpers/socketHelper'
 import { seedSubscriptionPlans } from './app/modules/subscription/subscription.seed'
@@ -54,11 +55,52 @@ async function main() {
       }
     })
 
+    // Determine allowed CORS origins for Socket.IO
+    const socketCorsOrigin =
+      config.cors_origins.length > 0 ? config.cors_origins : '*'
+
     // Socket.IO setup
-    io = new Server(server, {
+    io = new SocketServer(server, {
       pingTimeout: 60000,
-      cors: { origin: '*' },
+      cors: {
+        origin: socketCorsOrigin,
+        credentials: true,
+      },
     })
+
+    // Redis Adapter — enabled only when REDIS_URL is configured
+    if (config.redis_url) {
+      try {
+        const pubClient = createClient({ url: config.redis_url })
+        const subClient = pubClient.duplicate()
+
+        pubClient.on('error', err =>
+          errorLogger.error('Redis pubClient error:', err),
+        )
+        subClient.on('error', err =>
+          errorLogger.error('Redis subClient error:', err),
+        )
+
+        await Promise.all([pubClient.connect(), subClient.connect()])
+        io.adapter(createAdapter(pubClient, subClient))
+        logger.info(
+          colors.green(
+            '🔴 Redis adapter connected — Socket.IO is horizontally scalable',
+          ),
+        )
+      } catch (redisError) {
+        errorLogger.error(
+          colors.red('⚠️  Redis connection failed, falling back to in-memory adapter:'),
+          redisError,
+        )
+      }
+    } else {
+      logger.info(
+        colors.yellow(
+          '⚠️  REDIS_URL not set — using in-memory Socket.IO adapter (single instance only)',
+        ),
+      )
+    }
 
     // Create admin user
     await UserServices.createAdmin()

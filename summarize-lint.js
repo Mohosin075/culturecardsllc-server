@@ -1,3 +1,4 @@
+/* eslint-disable */
 const fs = require('fs')
 const data = JSON.parse(fs.readFileSync('lint-results.json', 'utf8'))
 

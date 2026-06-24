@@ -22,7 +22,6 @@ export const generatePDFInvoice = async (
     })
 
     const userData = payment.userId as any
-    const bookingData = payment.bookingId as any
 
     // --- Header ---
     doc

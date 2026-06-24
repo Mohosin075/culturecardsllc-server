@@ -5,7 +5,6 @@ import colors from 'colors'
 import { AuctionServices } from '../src/app/modules/auction/auction.service'
 import { ProductValidations } from '../src/app/modules/product/product.validation'
 import { AuctionValidations } from '../src/app/modules/auction/auction.validation'
-import { OrderValidations } from '../src/app/modules/order/order.validation'
 
 // Load environment config
 dotenv.config({ path: path.join(process.cwd(), '.env') })

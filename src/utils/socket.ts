@@ -1,2 +1,1 @@
-//@ts-ignore
-export const socket = global.io
+export const socket = (global as any).io

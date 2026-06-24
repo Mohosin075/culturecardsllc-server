@@ -36,19 +36,18 @@ const sendMessageToDB = async (userId, payload) => {
     await chat_model_1.Chat.findByIdAndUpdate(data.chatId, {
         $set: { updatedAt: new Date() },
     });
-    //@ts-ignore
     const io = global.io;
     if (io) {
         io.emit(`getMessage::${data === null || data === void 0 ? void 0 : data.chatId}`, response);
         io.emit(`updateChatList::${data === null || data === void 0 ? void 0 : data.sender}`);
         io.emit(`updateChatList::${data === null || data === void 0 ? void 0 : data.receiver}`);
-        const notificationData = {
-            text: `${sender === null || sender === void 0 ? void 0 : sender.name} send you message.`,
-            title: 'Received Message',
-            link: data === null || data === void 0 ? void 0 : data.chatId,
-            direction: 'message',
-            receiver: data.receiver,
-        };
+        // const notificationData = {
+        //   text: `${sender?.name} send you message.`,
+        //   title: 'Received Message',
+        //   link: data?.chatId,
+        //   direction: 'message',
+        //   receiver: data.receiver,
+        // }
         // await sendNotifications(notificationData);
     }
     return response;
@@ -64,7 +63,6 @@ const getMessageFromDB = async (chatId, user) => {
         // Mark messages as seen when chat is opened
         await message_model_1.Message.updateMany({ chatId, sender: { $ne: user.userId }, seen: false }, { $set: { seen: true } });
         // Notify the senders that their messages were seen
-        //@ts-ignore
         const io = global.io;
         if (io) {
             // For each unique sender of the unread messages, notify them

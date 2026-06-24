@@ -46,20 +46,19 @@ const sendMessageToDB = async (
     $set: { updatedAt: new Date() },
   })
 
-  //@ts-ignore
-  const io = global.io
+  const io = (global as any).io
   if (io) {
     io.emit(`getMessage::${data?.chatId}`, response)
     io.emit(`updateChatList::${data?.sender}`)
     io.emit(`updateChatList::${data?.receiver}`)
 
-    const notificationData = {
-      text: `${sender?.name} send you message.`,
-      title: 'Received Message',
-      link: data?.chatId,
-      direction: 'message',
-      receiver: data.receiver,
-    }
+    // const notificationData = {
+    //   text: `${sender?.name} send you message.`,
+    //   title: 'Received Message',
+    //   link: data?.chatId,
+    //   direction: 'message',
+    //   receiver: data.receiver,
+    // }
     // await sendNotifications(notificationData);
   }
 
@@ -85,8 +84,7 @@ const getMessageFromDB = async (
     )
 
     // Notify the senders that their messages were seen
-    //@ts-ignore
-    const io = global.io
+    const io = (global as any).io
     if (io) {
       // For each unique sender of the unread messages, notify them
       const senders = [...new Set(unreadMessages.map(m => m.sender.toString()))]

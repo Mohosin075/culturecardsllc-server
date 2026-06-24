@@ -5,7 +5,6 @@ import { IOrder, IJourneyUpdate } from './order.interface'
 import { Product } from '../product/product.model'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
-import { User } from '../user/user.model'
 import { Types } from 'mongoose'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 

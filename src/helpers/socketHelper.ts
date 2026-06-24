@@ -1,7 +1,7 @@
 import colors from 'colors'
 import { Server, Socket } from 'socket.io'
 import { User } from '../app/modules/user/user.model'
-import { LiveStream, AuctionItem } from '../app/modules/auction/auction.model'
+import { LiveStream } from '../app/modules/auction/auction.model'
 import { AuctionServices } from '../app/modules/auction/auction.service'
 
 // Weighted drop rates for the Seller's Spin Wheel:
@@ -102,9 +102,9 @@ const socket = (io: Server) => {
             })
           }
 
-          ;(socket as any).activeStreamId = streamId
+          (socket as any).activeStreamId = streamId
           if (userId) {
-            ;(socket as any).streamUserId = userId
+            (socket as any).streamUserId = userId
           }
         }
       },

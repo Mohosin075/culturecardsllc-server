@@ -9,7 +9,7 @@ export type ITradeStatus =
 
 export type IEscrowStatus = 'pending' | 'held' | 'released' | 'refunded'
 
-export interface ITradeOffer extends Document {
+export type ITradeOffer = {
   senderId: Schema.Types.ObjectId
   receiverId: Schema.Types.ObjectId
   senderProductId: Schema.Types.ObjectId
@@ -20,4 +20,4 @@ export interface ITradeOffer extends Document {
   expiresAt: Date
   createdAt: Date
   updatedAt: Date
-}
+} & Document

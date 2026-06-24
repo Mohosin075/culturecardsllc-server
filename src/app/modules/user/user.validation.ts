@@ -10,18 +10,6 @@ const addressSchema = z.object({
   presentAddress: z.string().optional(),
 })
 
-const authenticationSchema = z.object({
-  restrictionLeftAt: z.date().nullable().optional(),
-  resetPassword: z.boolean().optional(),
-  wrongLoginAttempts: z.number().optional(),
-  passwordChangedAt: z.date().optional(),
-  oneTimeCode: z.string().optional(),
-  latestRequestAt: z.date().optional(),
-  expiresAt: z.date().optional(),
-  requestCount: z.number().optional(),
-  authType: z.enum(['createAccount', 'resetPassword']).optional(),
-})
-
 const pointSchema = z.object({
   type: z.literal('Point').default('Point'),
   coordinates: z.tuple([z.number(), z.number()]).optional(), // [longitude, latitude]

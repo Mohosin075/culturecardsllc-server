@@ -249,7 +249,7 @@ const verifyAccount = async (onetimeCode, email, phone) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid OTP, please try again.');
     }
     const currentDate = new Date();
-    if ((authentication === null || authentication === void 0 ? void 0 : authentication.expiresAt) < currentDate) {
+    if (!authentication || !authentication.expiresAt || authentication.expiresAt < currentDate) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'OTP has expired, please try again.');
     }
     //either newly created user or existing user
@@ -352,6 +352,7 @@ const deleteAccount = async (user, password) => {
     };
 };
 const resendOtp = async (authType, email, phone) => {
+    var _a;
     const query = email ? { email: email.toLowerCase().trim() } : { phone: phone };
     const isUserExist = await user_model_1.User.findOne({
         ...query,
@@ -361,7 +362,7 @@ const resendOtp = async (authType, email, phone) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `No account found with this ${email ? 'email' : 'phone'}.`);
     }
     const { authentication } = isUserExist;
-    if ((authentication === null || authentication === void 0 ? void 0 : authentication.requestCount) >= 5) {
+    if (authentication && ((_a = authentication.requestCount) !== null && _a !== void 0 ? _a : 0) >= 5) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You have exceeded the maximum number of requests. Please try again later.');
     }
     const otp = (0, crypto_1.generateOtp)();

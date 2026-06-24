@@ -7,14 +7,14 @@ import ApiError from '../../errors/ApiError'
 import { User } from '../modules/user/user.model'
 import { USER_STATUS } from '../../enum/user'
 
-interface IVerifyUser extends JwtPayload {
+type IVerifyUser = {
   userId?: string
   authId?: string
   role?: string
   activeRole?: string
   user?: { role?: string }
   data?: { role?: string }
-}
+} & JwtPayload
 
 const auth =
   (...roles: string[]) =>

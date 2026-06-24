@@ -22,7 +22,6 @@ const generatePDFInvoice = async (payment) => {
             reject(err);
         });
         const userData = payment.userId;
-        const bookingData = payment.bookingId;
         // --- Header ---
         doc
             .fillColor('#444444')

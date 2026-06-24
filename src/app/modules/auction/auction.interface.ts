@@ -1,6 +1,6 @@
 import { Schema, Document } from 'mongoose'
 
-export interface ILiveStream extends Document {
+export type ILiveStream = {
   sellerId: Schema.Types.ObjectId
   title: string
   description?: string
@@ -12,9 +12,9 @@ export interface ILiveStream extends Document {
   likesCount: number
   createdAt: Date
   updatedAt: Date
-}
+} & Document
 
-export interface IAuctionItem extends Document {
+export type IAuctionItem = {
   streamId: Schema.Types.ObjectId
   productId: Schema.Types.ObjectId
   status: 'pending' | 'active' | 'completed' | 'failed'
@@ -25,4 +25,4 @@ export interface IAuctionItem extends Document {
   endsAt?: Date
   createdAt: Date
   updatedAt: Date
-}
+} & Document

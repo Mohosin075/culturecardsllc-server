@@ -33,6 +33,7 @@ const envVarsSchema = zod_1.z.object({
     SUPER_ADMIN_EMAIL: zod_1.z.string().optional(),
     SUPER_ADMIN_PASSWORD: zod_1.z.string().optional(),
     CORS_ORIGINS: zod_1.z.string().optional(),
+    REDIS_URL: zod_1.z.string().optional(),
 });
 const envVars = envVarsSchema.parse(process.env);
 exports.default = {
@@ -116,4 +117,5 @@ exports.default = {
         password: envVars.SUPER_ADMIN_PASSWORD,
     },
     cors_origins: ((_a = envVars.CORS_ORIGINS) === null || _a === void 0 ? void 0 : _a.split(',').map(origin => origin.trim())) || [],
+    redis_url: envVars.REDIS_URL,
 };

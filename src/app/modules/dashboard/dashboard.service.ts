@@ -1,4 +1,3 @@
-import { Types } from 'mongoose'
 import { User } from '../user/user.model'
 import { Order } from '../order/order.model'
 import { LiveStream } from '../auction/auction.model'

@@ -7,6 +7,8 @@ exports.io = exports.onlineUsers = void 0;
 const colors_1 = __importDefault(require("colors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const socket_io_1 = require("socket.io");
+const redis_1 = require("redis");
+const redis_adapter_1 = require("@socket.io/redis-adapter");
 const app_1 = __importDefault(require("./app"));
 const config_1 = __importDefault(require("./config"));
 const os_1 = __importDefault(require("os"));
@@ -41,11 +43,34 @@ async function main() {
                 logger_1.logger.info(colors_1.default.green(`   - Requested IP: http://${config_1.default.ip_address}:${port}`));
             }
         });
+        // Determine allowed CORS origins for Socket.IO
+        const socketCorsOrigin = config_1.default.cors_origins.length > 0 ? config_1.default.cors_origins : '*';
         // Socket.IO setup
         exports.io = new socket_io_1.Server(server, {
             pingTimeout: 60000,
-            cors: { origin: '*' },
+            cors: {
+                origin: socketCorsOrigin,
+                credentials: true,
+            },
         });
+        // Redis Adapter — enabled only when REDIS_URL is configured
+        if (config_1.default.redis_url) {
+            try {
+                const pubClient = (0, redis_1.createClient)({ url: config_1.default.redis_url });
+                const subClient = pubClient.duplicate();
+                pubClient.on('error', err => logger_1.errorLogger.error('Redis pubClient error:', err));
+                subClient.on('error', err => logger_1.errorLogger.error('Redis subClient error:', err));
+                await Promise.all([pubClient.connect(), subClient.connect()]);
+                exports.io.adapter((0, redis_adapter_1.createAdapter)(pubClient, subClient));
+                logger_1.logger.info(colors_1.default.green('🔴 Redis adapter connected — Socket.IO is horizontally scalable'));
+            }
+            catch (redisError) {
+                logger_1.errorLogger.error(colors_1.default.red('⚠️  Redis connection failed, falling back to in-memory adapter:'), redisError);
+            }
+        }
+        else {
+            logger_1.logger.info(colors_1.default.yellow('⚠️  REDIS_URL not set — using in-memory Socket.IO adapter (single instance only)'));
+        }
         // Create admin user
         await user_service_1.UserServices.createAdmin();
         // Seed subscription plans

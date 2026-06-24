@@ -330,7 +330,7 @@ const verifyAccount = async (
   }
 
   const currentDate = new Date()
-  if (authentication?.expiresAt! < currentDate) {
+  if (!authentication || !authentication.expiresAt || authentication.expiresAt < currentDate) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       'OTP has expired, please try again.',
@@ -542,7 +542,7 @@ const resendOtp = async (
   }
 
   const { authentication } = isUserExist
-  if (authentication?.requestCount! >= 5) {
+  if (authentication && (authentication.requestCount ?? 0) >= 5) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
       'You have exceeded the maximum number of requests. Please try again later.',

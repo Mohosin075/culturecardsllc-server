@@ -1,6 +1,6 @@
 import { Model, Types } from 'mongoose'
 
-export interface IPaymentPayload {
+export type IPaymentPayload = {
   amount: number
   bookingId: string
   productName?: string
@@ -33,4 +33,4 @@ export type IPayment = {
   updatedAt: Date
 }
 
-export type PaymentModel = Model<IPayment, {}, {}>
+export type PaymentModel = Model<IPayment>

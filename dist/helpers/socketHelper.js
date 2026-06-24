@@ -84,10 +84,8 @@ const socket = (io) => {
                         viewersCount: stream.viewersCount,
                     });
                 }
-                ;
                 socket.activeStreamId = streamId;
                 if (userId) {
-                    ;
                     socket.streamUserId = userId;
                 }
             }

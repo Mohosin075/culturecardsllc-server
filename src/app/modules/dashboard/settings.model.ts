@@ -1,7 +1,7 @@
 import { Schema, model, Document } from 'mongoose'
 import { IPlatformSettings } from './dashboard.interface'
 
-export interface ISystemSettingsDocument extends IPlatformSettings, Document {}
+export type ISystemSettingsDocument = {} & IPlatformSettings & Document
 
 const systemSettingsSchema = new Schema<ISystemSettingsDocument>(
   {

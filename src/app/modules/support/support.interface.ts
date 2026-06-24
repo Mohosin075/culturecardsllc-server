@@ -27,4 +27,4 @@ export type ISupport = {
   }>
 }
 
-export type SupportModel = Model<ISupport, {}, {}>
+export type SupportModel = Model<ISupport>

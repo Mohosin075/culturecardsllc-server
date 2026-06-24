@@ -17,7 +17,7 @@ export type IProductCondition =
   | 'Good'
   | 'Fair'
 
-export interface IProduct extends Document {
+export type IProduct = {
   sellerId: Schema.Types.ObjectId
   title: string
   description?: string
@@ -35,4 +35,4 @@ export interface IProduct extends Document {
   allowTrade: boolean
   createdAt: Date
   updatedAt: Date
-}
+} & Document

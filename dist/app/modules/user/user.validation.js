@@ -11,17 +11,6 @@ const addressSchema = zod_1.z.object({
     permanentAddress: zod_1.z.string().optional(),
     presentAddress: zod_1.z.string().optional(),
 });
-const authenticationSchema = zod_1.z.object({
-    restrictionLeftAt: zod_1.z.date().nullable().optional(),
-    resetPassword: zod_1.z.boolean().optional(),
-    wrongLoginAttempts: zod_1.z.number().optional(),
-    passwordChangedAt: zod_1.z.date().optional(),
-    oneTimeCode: zod_1.z.string().optional(),
-    latestRequestAt: zod_1.z.date().optional(),
-    expiresAt: zod_1.z.date().optional(),
-    requestCount: zod_1.z.number().optional(),
-    authType: zod_1.z.enum(['createAccount', 'resetPassword']).optional(),
-});
 const pointSchema = zod_1.z.object({
     type: zod_1.z.literal('Point').default('Point'),
     coordinates: zod_1.z.tuple([zod_1.z.number(), zod_1.z.number()]).optional(), // [longitude, latitude]

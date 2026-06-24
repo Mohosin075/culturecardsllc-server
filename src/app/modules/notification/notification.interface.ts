@@ -95,7 +95,7 @@ export type CreateNotificationDto = {
   actionText?: string
 }
 
-export type NotificationModel = Model<INotification, {}, {}>
+export type NotificationModel = Model<INotification>
 
 export type INotificationStats = {
   total: number

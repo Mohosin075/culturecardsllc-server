@@ -26,4 +26,4 @@ export type ICategory = {
   updatedAt: Date
 }
 
-export type CategoryModel = Model<ICategory, {}, {}>
+export type CategoryModel = Model<ICategory>

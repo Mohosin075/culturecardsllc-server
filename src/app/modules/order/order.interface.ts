@@ -4,14 +4,14 @@ export type IPurchaseType = 'auction_win' | 'buy_now' | 'trade_swap'
 
 export type IDeliveryStatus = 'pending' | 'shipped' | 'delivered' | 'cancelled'
 
-export interface IJourneyUpdate {
+export type IJourneyUpdate = {
   status: string
   description: string
   location?: string
   timestamp: Date
 }
 
-export interface IOrder extends Document {
+export type IOrder = {
   buyerId: Schema.Types.ObjectId
   sellerId: Schema.Types.ObjectId
   productId: Schema.Types.ObjectId
@@ -43,4 +43,4 @@ export interface IOrder extends Document {
   }
   createdAt: Date
   updatedAt: Date
-}
+} & Document
