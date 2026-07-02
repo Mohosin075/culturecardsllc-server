@@ -9,6 +9,8 @@ import { JwtPayload } from 'jsonwebtoken'
 const customLogin = catchAsync(async (req: Request, res: Response) => {
   const { ...loginData } = req.body
 
+  console.log({loginData})
+
   const result = await CustomAuthServices.customLogin(loginData)
   const { status, message, accessToken, refreshToken, role } = result
 
