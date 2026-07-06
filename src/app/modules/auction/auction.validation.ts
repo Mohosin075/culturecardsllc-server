@@ -51,8 +51,17 @@ const placeBidSchema = z.object({
   }),
 })
 
+const updateLiveStreamStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['scheduled', 'live', 'ended'], {
+      required_error: 'Status is required',
+    }),
+  }),
+})
+
 export const AuctionValidations = {
   createLiveStreamSchema,
   createAuctionItemSchema,
   placeBidSchema,
+  updateLiveStreamStatusSchema,
 }

@@ -200,6 +200,43 @@ const socket = (io) => {
                 });
             }
         });
+        // 7. Seller-controlled Live Stream termination
+        socket.on('end-stream', async (data) => {
+            const { streamId, sellerId } = data;
+            try {
+                if (!streamId || !sellerId) {
+                    socket.emit('stream-error', {
+                        message: 'Missing required parameters: streamId or sellerId.',
+                    });
+                    return;
+                }
+                const stream = await auction_model_1.LiveStream.findById(streamId);
+                if (!stream) {
+                    socket.emit('stream-error', { message: 'Stream session not found.' });
+                    return;
+                }
+                // Authorize: Only the stream host can end the stream
+                if (stream.sellerId.toString() !== sellerId) {
+                    socket.emit('stream-error', {
+                        message: 'Unauthorized: Only the stream host can end the stream.',
+                    });
+                    return;
+                }
+                stream.status = 'ended';
+                await stream.save();
+                // Broadcast stream closure to all clients in the room
+                io.to(`stream:${streamId}`).emit('stream-ended', {
+                    streamId,
+                    status: 'ended',
+                });
+                console.log(colors_1.default.red(`Live Stream ${streamId} terminated by host seller ${sellerId}`));
+            }
+            catch (err) {
+                socket.emit('stream-error', {
+                    message: err.message || 'Failed to end stream session.',
+                });
+            }
+        });
         // Handle Disconnections
         socket.on('disconnect', async () => {
             console.log(colors_1.default.red('A user disconnected:'), socket.id);

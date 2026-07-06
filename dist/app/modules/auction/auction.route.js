@@ -8,6 +8,8 @@ const express_1 = __importDefault(require("express"));
 const auction_controller_1 = require("./auction.controller");
 const validateRequest_1 = __importDefault(require("../../middleware/validateRequest"));
 const auction_validation_1 = require("./auction.validation");
+const auth_1 = __importDefault(require("../../middleware/auth"));
+const user_1 = require("../../../enum/user");
 const router = Router();
 function Router() {
     return express_1.default.Router();
@@ -17,5 +19,6 @@ router.post('/stream', (0, validateRequest_1.default)(auction_validation_1.Aucti
 router.get('/streams', auction_controller_1.AuctionControllers.getLiveStreams);
 router.post('/item', (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.createAuctionItemSchema), auction_controller_1.AuctionControllers.createAuctionItem);
 router.post('/bid', (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.placeBidSchema), auction_controller_1.AuctionControllers.placeBidSecure);
+router.patch('/stream/:streamId/status', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.updateLiveStreamStatusSchema), auction_controller_1.AuctionControllers.updateLiveStreamStatus);
 exports.AuctionRoutes = router;
 exports.default = exports.AuctionRoutes;

@@ -53,7 +53,7 @@ class DashboardService {
       ] = await Promise.all([
         User.countDocuments({
           status: USER_STATUS.ACTIVE,
-          roles: USER_ROLES.BUYER,
+          roles: { $in: [USER_ROLES.BUYER, 'user'] },
         }),
         User.countDocuments({
           status: USER_STATUS.ACTIVE,

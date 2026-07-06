@@ -119,10 +119,43 @@ const placeBidSecure = async (
   return updatedAuction
 }
 
+const updateLiveStreamStatus = async (
+  streamId: string,
+  userId: string,
+  userRole: string,
+  status: 'scheduled' | 'live' | 'ended',
+): Promise<ILiveStream> => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+
+  // Authorize: Only the seller who owns the stream, or an admin/super_admin can update status
+  if (
+    userRole !== 'admin' &&
+    userRole !== 'super_admin' &&
+    stream.sellerId.toString() !== userId
+  ) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Unauthorized: Only the stream host or administrators can change the stream status.',
+    )
+  }
+
+  stream.status = status
+  await stream.save()
+  return stream
+}
+
 export const AuctionServices = {
   generateAgoraToken,
   createLiveStream,
   getLiveStreams,
   createAuctionItem,
   placeBidSecure,
+  updateLiveStreamStatus,
 }

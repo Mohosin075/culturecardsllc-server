@@ -65,6 +65,7 @@ const updateProductSchema = zod_1.z.object({
         allowTrade: zod_1.z.boolean().optional(),
         status: zod_1.z.enum(['active', 'sold', 'unsold', 'pending']).optional(),
         stock: zod_1.z.number().nonnegative().optional(),
+        isFeatured: zod_1.z.boolean().optional(),
     }),
 });
 exports.ProductValidations = {

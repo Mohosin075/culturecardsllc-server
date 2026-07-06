@@ -50,8 +50,16 @@ const placeBidSchema = zod_1.z.object({
             .positive('Bid amount must be greater than zero'),
     }),
 });
+const updateLiveStreamStatusSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        status: zod_1.z.enum(['scheduled', 'live', 'ended'], {
+            required_error: 'Status is required',
+        }),
+    }),
+});
 exports.AuctionValidations = {
     createLiveStreamSchema,
     createAuctionItemSchema,
     placeBidSchema,
+    updateLiveStreamStatusSchema,
 };

@@ -11,6 +11,7 @@ const http_status_codes_1 = require("http-status-codes");
 const token_service_1 = require("../../token/token.service");
 const customLogin = (0, catchAsync_1.default)(async (req, res) => {
     const { ...loginData } = req.body;
+    console.log({ loginData });
     const result = await custom_auth_service_1.CustomAuthServices.customLogin(loginData);
     const { status, message, accessToken, refreshToken, role } = result;
     res.cookie('refreshToken', refreshToken, {

@@ -4,6 +4,7 @@ import { AuctionServices } from './auction.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
+import { JwtPayload } from 'jsonwebtoken'
 
 const generateAgoraToken = catchAsync(async (req: Request, res: Response) => {
   const channelName = req.query.channelName as string
@@ -76,10 +77,31 @@ const placeBidSecure = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const updateLiveStreamStatus = catchAsync(async (req: Request, res: Response) => {
+  const { streamId } = req.params
+  const { status } = req.body
+  const user = req.user as JwtPayload
+
+  const result = await AuctionServices.updateLiveStreamStatus(
+    streamId,
+    user.userId,
+    user.role,
+    status,
+  )
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Live stream status updated successfully.',
+    data: result,
+  })
+})
+
 export const AuctionControllers = {
   generateAgoraToken,
   createLiveStream,
   getLiveStreams,
   createAuctionItem,
   placeBidSecure,
+  updateLiveStreamStatus,
 }

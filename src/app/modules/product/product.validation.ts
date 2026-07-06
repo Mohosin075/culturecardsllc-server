@@ -67,6 +67,7 @@ const updateProductSchema = z.object({
     allowTrade: z.boolean().optional(),
     status: z.enum(['active', 'sold', 'unsold', 'pending']).optional(),
     stock: z.number().nonnegative().optional(),
+    isFeatured: z.boolean().optional(),
   }),
 })
 

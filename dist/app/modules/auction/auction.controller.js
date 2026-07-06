@@ -62,10 +62,23 @@ const placeBidSecure = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const updateLiveStreamStatus = (0, catchAsync_1.default)(async (req, res) => {
+    const { streamId } = req.params;
+    const { status } = req.body;
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.updateLiveStreamStatus(streamId, user.userId, user.role, status);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Live stream status updated successfully.',
+        data: result,
+    });
+});
 exports.AuctionControllers = {
     generateAgoraToken,
     createLiveStream,
     getLiveStreams,
     createAuctionItem,
     placeBidSecure,
+    updateLiveStreamStatus,
 };

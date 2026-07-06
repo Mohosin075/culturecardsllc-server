@@ -76,10 +76,29 @@ const placeBidSecure = async (auctionItemId, bidderId, bidAmount) => {
     }
     return updatedAuction;
 };
+const updateLiveStreamStatus = async (streamId, userId, userRole, status) => {
+    if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID');
+    }
+    const stream = await auction_model_1.LiveStream.findById(streamId);
+    if (!stream) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Live stream session not found');
+    }
+    // Authorize: Only the seller who owns the stream, or an admin/super_admin can update status
+    if (userRole !== 'admin' &&
+        userRole !== 'super_admin' &&
+        stream.sellerId.toString() !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host or administrators can change the stream status.');
+    }
+    stream.status = status;
+    await stream.save();
+    return stream;
+};
 exports.AuctionServices = {
     generateAgoraToken,
     createLiveStream,
     getLiveStreams,
     createAuctionItem,
     placeBidSecure,
+    updateLiveStreamStatus,
 };
