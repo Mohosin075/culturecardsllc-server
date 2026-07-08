@@ -1177,6 +1177,7 @@ class DashboardService {
   private getDemoSellerVerificationsData(): ISellerVerificationRequest[] {
     return [
       {
+        id: '60f7e271a39f6c001f3e7a01',
         name: 'John Smith',
         email: 'john@example.com',
         requestId: 'VER-001',
@@ -1186,6 +1187,7 @@ class DashboardService {
         status: 'Pending',
       },
       {
+        id: '60f7e271a39f6c001f3e7a02',
         name: 'Emily Chen',
         email: 'emily@example.com',
         requestId: 'VER-002',
@@ -1195,6 +1197,7 @@ class DashboardService {
         status: 'Pending',
       },
       {
+        id: '60f7e271a39f6c001f3e7a03',
         name: 'David Martinez',
         email: 'david@example.com',
         requestId: 'VER-003',
@@ -1204,6 +1207,7 @@ class DashboardService {
         status: 'Pending',
       },
       {
+        id: '60f7e271a39f6c001f3e7a04',
         name: 'Lisa Anderson',
         email: 'lisa@example.com',
         requestId: 'VER-004',
