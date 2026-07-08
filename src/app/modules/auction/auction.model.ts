@@ -47,6 +47,13 @@ const LiveStreamSchema = new Schema<ILiveStream>(
       default: 0,
       min: 0,
     },
+    chatMessages: [
+      {
+        user: { type: String, required: true },
+        message: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+      }
+    ],
   },
   {
     timestamps: true,

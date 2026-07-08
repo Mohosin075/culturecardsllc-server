@@ -361,6 +361,7 @@ class DashboardService {
           'TCG',
         ]
         return {
+          id: u._id.toString(),
           name: u.fullName || u.name || 'Anonymous Professional',
           email: u.email || 'seller@example.com',
           requestId: `VER-${(idx + 1).toString().padStart(3, '0')}`,
@@ -472,11 +473,14 @@ class DashboardService {
           'TCG',
         ]
         return {
+          _id: s._id,
           streamId: s._id.toString().substring(0, 8).toUpperCase(),
           title: s.title || 'Live Streaming Auction',
           seller: s.sellerId?.fullName || s.sellerId?.name || 'Seller',
           category: categories[Math.floor(Math.random() * categories.length)],
           viewersCount: s.viewersCount || 10,
+          likesCount: s.likesCount || 0,
+          chatMessages: s.chatMessages || [],
           duration: '35m',
         }
       })
@@ -491,6 +495,7 @@ class DashboardService {
           'TCG',
         ]
         return {
+          _id: s._id,
           streamId: `STR-${(idx + 4).toString().padStart(3, '0')}`,
           title: s.title || 'Scheduled stream',
           seller: s.sellerId?.fullName || s.sellerId?.name || 'Seller',
@@ -504,23 +509,16 @@ class DashboardService {
         }
       })
 
-      if (currentlyLive.length === 0 && scheduled.length === 0) {
-        return this.getDemoLiveStreamsData()
-      }
-
       return {
-        currentlyLive:
-          currentlyLive.length > 0
-            ? currentlyLive
-            : this.getDemoLiveStreamsData().currentlyLive,
-        scheduled:
-          scheduled.length > 0
-            ? scheduled
-            : this.getDemoLiveStreamsData().scheduled,
+        currentlyLive,
+        scheduled,
       }
     } catch (error) {
       console.error('Error fetching live streams:', error)
-      return this.getDemoLiveStreamsData()
+      return {
+        currentlyLive: [],
+        scheduled: [],
+      }
     }
   }
 
@@ -1279,59 +1277,6 @@ class DashboardService {
     ]
   }
 
-  private getDemoLiveStreamsData(): ILiveStreamsOverview {
-    return {
-      currentlyLive: [
-        {
-          streamId: 'STR-001',
-          title: 'Rare Sneakers Auction - Jordan Collection',
-          seller: 'SneakerKing',
-          category: 'Sneakers',
-          viewersCount: 234,
-          duration: '45m',
-        },
-        {
-          streamId: 'STR-002',
-          title: 'Vintage Watch Showcase',
-          seller: 'WatchMaster',
-          category: 'Watches',
-          viewersCount: 89,
-          duration: '1h 20m',
-        },
-        {
-          streamId: 'STR-003',
-          title: 'Pokemon Cards Opening - Booster Box',
-          seller: 'CardCollector99',
-          category: 'Cards',
-          viewersCount: 567,
-          duration: '32m',
-        },
-      ],
-      scheduled: [
-        {
-          streamId: 'STR-004',
-          title: 'Limited Edition Yeezy Drop',
-          seller: 'SneakerHub',
-          category: 'Sneakers',
-          scheduledTime: '2026-04-24 18:00',
-        },
-        {
-          streamId: 'STR-005',
-          title: 'Luxury Watch Collection Tour',
-          seller: 'TimeKeeper',
-          category: 'Watches',
-          scheduledTime: '2026-04-24 20:00',
-        },
-        {
-          streamId: 'STR-006',
-          title: 'Trading Card Grading Session',
-          seller: 'CardExpert',
-          category: 'Cards',
-          scheduledTime: '2026-04-25 15:00',
-        },
-      ],
-    }
-  }
 
   private getDemoTradesData(): ITradeOverviewItem[] {
     return [

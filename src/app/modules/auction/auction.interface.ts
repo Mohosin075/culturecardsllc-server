@@ -10,6 +10,11 @@ export type ILiveStream = {
   pinnedProductId?: Schema.Types.ObjectId
   viewersCount: number
   likesCount: number
+  chatMessages?: Array<{
+    user: string
+    message: string
+    timestamp: Date
+  }>
   createdAt: Date
   updatedAt: Date
 } & Document

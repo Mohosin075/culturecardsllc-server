@@ -205,6 +205,17 @@ const socket = (io: Server) => {
           const userInfo = await User.findById(userId).select(
             'name fullName email image photo',
           )
+          const displayName = userInfo?.fullName || userInfo?.name || 'User'
+
+          await LiveStream.findByIdAndUpdate(streamId, {
+            $push: {
+              chatMessages: {
+                user: displayName,
+                message: message,
+                timestamp: new Date(),
+              },
+            },
+          })
 
           io.to(`stream:${streamId}`).emit('new-chat-message', {
             streamId,

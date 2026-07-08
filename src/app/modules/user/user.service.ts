@@ -296,7 +296,7 @@ const getUserById = async (userId: string): Promise<IUser> => {
   return isUserExist
 }
 
-const updateUserStatus = async (userId: string, status: USER_STATUS) => {
+const updateUserStatus = async (userId: string, data: Record<string, any>) => {
   const isUserExist = await User.findOne({
     _id: userId,
     status: { $nin: [USER_STATUS.DELETED] },
@@ -307,15 +307,15 @@ const updateUserStatus = async (userId: string, status: USER_STATUS) => {
 
   const updatedUser = await User.findOneAndUpdate(
     { _id: userId, status: { $nin: [USER_STATUS.DELETED] } },
-    { $set: { status } },
+    { $set: data },
     { new: true },
   )
 
   if (!updatedUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to update user status.')
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to update user.')
   }
 
-  return 'User status updated successfully.'
+  return 'User updated successfully.'
 }
 
 export const getProfile = async (user: JwtPayload) => {
