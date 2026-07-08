@@ -58,26 +58,46 @@ router.post(
 
 router.patch(
   '/read-all',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+  ),
   NotificationController.markAllAsRead,
 )
 
 router.patch(
   '/:id',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+  ),
   validateRequest(NotificationValidations.update),
   NotificationController.updateNotification,
 )
 
 router.patch(
   '/:id/read',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+  ),
   NotificationController.markAsRead,
 )
 
 router.patch(
   '/:id/archive',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(
+    USER_ROLES.SELLER,
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+  ),
   NotificationController.archiveNotification,
 )
 

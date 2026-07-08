@@ -826,11 +826,14 @@ class DashboardService {
       })
 
       if (mapped.length === 0) {
-        return this.getDemoNotificationsData()
+        return {
+          unreadCount: 0,
+          notifications: [],
+        }
       }
 
       return {
-        unreadCount: unreadCount || 3,
+        unreadCount: unreadCount || 0,
         notifications: mapped,
       }
     } catch (error) {
