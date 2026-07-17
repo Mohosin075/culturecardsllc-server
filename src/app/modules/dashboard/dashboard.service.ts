@@ -377,10 +377,10 @@ class DashboardService {
         }
       })
 
-      return result.length > 0 ? result : this.getDemoSellerVerificationsData()
+      return result
     } catch (error) {
       console.error('Error fetching verifications data:', error)
-      return this.getDemoSellerVerificationsData()
+      return []
     }
   }
 

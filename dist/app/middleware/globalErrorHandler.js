@@ -14,7 +14,12 @@ const globalErrorHandler = (error, req, res, next) => {
     var _a, _b;
     // Safe logging using Winston
     if (config_1.default.node_env === 'development') {
-        logger_1.errorLogger.error('Inside Global Error Handler🪐', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        if (error instanceof ApiError_1.default) {
+            logger_1.errorLogger.error(`[ApiError] ${error.statusCode} - ${error.message}`);
+        }
+        else {
+            logger_1.errorLogger.error('Inside Global Error Handler🪐', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        }
     }
     let statusCode = 500;
     let message = 'Something went wrong!';
