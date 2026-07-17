@@ -6,6 +6,11 @@ import { Product } from '../product/product.model'
 import { Message } from '../message/message.model'
 import { Chat } from '../chat/chat.model'
 import { Types } from 'mongoose'
+import { io } from '../../../server'
+import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
+import { User } from '../user/user.model'
+import config from '../../../config'
+import stripe from '../../../config/stripe'
 
 const createTradeOffer = async (
   payload: Partial<ITradeOffer>,
@@ -45,17 +50,14 @@ const createTradeOffer = async (
 
   const offer = (await TradeOffer.create(payload)) as any
 
+  // Find existing chat between sender and receiver using participants array
   let chat = await Chat.findOne({
-    $or: [
-      { creator: senderId, participant: receiverId },
-      { creator: receiverId, participant: senderId },
-    ],
+    participants: { $all: [senderId, receiverId] },
   })
 
   if (!chat) {
     chat = await Chat.create({
-      creator: senderId,
-      participant: receiverId,
+      participants: [senderId, receiverId],
     })
   }
 
@@ -131,21 +133,14 @@ const acceptTradeOffer = async (offerId: string): Promise<ITradeOffer> => {
       { session },
     )
 
+    // Use participants[] array — consistent with Chat model schema
     let chat = await Chat.findOne({
-      $or: [
-        { creator: offer.senderId, participant: offer.receiverId },
-        { creator: offer.receiverId, participant: offer.senderId },
-      ],
+      participants: { $all: [offer.senderId, offer.receiverId] },
     })
 
     if (!chat) {
       const createdChats = await Chat.create(
-        [
-          {
-            creator: offer.senderId,
-            participant: offer.receiverId,
-          },
-        ],
+        [{ participants: [offer.senderId, offer.receiverId] }],
         { session },
       )
       chat = createdChats[0]
@@ -171,6 +166,24 @@ const acceptTradeOffer = async (offerId: string): Promise<ITradeOffer> => {
     }
 
     await session.commitTransaction()
+
+    // Notify sender via socket + push
+    if (io) {
+      io.to(offer.senderId.toString()).emit('trade-accepted', {
+        tradeOfferId: offer._id.toString(),
+        message: 'Your trade offer was accepted! 🤝',
+      })
+    }
+    const senderUser = await User.findById(offer.senderId).select('deviceToken')
+    if (senderUser?.deviceToken) {
+      await sendPushNotification(
+        senderUser.deviceToken,
+        'Trade Accepted 🤝',
+        'Your trade offer was accepted! Escrow is now active.',
+        { type: 'TRADE_ACCEPTED', tradeOfferId: offer._id.toString() },
+      ).catch(() => {/* non-blocking */})
+    }
+
     return offer
   } catch (error) {
     await session.abortTransaction()
@@ -200,11 +213,9 @@ const declineTradeOffer = async (offerId: string): Promise<ITradeOffer> => {
   offer.status = 'declined'
   await offer.save()
 
+  // Use participants[] array — consistent with Chat model schema
   const chat = await Chat.findOne({
-    $or: [
-      { creator: offer.senderId, participant: offer.receiverId },
-      { creator: offer.receiverId, participant: offer.senderId },
-    ],
+    participants: { $all: [offer.senderId, offer.receiverId] },
   })
 
   if (chat) {
@@ -221,7 +232,166 @@ const declineTradeOffer = async (offerId: string): Promise<ITradeOffer> => {
     })
   }
 
+  // Notify sender
+  if (io) {
+    io.to(offer.senderId.toString()).emit('trade-declined', {
+      tradeOfferId: offer._id.toString(),
+      message: 'Your trade offer was declined ❌',
+    })
+  }
+  const senderUser = await User.findById(offer.senderId).select('deviceToken')
+  if (senderUser?.deviceToken) {
+    await sendPushNotification(
+      senderUser.deviceToken,
+      'Trade Declined ❌',
+      'Your trade offer was declined.',
+      { type: 'TRADE_DECLINED', tradeOfferId: offer._id.toString() },
+    ).catch(() => {/* non-blocking */})
+  }
+
   return offer
+}
+
+// ─── Trade Complete: ownership swap + escrow release ───────────────────────
+const completeTradeOffer = async (
+  offerId: string,
+  userId: string,
+): Promise<ITradeOffer | { checkoutUrl: string }> => {
+  if (!Types.ObjectId.isValid(offerId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Offer ID')
+  }
+
+  const offer = (await TradeOffer.findById(offerId)
+    .populate('senderProductId')
+    .populate('receiverProductId')) as any
+
+  if (!offer) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Trade offer not found')
+  }
+
+  if (offer.status !== 'accepted') {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Only accepted trade offers can be completed.',
+    )
+  }
+
+  // Authorization: only sender or receiver can complete
+  const isSender = offer.senderId.toString() === userId
+  const isReceiver = offer.receiverId.toString() === userId
+  if (!isSender && !isReceiver) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'You are not authorized to complete this trade.',
+    )
+  }
+
+  // ── Cash supplement: create Stripe checkout if needed ──────────────────
+  if (offer.cashSupplement && offer.cashSupplement !== 0) {
+    const payerId = offer.cashSupplement > 0 ? offer.senderId : offer.receiverId
+    const payerUser = await User.findById(payerId).select('email')
+
+    if (!payerUser?.email) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Payer user email not found')
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Trade Cash Supplement',
+              description: `Supplement for trading ${offer.senderProductId.title} ↔ ${offer.receiverProductId.title}`,
+            },
+            unit_amount: Math.round(Math.abs(offer.cashSupplement) * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${config.clientUrl}?trade_complete=true&offerId=${offer._id}`,
+      cancel_url: `${config.clientUrl}/trade/cancel`,
+      customer_email: payerUser.email,
+      metadata: {
+        purchaseType: 'trade_supplement',
+        tradeOfferId: offer._id.toString(),
+        senderId: offer.senderId.toString(),
+        receiverId: offer.receiverId.toString(),
+        senderProductId: offer.senderProductId._id.toString(),
+        receiverProductId: offer.receiverProductId._id.toString(),
+      },
+    })
+
+    return { checkoutUrl: session.url! }
+  }
+
+  // ── No cash supplement: complete immediately ────────────────────────────
+  const session = await TradeOffer.startSession()
+  session.startTransaction()
+
+  try {
+    // Swap product ownership
+    await Product.findByIdAndUpdate(
+      offer.senderProductId._id,
+      { sellerId: offer.receiverId, status: 'active' },
+      { session },
+    )
+    await Product.findByIdAndUpdate(
+      offer.receiverProductId._id,
+      { sellerId: offer.senderId, status: 'active' },
+      { session },
+    )
+
+    // Update offer
+    offer.status = 'completed'
+    offer.escrowStatus = 'released'
+    await offer.save({ session })
+
+    // Chat message
+    const chat = await Chat.findOne({
+      participants: { $all: [offer.senderId, offer.receiverId] },
+    })
+    if (chat) {
+      await Message.create(
+        [
+          {
+            chatId: chat._id,
+            sender: userId,
+            text: 'Trade completed! Items have been exchanged. ✅',
+            messageType: 'trade_proposal',
+            seen: false,
+            metadata: {
+              tradeOfferId: offer._id.toString(),
+              statusLabel: 'TRADE COMPLETED ✅',
+            },
+          },
+        ],
+        { session },
+      )
+    }
+
+    await session.commitTransaction()
+
+    // Notify both parties
+    const notifyIds = [offer.senderId.toString(), offer.receiverId.toString()]
+    notifyIds.forEach(uid => {
+      if (io) {
+        io.to(uid).emit('trade-completed', {
+          tradeOfferId: offer._id.toString(),
+          message: 'Trade completed! Ownership transferred. ✅',
+        })
+      }
+    })
+
+    return offer
+  } catch (error) {
+    await session.abortTransaction()
+    throw error
+  } finally {
+    session.endSession()
+  }
 }
 
 export const TradeServices = {
@@ -229,4 +399,5 @@ export const TradeServices = {
   getTradeOffers,
   acceptTradeOffer,
   declineTradeOffer,
+  completeTradeOffer,
 }

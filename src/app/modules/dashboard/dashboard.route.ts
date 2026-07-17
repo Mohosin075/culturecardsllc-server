@@ -101,5 +101,29 @@ router.patch(
   dashboardController.updateSettingsData,
 )
 
+router.patch(
+  '/seller-verifications/:userId/approve',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.approveSellerVerification,
+)
+
+router.patch(
+  '/seller-verifications/:userId/reject',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.rejectSellerVerification,
+)
+
+router.patch(
+  '/disputes/:id/resolve',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.resolveDispute,
+)
+
+router.patch(
+  '/disputes/:id/reject',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.rejectDispute,
+)
+
 export const DashboardRoutes = router
 export default DashboardRoutes

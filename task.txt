@@ -1,0 +1,117 @@
+============================================================
+   CultureCards LLC — Incomplete & Missing Features
+============================================================
+
+================================================================
+🔴 CRITICAL (অবশ্যই করতে হবে — core flow কাজ করবে না)
+================================================================
+
+1. Auction complete + winner payment
+   - AuctionItem status "completed" করার কোনো endpoint নেই
+   - Auction timer শেষ হলে winner কে payment করতে বলার mechanism নেই
+   - highestBidderId দিয়ে Stripe checkout session তৈরি হয় না
+   - Auction → Order auto-create নেই (purchaseType: 'auction_win')
+   - File: auction.service.ts, auction.route.ts, payment.service.ts
+
+2. Trade complete + ownership swap
+   - Accept এর পর "completed" করার কোনো endpoint নেই
+   - Product sellerId swap (ownership transfer) নেই
+   - Escrow "released" করার কোনো logic নেই
+   - File: trade.service.ts, trade.route.ts
+
+3. Auction route — auth middleware নেই (Security Hole)
+   - POST /auctions/item   → কোনো auth() নেই
+   - POST /auctions/bid    → কোনো auth() নেই
+   - GET  /auctions/token  → কোনো auth() নেই
+   - যেকেউ token ছাড়াই bid করতে পারবে
+   - File: auction.route.ts
+
+================================================================
+🟡 IMPORTANT (করা উচিত — feature incomplete থাকবে)
+================================================================
+
+4. Webhook → Order + Product update নেই
+   - Stripe payment success হলে শুধু Payment.status = 'succeeded' হয়
+   - Order এর paymentStatus → 'paid' হয় না
+   - Product এর status → 'sold' হয় না webhook থেকে
+   - File: payment/webhook.service.ts
+
+5. Buy Now → Payment flow unclear
+   - Order তৈরি হয় সরাসরি, payment আগে না পরে সেটা clear নেই
+   - Payment → Order এর সংযোগ নেই
+   - File: order.service.ts, payment.service.ts
+
+6. Trade cash supplement payment নেই
+   - cashSupplement > 0 হলে Stripe দিয়ে payment নেওয়ার flow নেই
+   - File: trade.service.ts, payment.service.ts
+
+7. Dashboard — Seller Verification approve/reject নেই
+   - GET /dashboard/seller-verifications → data দেখা যায়
+   - কিন্তু approve/reject করার কোনো endpoint নেই
+   - File: dashboard.route.ts, dashboard.service.ts
+
+8. Dashboard — Dispute resolve/reject নেই
+   - GET /dashboard/disputes → data দেখা যায়
+   - কিন্তু resolve/reject action এর endpoint নেই
+   - File: dashboard.route.ts, dashboard.service.ts
+
+9. Chat — dual model conflict (bug potential)
+   - Trade/Order module: { creator, participant } field দিয়ে Chat তৈরি করে
+   - Chat service: { participants: [] } array দিয়ে Chat তৈরি করে
+   - এই inconsistency production এ bug করতে পারে
+   - File: chat.model.ts, trade.service.ts, order.service.ts
+
+================================================================
+🟢 MINOR (ছোট fix — security বা UX improvement)
+================================================================
+
+10. Trade expiry cron job নেই
+    - Offer 24 ঘণ্টায় expire হওয়ার কথা (expiresAt set হয়)
+    - কিন্তু কোনো scheduled job নেই যেটা status → 'expired' করবে
+    - File: src/task/ (নতুন file বানাতে হবে)
+
+11. senderId security issue (Trade)
+    - createTradeOffer controller এ req.user থেকে senderId নেওয়া হচ্ছে না
+    - Client body থেকে senderId নেওয়া হচ্ছে → security risk
+    - File: trade.controller.ts
+
+12. Support → Admin notification নেই
+    - Report submit হলে superAdmin খুঁজে পাওয়া হয় কিন্তু notify করা হয় না
+    - File: support.service.ts (line 34-37)
+
+13. Review — bookingId এর বদলে orderId/tradeOfferId দরকার
+    - Review create করতে bookingId required কিন্তু platform এ booking নেই
+    - Product কিনলে বা trade করলে review দেওয়ার flow নেই
+    - Fix: bookingId → orderId বা tradeOfferId করতে হবে
+    - File: review.interface.ts, review.model.ts, review.service.ts
+
+14. Trade/Auction specific notifications নেই
+    - Bid placed, auction won, trade accepted — কোনো notification trigger নেই
+    - File: socketHelper.ts, auction.service.ts, trade.service.ts
+
+15. Boost listing flow নেই
+    - Product model এ isBoosted: boolean আছে
+    - কিন্তু boost করার endpoint বা payment flow নেই
+    - Dashboard এ boosted listings দেখা যায় কিন্তু boost করা যায় না
+    - File: product.route.ts, payment.service.ts
+
+================================================================
+❓ UNCLEAR (requirement confirm করতে হবে)
+================================================================
+
+16. Subscription → Product listing permission
+    - কোনো user subscribe না করলেও product list করতে পারছে
+    - Subscription tier অনুযায়ী product listing limit বা permission check নেই
+    - Implement করতে হবে কিনা সেটা product requirement এর উপর নির্ভর করে
+    - File: product.route.ts, subscription middleware
+
+================================================================
+   SUMMARY
+================================================================
+
+   🔴 Critical  : 3 items  (auction payment, trade complete, auth fix)
+   🟡 Important : 6 items  (webhook, buy now, supplement, dashboard, chat)
+   🟢 Minor     : 6 items  (cron, senderId, support, review, notification, boost)
+   ❓ Unclear   : 1 item   (subscription permission)
+
+   Total: 16 items

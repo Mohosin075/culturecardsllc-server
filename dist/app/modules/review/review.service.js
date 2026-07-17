@@ -16,6 +16,10 @@ const createReview = async (user, payload) => {
     if (!payload.reviewee) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Reviewee is required');
     }
+    // Require either orderId or tradeOfferId (platform has no booking concept)
+    if (!payload.orderId && !payload.tradeOfferId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Either orderId or tradeOfferId is required to leave a review.');
+    }
     const isUserExist = await user_model_1.User.findById(user.userId);
     if (!isUserExist) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
@@ -93,24 +97,24 @@ const getAllReviews = async (type, paginationOptions) => {
         data: result,
     };
 };
-const getReviewsByBooking = async (user, bookingId, type, paginationOptions) => {
+const getReviewsByOrder = async (user, referenceId, type, paginationOptions) => {
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(paginationOptions);
-    const cacheKey = `reviews:${type}:${user.userId}:booking:${bookingId}:page:${page}:limit:${limit}:sort:${sortBy}:${sortOrder}`;
-    // const cachedResult = await redisClient.get(cacheKey);
-    // if(cachedResult){
-    //   return JSON.parse(cachedResult);
-    // }
+    // Match by orderId or tradeOfferId
+    const query = {
+        $or: [
+            { orderId: referenceId },
+            { tradeOfferId: referenceId },
+        ],
+    };
     const [result, total] = await Promise.all([
-        review_model_1.Review.find({ bookingId: bookingId })
+        review_model_1.Review.find(query)
             .populate('reviewer')
             .populate('reviewee')
             .skip(skip)
             .limit(limit)
             .sort({ [sortBy]: sortOrder }),
-        review_model_1.Review.countDocuments({ bookingId: bookingId }),
+        review_model_1.Review.countDocuments(query),
     ]);
-    //cache the result
-    // await redisClient.setex(cacheKey, JSON.stringify({ meta: { page, limit, total, totalPages: Math.ceil(total / limit) }, data: result }), 60 * 3); // 2 minutes
     return {
         meta: {
             page,
@@ -279,6 +283,6 @@ exports.ReviewServices = {
     updateReview,
     deleteReview,
     getSingleReview,
-    getReviewsByBooking,
+    getReviewsByOrder,
     getReviewsByProvider,
 };

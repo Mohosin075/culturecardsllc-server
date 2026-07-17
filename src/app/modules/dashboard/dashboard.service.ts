@@ -7,6 +7,8 @@ import { Product } from '../product/product.model'
 import { Category } from '../category/category.model'
 import { Notification } from '../notification/notification.model'
 import { SystemSettings } from './settings.model'
+import { StatusCodes } from 'http-status-codes'
+import ApiError from '../../../errors/ApiError'
 import {
   IDashboardOverviewResponse,
   IUserManagementItem,
@@ -1010,6 +1012,63 @@ class DashboardService {
       console.error('Error updating system settings:', error)
       return this.getDemoSettingsData()
     }
+  }
+
+  // Approve a user as a verified seller
+  async approveSellerVerification(userId: string): Promise<any> {
+    const user = await User.findById(userId)
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    if (!user.roles.includes(USER_ROLES.SELLER)) {
+      user.roles.push(USER_ROLES.SELLER)
+    }
+    user.verified = true
+    await user.save()
+
+    return user
+  }
+
+  // Reject seller verification request
+  async rejectSellerVerification(userId: string, reason?: string): Promise<any> {
+    const user = await User.findById(userId)
+    if (!user) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    user.verified = false
+    // Remove seller role if they aren't verified anymore
+    user.roles = user.roles.filter(role => role !== USER_ROLES.SELLER)
+    await user.save()
+
+    return user
+  }
+
+  // Resolve a dispute/support ticket
+  async resolveDispute(supportId: string): Promise<any> {
+    const dispute = await Support.findByIdAndUpdate(
+      supportId,
+      { status: 'solved' },
+      { new: true }
+    )
+    if (!dispute) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Dispute not found')
+    }
+    return dispute
+  }
+
+  // Reject a dispute/support ticket
+  async rejectDispute(supportId: string, reason?: string): Promise<any> {
+    const dispute = await Support.findByIdAndUpdate(
+      supportId,
+      { status: 'dismissed' },
+      { new: true }
+    )
+    if (!dispute) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Dispute not found')
+    }
+    return dispute
   }
 
   // --- PRIVATE DEMO DATA FALLBACK GENERATORS (MATCHING SCREENSHOTS) ---

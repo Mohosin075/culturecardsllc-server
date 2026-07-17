@@ -12,9 +12,7 @@ const createLiveStreamSchema = zod_1.z.object({
             .string()
             .datetime({ message: 'Invalid ISO date-time string' })
             .optional(),
-        sellerId: zod_1.z
-            .string({ required_error: 'Seller ID is required' })
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Seller ID format'),
+        // sellerId is injected from req.user in the controller — not accepted from body
         agoraChannelName: zod_1.z.string().optional(),
     }),
 });
@@ -42,9 +40,7 @@ const placeBidSchema = zod_1.z.object({
         auctionItemId: zod_1.z
             .string({ required_error: 'Auction Item ID is required' })
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Auction Item ID format'),
-        bidderId: zod_1.z
-            .string({ required_error: 'Bidder ID is required' })
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Bidder ID format'),
+        // bidderId is injected from req.user in the controller — not accepted from body
         bidAmount: zod_1.z
             .number({ required_error: 'Bid amount is required' })
             .positive('Bid amount must be greater than zero'),

@@ -4,9 +4,7 @@ exports.TradeValidations = void 0;
 const zod_1 = require("zod");
 const createTradeOfferSchema = zod_1.z.object({
     body: zod_1.z.object({
-        senderId: zod_1.z
-            .string({ required_error: 'Sender ID is required' })
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Sender ID format'),
+        // senderId is injected from req.user in controller — not accepted from body
         receiverId: zod_1.z
             .string({ required_error: 'Receiver ID is required' })
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Receiver ID format'),
@@ -16,7 +14,7 @@ const createTradeOfferSchema = zod_1.z.object({
         receiverProductId: zod_1.z
             .string({ required_error: 'Receiver Product ID is required' })
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Receiver Product ID format'),
-        cashSupplement: zod_1.z.number().nonnegative().optional(),
+        cashSupplement: zod_1.z.number().optional(),
     }),
 });
 exports.TradeValidations = {

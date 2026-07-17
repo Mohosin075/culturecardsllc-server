@@ -41,7 +41,7 @@ const createCheckoutSession = async (user, payload) => {
             customer_email: user.email,
             metadata: {
                 userId: user.userId.toString(),
-                bookingId: payload.bookingId.toString(),
+                ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
                 ...payload.metadata,
             },
         });
@@ -50,13 +50,13 @@ const createCheckoutSession = async (user, payload) => {
             bookingId: payload.bookingId,
             userEmail: user.email,
             amount: payload.amount,
-            currency: 'EUR',
+            currency: payload.currency || 'EUR',
             paymentMethod: 'stripe',
             paymentIntentId: session.payment_intent || session.id,
             status: 'pending',
             metadata: {
                 checkoutSessionId: session.id,
-                bookingId: payload.bookingId.toString(),
+                ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
                 ...payload.metadata,
             },
         });

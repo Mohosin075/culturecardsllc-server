@@ -9,6 +9,12 @@ const stripe_1 = __importDefault(require("../../../config/stripe"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const payment_model_1 = require("./payment.model");
 const emailHelper_1 = require("../../../helpers/emailHelper");
+const order_model_1 = require("../order/order.model");
+const product_model_1 = require("../product/product.model");
+const trade_model_1 = require("../trade/trade.model");
+const chat_model_1 = require("../chat/chat.model");
+const message_model_1 = require("../message/message.model");
+const server_1 = require("../../../server");
 const handleCheckoutSessionCompleted = async (sessionData) => {
     var _a;
     try {
@@ -16,7 +22,6 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
         const sessionWithDetails = await stripe_1.default.checkout.sessions.retrieve(sessionData.id, {
             expand: ['payment_intent', 'line_items'],
         });
-        console.log('✅ Session Details Retrieved. Payment Intent:', sessionWithDetails.payment_intent);
         let lookupId;
         if (typeof sessionWithDetails.payment_intent === 'string') {
             lookupId = sessionWithDetails.payment_intent;
@@ -30,7 +35,6 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
         const mongoSession = await payment_model_1.Payment.startSession();
         mongoSession.startTransaction();
         try {
-            // Find and lock the payment document
             const payment = await payment_model_1.Payment.findOne({
                 $or: [
                     { paymentIntentId: lookupId },
@@ -40,23 +44,118 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
             if (!payment) {
                 throw new Error(`Payment not found for session: ${sessionWithDetails.id}`);
             }
-            // Check if already processed to avoid duplicates
             if (payment.status === 'succeeded') {
                 await mongoSession.commitTransaction();
                 return;
             }
-            // Update payment
             payment.status = 'succeeded';
             payment.metadata = { ...payment.metadata, ...sessionWithDetails };
             await payment.save({ session: mongoSession });
-            // Booking and Wallet logic removed as requested
+            const meta = (sessionWithDetails.metadata || {});
+            const purchaseType = meta.purchaseType;
+            // ─── BUY NOW: update order paymentStatus + product status ───────────────────
+            if (purchaseType === 'buy_now' && meta.orderId) {
+                await order_model_1.Order.findByIdAndUpdate(meta.orderId, { paymentStatus: 'paid' }, { session: mongoSession });
+                if (meta.productId) {
+                    await product_model_1.Product.findByIdAndUpdate(meta.productId, { status: 'sold' }, { session: mongoSession });
+                }
+            }
+            // ─── AUCTION WIN: create order + mark product sold ─────────────────────────
+            if (purchaseType === 'auction_win' && meta.productId && meta.winnerId && meta.sellerId) {
+                const product = await product_model_1.Product.findById(meta.productId).session(mongoSession);
+                if (product) {
+                    // Create order
+                    const [order] = await order_model_1.Order.create([
+                        {
+                            buyerId: meta.winnerId,
+                            sellerId: meta.sellerId,
+                            productId: meta.productId,
+                            totalPrice: product.buyNowPrice || 0,
+                            purchaseType: 'auction_win',
+                            paymentStatus: 'paid',
+                            deliveryStatus: 'pending',
+                            trackingDetails: { journeyUpdates: [] },
+                        },
+                    ], { session: mongoSession });
+                    // Mark product sold
+                    await product_model_1.Product.findByIdAndUpdate(meta.productId, { status: 'sold', stock: 0 }, { session: mongoSession });
+                    // Chat message to seller
+                    const chat = await chat_model_1.Chat.findOne({
+                        participants: { $all: [meta.winnerId, meta.sellerId] },
+                    });
+                    if (chat) {
+                        await message_model_1.Message.create([
+                            {
+                                chatId: chat._id,
+                                sender: meta.winnerId,
+                                text: `🏆 Auction Won! Payment complete. Order #${order._id.toString().substring(0, 8).toUpperCase()} created.`,
+                                messageType: 'order_update',
+                                seen: false,
+                                metadata: { orderId: order._id.toString(), statusLabel: 'AUCTION WON 🏆' },
+                            },
+                        ], { session: mongoSession });
+                    }
+                    // Socket notify seller
+                    if (server_1.io) {
+                        server_1.io.to(meta.sellerId).emit('auction-payment-received', {
+                            orderId: order._id.toString(),
+                            productId: meta.productId,
+                            message: 'Auction payment received! Order created.',
+                        });
+                    }
+                }
+            }
+            // ─── TRADE SUPPLEMENT: complete trade ownership swap ─────────────────────
+            if (purchaseType === 'trade_supplement' && meta.tradeOfferId) {
+                const tradeOffer = await trade_model_1.TradeOffer.findById(meta.tradeOfferId).session(mongoSession);
+                if (tradeOffer && tradeOffer.status === 'accepted') {
+                    // Swap ownership
+                    await product_model_1.Product.findByIdAndUpdate(meta.senderProductId, { sellerId: meta.receiverId, status: 'active' }, { session: mongoSession });
+                    await product_model_1.Product.findByIdAndUpdate(meta.receiverProductId, { sellerId: meta.senderId, status: 'active' }, { session: mongoSession });
+                    tradeOffer.status = 'completed';
+                    tradeOffer.escrowStatus = 'released';
+                    await tradeOffer.save({ session: mongoSession });
+                    // Chat message
+                    const chat = await chat_model_1.Chat.findOne({
+                        participants: { $all: [meta.senderId, meta.receiverId] },
+                    });
+                    if (chat) {
+                        await message_model_1.Message.create([
+                            {
+                                chatId: chat._id,
+                                sender: meta.senderId,
+                                text: 'Trade completed! Payment received and items exchanged. ✅',
+                                messageType: 'trade_proposal',
+                                seen: false,
+                                metadata: { tradeOfferId: meta.tradeOfferId, statusLabel: 'TRADE COMPLETED ✅' },
+                            },
+                        ], { session: mongoSession });
+                    }
+                    // Notify both parties
+                    if (server_1.io) {
+                        [meta.senderId, meta.receiverId].forEach(uid => {
+                            server_1.io.to(uid).emit('trade-completed', {
+                                tradeOfferId: meta.tradeOfferId,
+                                message: 'Trade completed! Ownership transferred. ✅',
+                            });
+                        });
+                    }
+                }
+            }
+            // ─── PRODUCT BOOST: update product isFeatured + boostedUntil ───────────────
+            if (purchaseType === 'product_boost' && meta.productId) {
+                const durationDays = Number(meta.boostDurationDays || '7');
+                const boostedUntil = new Date();
+                boostedUntil.setDate(boostedUntil.getDate() + durationDays);
+                await product_model_1.Product.findByIdAndUpdate(meta.productId, { isFeatured: true, boostedUntil }, { session: mongoSession });
+            }
             await mongoSession.commitTransaction();
-            console.log(`Successfully processed payment for session: ${sessionWithDetails.id}`);
-            // Send email
+            console.log(`✅ Payment processed: ${sessionWithDetails.id} [${purchaseType || 'unknown'}]`);
+            // Send confirmation email
             await emailHelper_1.emailHelper.sendEmail({
                 to: payment.userEmail,
-                subject: 'Payment Successful',
-                html: `<p>Your payment was successful.</p>`,
+                subject: 'Payment Successful ✅',
+                html: `<p>Your payment was processed successfully. Thank you for using CultureCards!</p>`,
             });
         }
         catch (error) {

@@ -33,7 +33,8 @@ exports.updateUserSchema = zod_1.z.object({
 });
 exports.updateUserStatusSchema = zod_1.z.object({
     body: zod_1.z.object({
-        status: zod_1.z.nativeEnum(user_1.USER_STATUS),
+        status: zod_1.z.nativeEnum(user_1.USER_STATUS).optional(),
+        verified: zod_1.z.boolean().optional(),
     }),
 });
 exports.switchRoleSchema = zod_1.z.object({

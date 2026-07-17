@@ -32,6 +32,7 @@ export type IProduct = {
   status: 'active' | 'sold' | 'unsold' | 'pending'
   stock: number
   isFeatured: boolean
+  boostedUntil?: Date
   allowTrade: boolean
   createdAt: Date
   updatedAt: Date

@@ -146,6 +146,16 @@ const socket = (io) => {
             const { streamId, userId, message } = data;
             if (streamId && userId && message) {
                 const userInfo = await user_model_1.User.findById(userId).select('name fullName email image photo');
+                const displayName = (userInfo === null || userInfo === void 0 ? void 0 : userInfo.fullName) || (userInfo === null || userInfo === void 0 ? void 0 : userInfo.name) || 'User';
+                await auction_model_1.LiveStream.findByIdAndUpdate(streamId, {
+                    $push: {
+                        chatMessages: {
+                            user: displayName,
+                            message: message,
+                            timestamp: new Date(),
+                        },
+                    },
+                });
                 io.to(`stream:${streamId}`).emit('new-chat-message', {
                     streamId,
                     user: userInfo,

@@ -3,8 +3,9 @@ import { IReview, ReviewModel } from './review.interface'
 
 const reviewSchema = new Schema<IReview, ReviewModel>(
   {
-    bookingId: { type: Schema.Types.ObjectId, ref: 'Booking', required: true },
-    serviceId: { type: Schema.Types.ObjectId, ref: 'Service' },
+    // One of orderId or tradeOfferId is required at the service/validation layer
+    orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
+    tradeOfferId: { type: Schema.Types.ObjectId, ref: 'TradeOffer' },
     reviewer: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -15,8 +16,8 @@ const reviewSchema = new Schema<IReview, ReviewModel>(
       ref: 'User',
       populate: { path: 'reviewee', select: 'name lastName fullName profile' },
     },
-    rating: { type: Number, required: true },
-    review: { type: String, required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    review: { type: String, required: true, trim: true },
   },
   {
     timestamps: true,

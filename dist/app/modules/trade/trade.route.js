@@ -22,5 +22,7 @@ router.get('/offers', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_R
 router.post('/accept/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), trade_controller_1.TradeControllers.acceptTradeOffer);
 // POST /decline/:id — Decline a trade offer (receiver only)
 router.post('/decline/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), trade_controller_1.TradeControllers.declineTradeOffer);
+// POST /complete/:id — Complete an accepted trade (sender or receiver)
+router.post('/complete/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), trade_controller_1.TradeControllers.completeTradeOffer);
 exports.TradeRoutes = router;
 exports.default = exports.TradeRoutes;

@@ -3,8 +3,9 @@ import { IUser } from '../user/user.interface'
 
 export type IReview = {
   _id?: Types.ObjectId
-  bookingId: Types.ObjectId
-  serviceId?: Types.ObjectId
+  // One of orderId or tradeOfferId is required (platform has no booking concept)
+  orderId?: Types.ObjectId
+  tradeOfferId?: Types.ObjectId
   reviewer: Types.ObjectId | IUser
   reviewee?: Types.ObjectId | IUser
   rating: number

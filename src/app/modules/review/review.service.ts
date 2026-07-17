@@ -16,8 +16,15 @@ const createReview = async (user: JwtPayload, payload: IReview) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Reviewee is required')
   }
 
-  const isUserExist = await User.findById(user.userId)
+  // Require either orderId or tradeOfferId (platform has no booking concept)
+  if (!payload.orderId && !payload.tradeOfferId) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Either orderId or tradeOfferId is required to leave a review.',
+    )
+  }
 
+  const isUserExist = await User.findById(user.userId)
   if (!isUserExist) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
   }
@@ -118,35 +125,32 @@ const getAllReviews = async (
   }
 }
 
-const getReviewsByBooking = async (
+const getReviewsByOrder = async (
   user: JwtPayload,
-  bookingId: string,
+  referenceId: string,
   type: 'reviewer' | 'reviewee',
   paginationOptions: IPaginationOptions,
 ) => {
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(paginationOptions)
 
-  const cacheKey = `reviews:${type}:${user.userId}:booking:${bookingId}:page:${page}:limit:${limit}:sort:${sortBy}:${sortOrder}`
-
-  // const cachedResult = await redisClient.get(cacheKey);
-
-  // if(cachedResult){
-  //   return JSON.parse(cachedResult);
-  // }
+  // Match by orderId or tradeOfferId
+  const query = {
+    $or: [
+      { orderId: referenceId },
+      { tradeOfferId: referenceId },
+    ],
+  }
 
   const [result, total] = await Promise.all([
-    Review.find({ bookingId: bookingId })
+    Review.find(query)
       .populate('reviewer')
       .populate('reviewee')
       .skip(skip)
       .limit(limit)
       .sort({ [sortBy]: sortOrder }),
-    Review.countDocuments({ bookingId: bookingId }),
+    Review.countDocuments(query),
   ])
-
-  //cache the result
-  // await redisClient.setex(cacheKey, JSON.stringify({ meta: { page, limit, total, totalPages: Math.ceil(total / limit) }, data: result }), 60 * 3); // 2 minutes
 
   return {
     meta: {
@@ -362,6 +366,6 @@ export const ReviewServices = {
   updateReview,
   deleteReview,
   getSingleReview,
-  getReviewsByBooking,
+  getReviewsByOrder,
   getReviewsByProvider,
 }

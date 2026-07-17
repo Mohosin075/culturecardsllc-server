@@ -19,8 +19,8 @@ router
   )
 
 router
-  .route('/:bookingId/booking')
-  .get(auth(...Object.values(USER_ROLES)), ReviewController.getReviewsByBooking)
+  .route('/:referenceId/reference')
+  .get(auth(...Object.values(USER_ROLES)), ReviewController.getReviewsByOrder)
 
 router.route('/provider/:providerId').get(ReviewController.getReviewsByProvider)
 

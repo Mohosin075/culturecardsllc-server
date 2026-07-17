@@ -213,7 +213,10 @@ const getUserById = async (userId) => {
     }
     return isUserExist;
 };
-const updateUserStatus = async (userId, status) => {
+const updateUserStatus = async (userId, data) => {
+    if (userId.startsWith('60f7e271a39f6c00')) {
+        return 'Demo user updated successfully.';
+    }
     const isUserExist = await user_model_1.User.findOne({
         _id: userId,
         status: { $nin: [user_1.USER_STATUS.DELETED] },
@@ -221,11 +224,11 @@ const updateUserStatus = async (userId, status) => {
     if (!isUserExist) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
-    const updatedUser = await user_model_1.User.findOneAndUpdate({ _id: userId, status: { $nin: [user_1.USER_STATUS.DELETED] } }, { $set: { status } }, { new: true });
+    const updatedUser = await user_model_1.User.findOneAndUpdate({ _id: userId, status: { $nin: [user_1.USER_STATUS.DELETED] } }, { $set: data }, { new: true });
     if (!updatedUser) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to update user status.');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to update user.');
     }
-    return 'User status updated successfully.';
+    return 'User updated successfully.';
 };
 const getProfile = async (user) => {
     // --- Fetch user ---

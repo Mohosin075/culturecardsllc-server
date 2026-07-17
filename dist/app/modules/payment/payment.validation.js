@@ -5,14 +5,13 @@ const zod_1 = require("zod");
 exports.PaymentValidations = {
     create: zod_1.z.object({
         body: zod_1.z.object({
-            bookingId: zod_1.z.string({
-                required_error: 'Booking ID is required',
-            }),
+            bookingId: zod_1.z.string().optional(),
             amount: zod_1.z.number().min(1, 'Amount must be at least 1').optional(),
             currency: zod_1.z.string().default('EUR'),
             productName: zod_1.z.string().optional(),
             description: zod_1.z.string().optional(),
             paymentMethodId: zod_1.z.string().optional(),
+            metadata: zod_1.z.record(zod_1.z.string()).optional(),
         }),
     }),
     update: zod_1.z.object({

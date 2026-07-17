@@ -32,7 +32,10 @@ const generateAgoraToken = catchAsync(async (req: Request, res: Response) => {
 })
 
 const createLiveStream = catchAsync(async (req: Request, res: Response) => {
-  const result = await AuctionServices.createLiveStream(req.body)
+  const user = req.user as JwtPayload
+  // sellerId always comes from authenticated user, never from body
+  const payload = { ...req.body, sellerId: user.userId }
+  const result = await AuctionServices.createLiveStream(payload)
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -63,10 +66,12 @@ const createAuctionItem = catchAsync(async (req: Request, res: Response) => {
 })
 
 const placeBidSecure = catchAsync(async (req: Request, res: Response) => {
-  const { auctionItemId, bidderId, bidAmount } = req.body
+  const user = req.user as JwtPayload
+  const { auctionItemId, bidAmount } = req.body
+  // bidderId always from authenticated user
   const result = await AuctionServices.placeBidSecure(
     auctionItemId,
-    bidderId,
+    user.userId,
     bidAmount,
   )
   sendResponse(res, {
@@ -97,6 +102,18 @@ const updateLiveStreamStatus = catchAsync(async (req: Request, res: Response) =>
   })
 })
 
+const completeAuction = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const { id } = req.params
+  const result = await AuctionServices.completeAuction(id, user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Auction completed. Winner has been notified for payment.',
+    data: result,
+  })
+})
+
 export const AuctionControllers = {
   generateAgoraToken,
   createLiveStream,
@@ -104,4 +121,5 @@ export const AuctionControllers = {
   createAuctionItem,
   placeBidSecure,
   updateLiveStreamStatus,
+  completeAuction,
 }

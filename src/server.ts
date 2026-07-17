@@ -11,6 +11,7 @@ import { UserServices } from './app/modules/user/user.service'
 import { socketHelper } from './helpers/socketHelper'
 import { seedSubscriptionPlans } from './app/modules/subscription/subscription.seed'
 import { logger, errorLogger } from './shared/logger'
+import { startTradeExpiryCron } from './task/tradeExpiryCron'
 
 // Uncaught exceptions
 process.on('uncaughtException', error => {
@@ -111,6 +112,9 @@ async function main() {
     // Socket helper
     socketHelper.socket(io)
     global.io = io
+
+    // Start background cron jobs
+    startTradeExpiryCron()
 
     logger.info(colors.green('🍁 Socket.IO initialized successfully'))
   } catch (error) {

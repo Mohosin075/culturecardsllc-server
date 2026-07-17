@@ -3,6 +3,8 @@ import ApiError from '../../../errors/ApiError'
 import { IProduct } from './product.interface'
 import { Product } from './product.model'
 import { Types } from 'mongoose'
+import stripe from '../../../config/stripe'
+import config from '../../../config'
 
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   const result = await Product.create(payload)
@@ -98,10 +100,64 @@ const deleteProduct = async (id: string): Promise<IProduct | null> => {
   return result
 }
 
+const boostProduct = async (
+  productId: string,
+  userId: string,
+  boostDurationDays: number = 7,
+): Promise<{ sessionId: string; url: string }> => {
+  if (!Types.ObjectId.isValid(productId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
+  }
+
+  const product = await Product.findById(productId)
+  if (!product) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
+  }
+
+  if (product.sellerId.toString() !== userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You are not authorized to boost this product')
+  }
+
+  // Cost calculation: e.g., $5 per day
+  const amountPerDay = 5
+  const totalAmount = amountPerDay * boostDurationDays
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Boost Listing: ${product.title}`,
+            description: `Boost item listing for ${boostDurationDays} days`,
+          },
+          unit_amount: Math.round(totalAmount * 100),
+        },
+        quantity: 1,
+      },
+    ],
+    mode: 'payment',
+    success_url: `${config.clientUrl}?boost_success=true&productId=${productId}`,
+    cancel_url: `${config.clientUrl}/product/cancel`,
+    metadata: {
+      purchaseType: 'product_boost',
+      productId: productId,
+      boostDurationDays: boostDurationDays.toString(),
+    },
+  })
+
+  return {
+    sessionId: session.id,
+    url: session.url!,
+  }
+}
+
 export const ProductServices = {
   createProduct,
   getAllProducts,
   getProductById,
   updateProduct,
   deleteProduct,
+  boostProduct,
 }

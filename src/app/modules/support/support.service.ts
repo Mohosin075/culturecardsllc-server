@@ -9,6 +9,8 @@ import { Types } from 'mongoose'
 import { SUPPORT_STATUS } from '../../../enum/support'
 import { User } from '../user/user.model'
 import { USER_ROLES, USER_STATUS } from '../../../enum/user'
+import { io } from '../../../server'
+import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 
 const createSupport = async (
   user: JwtPayload,
@@ -31,10 +33,33 @@ const createSupport = async (
       )
     }
 
+    // Notify admin via socket + push (non-blocking)
     const superAdmin = await User.findOne({
       role: USER_ROLES.SUPER_ADMIN,
       status: USER_STATUS.ACTIVE,
-    }).select('_id email')
+    }).select('_id deviceToken')
+
+    if (superAdmin) {
+      // Real-time socket notification
+      if (io) {
+        io.to(superAdmin._id.toString()).emit('new-report', {
+          type: 'NEW_REPORT',
+          reportId: result._id.toString(),
+          reason: data.reason,
+          contentType: data.contentType,
+          message: `New ${data.reason} report submitted`,
+        })
+      }
+      // Push notification
+      if (superAdmin.deviceToken) {
+        sendPushNotification(
+          superAdmin.deviceToken,
+          'New Report Submitted',
+          `A user reported a ${data.contentType} for: ${data.reason}`,
+          { type: 'NEW_REPORT', reportId: result._id.toString() },
+        ).catch(() => {/* non-blocking */})
+      }
+    }
 
     return result
   } catch (error: any) {

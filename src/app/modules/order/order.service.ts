@@ -31,21 +31,14 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     }
     await product.save({ session })
 
+    // Use participants[] array — consistent with Chat model schema
     let chat = await Chat.findOne({
-      $or: [
-        { creator: order.buyerId, participant: order.sellerId },
-        { creator: order.sellerId, participant: order.buyerId },
-      ],
+      participants: { $all: [order.buyerId, order.sellerId] },
     })
 
     if (!chat) {
       const createdChats = await Chat.create(
-        [
-          {
-            creator: order.buyerId,
-            participant: order.sellerId,
-          },
-        ],
+        [{ participants: [order.buyerId, order.sellerId] }],
         { session },
       )
       chat = createdChats[0]
@@ -138,11 +131,9 @@ const updateOrderJourney = async (
     ? buyerUser._id.toString()
     : order.buyerId.toString()
 
+  // Use participants[] array — consistent with Chat model schema
   const chat = await Chat.findOne({
-    $or: [
-      { creator: buyerUserId, participant: order.sellerId },
-      { creator: order.sellerId, participant: buyerUserId },
-    ],
+    participants: { $all: [buyerUserId, order.sellerId] },
   })
 
   if (chat) {

@@ -79,6 +79,9 @@ const ProductSchema = new mongoose_1.Schema({
         default: false,
         index: true,
     },
+    boostedUntil: {
+        type: Date,
+    },
     allowTrade: {
         type: Boolean,
         default: true,

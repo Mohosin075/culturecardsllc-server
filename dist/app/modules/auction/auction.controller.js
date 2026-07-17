@@ -25,7 +25,10 @@ const generateAgoraToken = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const createLiveStream = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await auction_service_1.AuctionServices.createLiveStream(req.body);
+    const user = req.user;
+    // sellerId always comes from authenticated user, never from body
+    const payload = { ...req.body, sellerId: user.userId };
+    const result = await auction_service_1.AuctionServices.createLiveStream(payload);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
@@ -53,8 +56,10 @@ const createAuctionItem = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const placeBidSecure = (0, catchAsync_1.default)(async (req, res) => {
-    const { auctionItemId, bidderId, bidAmount } = req.body;
-    const result = await auction_service_1.AuctionServices.placeBidSecure(auctionItemId, bidderId, bidAmount);
+    const user = req.user;
+    const { auctionItemId, bidAmount } = req.body;
+    // bidderId always from authenticated user
+    const result = await auction_service_1.AuctionServices.placeBidSecure(auctionItemId, user.userId, bidAmount);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -74,6 +79,17 @@ const updateLiveStreamStatus = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const completeAuction = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { id } = req.params;
+    const result = await auction_service_1.AuctionServices.completeAuction(id, user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Auction completed. Winner has been notified for payment.',
+        data: result,
+    });
+});
 exports.AuctionControllers = {
     generateAgoraToken,
     createLiveStream,
@@ -81,4 +97,5 @@ exports.AuctionControllers = {
     createAuctionItem,
     placeBidSecure,
     updateLiveStreamStatus,
+    completeAuction,
 };

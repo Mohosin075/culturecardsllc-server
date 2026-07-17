@@ -10,7 +10,10 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const createTradeOffer = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await trade_service_1.TradeServices.createTradeOffer(req.body);
+    const user = req.user;
+    // senderId always from authenticated user — never trust client body
+    const payload = { ...req.body, senderId: user.userId };
+    const result = await trade_service_1.TradeServices.createTradeOffer(payload);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
@@ -50,9 +53,20 @@ const declineTradeOffer = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const completeTradeOffer = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const result = await trade_service_1.TradeServices.completeTradeOffer(req.params.id, user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Trade completed successfully. Ownership transferred.',
+        data: result,
+    });
+});
 exports.TradeControllers = {
     createTradeOffer,
     getTradeOffers,
     acceptTradeOffer,
     declineTradeOffer,
+    completeTradeOffer,
 };

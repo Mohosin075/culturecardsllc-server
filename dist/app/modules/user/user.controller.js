@@ -88,15 +88,14 @@ const getUserById = (0, catchAsync_1.default)(async (req, res) => {
 });
 const updateUserStatus = (0, catchAsync_1.default)(async (req, res) => {
     const { userId } = req.params;
-    const { status } = req.body;
-    if (!status) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Status is required');
+    if (req.body.status === undefined && req.body.verified === undefined) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Status or verified field is required');
     }
-    const result = await user_service_1.UserServices.updateUserStatus(userId, status);
+    const result = await user_service_1.UserServices.updateUserStatus(userId, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
-        message: 'User status updated successfully',
+        message: 'User updated successfully',
         data: result,
     });
 });

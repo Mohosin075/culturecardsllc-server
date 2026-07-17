@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { ProductServices } from './product.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
+import { JwtPayload } from 'jsonwebtoken'
 
 const createProduct = catchAsync(async (req: Request, res: Response) => {
   const result = await ProductServices.createProduct(req.body)
@@ -67,10 +68,23 @@ const deleteProduct = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const boostProduct = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const boostDurationDays = req.body.boostDurationDays ? Number(req.body.boostDurationDays) : 7
+  const result = await ProductServices.boostProduct(req.params.id, user.userId, boostDurationDays)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Boost Checkout session created successfully.',
+    data: result,
+  })
+})
+
 export const ProductControllers = {
   createProduct,
   getAllProducts,
   getProductById,
   updateProduct,
   deleteProduct,
+  boostProduct,
 }

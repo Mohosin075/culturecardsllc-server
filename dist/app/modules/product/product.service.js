@@ -8,6 +8,8 @@ const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const product_model_1 = require("./product.model");
 const mongoose_1 = require("mongoose");
+const stripe_1 = __importDefault(require("../../../config/stripe"));
+const config_1 = __importDefault(require("../../../config"));
 const createProduct = async (payload) => {
     const result = await product_model_1.Product.create(payload);
     return result;
@@ -73,10 +75,54 @@ const deleteProduct = async (id) => {
     }
     return result;
 };
+const boostProduct = async (productId, userId, boostDurationDays = 7) => {
+    if (!mongoose_1.Types.ObjectId.isValid(productId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Product ID');
+    }
+    const product = await product_model_1.Product.findById(productId);
+    if (!product) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
+    }
+    if (product.sellerId.toString() !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You are not authorized to boost this product');
+    }
+    // Cost calculation: e.g., $5 per day
+    const amountPerDay = 5;
+    const totalAmount = amountPerDay * boostDurationDays;
+    const session = await stripe_1.default.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+            {
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: `Boost Listing: ${product.title}`,
+                        description: `Boost item listing for ${boostDurationDays} days`,
+                    },
+                    unit_amount: Math.round(totalAmount * 100),
+                },
+                quantity: 1,
+            },
+        ],
+        mode: 'payment',
+        success_url: `${config_1.default.clientUrl}?boost_success=true&productId=${productId}`,
+        cancel_url: `${config_1.default.clientUrl}/product/cancel`,
+        metadata: {
+            purchaseType: 'product_boost',
+            productId: productId,
+            boostDurationDays: boostDurationDays.toString(),
+        },
+    });
+    return {
+        sessionId: session.id,
+        url: session.url,
+    };
+};
 exports.ProductServices = {
     createProduct,
     getAllProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    boostProduct,
 };

@@ -40,5 +40,12 @@ router.post(
   TradeControllers.declineTradeOffer,
 )
 
+// POST /complete/:id — Complete an accepted trade (sender or receiver)
+router.post(
+  '/complete/:id',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
+  TradeControllers.completeTradeOffer,
+)
+
 export const TradeRoutes = router
 export default TradeRoutes

@@ -3,8 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Review = void 0;
 const mongoose_1 = require("mongoose");
 const reviewSchema = new mongoose_1.Schema({
-    bookingId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Booking', required: true },
-    serviceId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Service' },
+    // One of orderId or tradeOfferId is required at the service/validation layer
+    orderId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Order' },
+    tradeOfferId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'TradeOffer' },
     reviewer: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User',
@@ -15,8 +16,8 @@ const reviewSchema = new mongoose_1.Schema({
         ref: 'User',
         populate: { path: 'reviewee', select: 'name lastName fullName profile' },
     },
-    rating: { type: Number, required: true },
-    review: { type: String, required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    review: { type: String, required: true, trim: true },
 }, {
     timestamps: true,
 });

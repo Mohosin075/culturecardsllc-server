@@ -17,9 +17,9 @@ router.get('/stats', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_R
 router.get('/:id', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), notification_controller_1.NotificationController.getNotificationById);
 router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), (0, validateRequest_1.default)(notification_validation_1.NotificationValidations.create), notification_controller_1.NotificationController.createNotification);
 router.post('/test-email', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), (0, validateRequest_1.default)(notification_validation_1.NotificationValidations.sendEmail), notification_controller_1.NotificationController.sendTestEmail);
-router.patch('/read-all', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), notification_controller_1.NotificationController.markAllAsRead);
-router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), (0, validateRequest_1.default)(notification_validation_1.NotificationValidations.update), notification_controller_1.NotificationController.updateNotification);
-router.patch('/:id/read', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), notification_controller_1.NotificationController.markAsRead);
-router.patch('/:id/archive', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), notification_controller_1.NotificationController.archiveNotification);
+router.patch('/read-all', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), notification_controller_1.NotificationController.markAllAsRead);
+router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(notification_validation_1.NotificationValidations.update), notification_controller_1.NotificationController.updateNotification);
+router.patch('/:id/read', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), notification_controller_1.NotificationController.markAsRead);
+router.patch('/:id/archive', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), notification_controller_1.NotificationController.archiveNotification);
 router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), notification_controller_1.NotificationController.deleteNotification);
 exports.NotificationRoutes = router;

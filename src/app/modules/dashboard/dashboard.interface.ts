@@ -66,6 +66,7 @@ export type IUserManagementItem = {
 }
 
 export type ISellerVerificationRequest = {
+  id?: string
   name: string
   email: string
   requestId: string

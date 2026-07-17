@@ -30,19 +30,12 @@ const createOrder = async (payload) => {
             product.status = 'sold';
         }
         await product.save({ session });
+        // Use participants[] array — consistent with Chat model schema
         let chat = await chat_model_1.Chat.findOne({
-            $or: [
-                { creator: order.buyerId, participant: order.sellerId },
-                { creator: order.sellerId, participant: order.buyerId },
-            ],
+            participants: { $all: [order.buyerId, order.sellerId] },
         });
         if (!chat) {
-            const createdChats = await chat_model_1.Chat.create([
-                {
-                    creator: order.buyerId,
-                    participant: order.sellerId,
-                },
-            ], { session });
+            const createdChats = await chat_model_1.Chat.create([{ participants: [order.buyerId, order.sellerId] }], { session });
             chat = createdChats[0];
         }
         if (chat) {
@@ -113,11 +106,9 @@ const updateOrderJourney = async (orderId, journeyUpdate, deliveryStatus) => {
     const buyerUserId = (buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser._id)
         ? buyerUser._id.toString()
         : order.buyerId.toString();
+    // Use participants[] array — consistent with Chat model schema
     const chat = await chat_model_1.Chat.findOne({
-        $or: [
-            { creator: buyerUserId, participant: order.sellerId },
-            { creator: order.sellerId, participant: buyerUserId },
-        ],
+        participants: { $all: [buyerUserId, order.sellerId] },
     });
     if (chat) {
         const trackingMsg = `Order tracking update: ${journeyUpdate.description} (${journeyUpdate.status})`;

@@ -152,6 +152,42 @@ const updateSettingsData = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const approveSellerVerification = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.approveSellerVerification(req.params.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Seller verification approved successfully.',
+        data: result,
+    });
+});
+const rejectSellerVerification = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.rejectSellerVerification(req.params.userId, req.body.reason);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Seller verification request rejected.',
+        data: result,
+    });
+});
+const resolveDispute = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.resolveDispute(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Dispute resolved successfully.',
+        data: result,
+    });
+});
+const rejectDispute = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await dashboard_service_1.dashboardService.rejectDispute(req.params.id, req.body.reason);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Dispute rejected successfully.',
+        data: result,
+    });
+});
 exports.dashboardController = {
     getOverviewData,
     getUsersData,
@@ -169,4 +205,8 @@ exports.dashboardController = {
     getReportsData,
     getSettingsData,
     updateSettingsData,
+    approveSellerVerification,
+    rejectSellerVerification,
+    resolveDispute,
+    rejectDispute,
 };

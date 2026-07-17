@@ -5,6 +5,10 @@ import { ILiveStream, IAuctionItem } from './auction.interface'
 import { RtcTokenBuilder, RtcRole } from 'agora-access-token'
 import config from '../../../config'
 import { Types } from 'mongoose'
+import stripe from '../../../config/stripe'
+import { Product } from '../product/product.model'
+import { User } from '../user/user.model'
+import { io } from '../../../server'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -151,6 +155,120 @@ const updateLiveStreamStatus = async (
   return stream
 }
 
+// ── Complete auction + trigger winner Stripe checkout ────────────────────────────
+const completeAuction = async (
+  auctionItemId: string,
+  requestingUserId: string,
+): Promise<{ checkoutUrl: string; auctionItem: IAuctionItem }> => {
+  if (!Types.ObjectId.isValid(auctionItemId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID')
+  }
+
+  const auctionItem = (await AuctionItem.findById(auctionItemId)
+    .populate('productId')
+    .populate('streamId')) as any
+
+  if (!auctionItem) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Auction item not found')
+  }
+
+  if (auctionItem.status !== 'active') {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `Auction cannot be completed. Current status: ${auctionItem.status}`,
+    )
+  }
+
+  if (!auctionItem.highestBidderId) {
+    // No bids placed: mark as failed
+    auctionItem.status = 'failed'
+    await auctionItem.save()
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Auction ended with no bids. Status set to failed.',
+    )
+  }
+
+  // Check reservePrice
+  const product = auctionItem.productId as any
+  if (product.reservePrice && auctionItem.currentBid < product.reservePrice) {
+    auctionItem.status = 'failed'
+    await auctionItem.save()
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `Reserve price not met (current: $${auctionItem.currentBid}, reserve: $${product.reservePrice}). Auction failed.`,
+    )
+  }
+
+  // Authorize: only the stream seller or admin can complete
+  const stream = auctionItem.streamId as any
+  if (
+    stream &&
+    stream.sellerId.toString() !== requestingUserId &&
+    requestingUserId !== 'admin'
+  ) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only the auction host can complete this auction.',
+    )
+  }
+
+  // Mark product pending (escrow-like hold)
+  await Product.findByIdAndUpdate(product._id, { status: 'pending' })
+
+  // Mark auction completed
+  auctionItem.status = 'completed'
+  await auctionItem.save()
+
+  // Get winner info
+  const winner = await User.findById(auctionItem.highestBidderId).select('email name')
+  if (!winner?.email) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Winner email not found')
+  }
+
+  // Create Stripe checkout session for winner
+  const stripeSession = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Auction Win: ${product.title}`,
+            description: `You won the auction! Highest bid: $${auctionItem.currentBid}`,
+          },
+          unit_amount: Math.round(auctionItem.currentBid * 100),
+        },
+        quantity: 1,
+      },
+    ],
+    mode: 'payment',
+    success_url: `${config.clientUrl}?auction_won=true&auctionItemId=${auctionItemId}`,
+    cancel_url: `${config.clientUrl}/auction/cancel`,
+    customer_email: winner.email,
+    metadata: {
+      purchaseType: 'auction_win',
+      productId: product._id.toString(),
+      sellerId: stream?.sellerId?.toString() || '',
+      winnerId: auctionItem.highestBidderId.toString(),
+      auctionItemId: auctionItemId,
+    },
+  })
+
+  // Notify winner via socket
+  if (io) {
+    io.to(auctionItem.highestBidderId.toString()).emit('auction-won', {
+      auctionItemId,
+      productTitle: product.title,
+      winningBid: auctionItem.currentBid,
+      checkoutUrl: stripeSession.url,
+      message: `🏆 You won the auction for ${product.title}! Please complete your payment.`,
+    })
+  }
+
+  return { checkoutUrl: stripeSession.url!, auctionItem }
+}
+
 export const AuctionServices = {
   generateAgoraToken,
   createLiveStream,
@@ -158,4 +276,5 @@ export const AuctionServices = {
   createAuctionItem,
   placeBidSecure,
   updateLiveStreamStatus,
+  completeAuction,
 }

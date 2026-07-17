@@ -4,9 +4,13 @@ import { TradeServices } from './trade.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
+import { JwtPayload } from 'jsonwebtoken'
 
 const createTradeOffer = catchAsync(async (req: Request, res: Response) => {
-  const result = await TradeServices.createTradeOffer(req.body)
+  const user = req.user as JwtPayload
+  // senderId always from authenticated user — never trust client body
+  const payload = { ...req.body, senderId: user.userId }
+  const result = await TradeServices.createTradeOffer(payload)
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -55,9 +59,21 @@ const declineTradeOffer = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const completeTradeOffer = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const result = await TradeServices.completeTradeOffer(req.params.id, user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Trade completed successfully. Ownership transferred.',
+    data: result,
+  })
+})
+
 export const TradeControllers = {
   createTradeOffer,
   getTradeOffers,
   acceptTradeOffer,
   declineTradeOffer,
+  completeTradeOffer,
 }

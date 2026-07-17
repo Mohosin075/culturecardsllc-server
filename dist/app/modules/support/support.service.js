@@ -12,6 +12,8 @@ const mongoose_1 = require("mongoose");
 const support_1 = require("../../../enum/support");
 const user_model_1 = require("../user/user.model");
 const user_1 = require("../../../enum/user");
+const server_1 = require("../../../server");
+const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const createSupport = async (user, payload) => {
     console.log({ user, payload });
     const data = {
@@ -24,10 +26,27 @@ const createSupport = async (user, payload) => {
         if (!result) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create Support, please try again with valid data.');
         }
+        // Notify admin via socket + push (non-blocking)
         const superAdmin = await user_model_1.User.findOne({
             role: user_1.USER_ROLES.SUPER_ADMIN,
             status: user_1.USER_STATUS.ACTIVE,
-        }).select('_id email');
+        }).select('_id deviceToken');
+        if (superAdmin) {
+            // Real-time socket notification
+            if (server_1.io) {
+                server_1.io.to(superAdmin._id.toString()).emit('new-report', {
+                    type: 'NEW_REPORT',
+                    reportId: result._id.toString(),
+                    reason: data.reason,
+                    contentType: data.contentType,
+                    message: `New ${data.reason} report submitted`,
+                });
+            }
+            // Push notification
+            if (superAdmin.deviceToken) {
+                (0, pushnotificationHelper_1.sendPushNotification)(superAdmin.deviceToken, 'New Report Submitted', `A user reported a ${data.contentType} for: ${data.reason}`, { type: 'NEW_REPORT', reportId: result._id.toString() }).catch(() => { });
+            }
+        }
         return result;
     }
     catch (error) {

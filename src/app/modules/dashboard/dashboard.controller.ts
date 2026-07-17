@@ -170,6 +170,46 @@ const updateSettingsData = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const approveSellerVerification = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.approveSellerVerification(req.params.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Seller verification approved successfully.',
+    data: result,
+  })
+})
+
+const rejectSellerVerification = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.rejectSellerVerification(req.params.userId, req.body.reason)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Seller verification request rejected.',
+    data: result,
+  })
+})
+
+const resolveDispute = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.resolveDispute(req.params.id)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Dispute resolved successfully.',
+    data: result,
+  })
+})
+
+const rejectDispute = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.rejectDispute(req.params.id, req.body.reason)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Dispute rejected successfully.',
+    data: result,
+  })
+})
+
 export const dashboardController = {
   getOverviewData,
   getUsersData,
@@ -187,4 +227,8 @@ export const dashboardController = {
   getReportsData,
   getSettingsData,
   updateSettingsData,
+  approveSellerVerification,
+  rejectSellerVerification,
+  resolveDispute,
+  rejectDispute,
 }

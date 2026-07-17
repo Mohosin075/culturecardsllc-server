@@ -3,6 +3,13 @@ import stripe from '../../../config/stripe'
 import ApiError from '../../../errors/ApiError'
 import { Payment } from './payment.model'
 import { emailHelper } from '../../../helpers/emailHelper'
+import { Order } from '../order/order.model'
+import { Product } from '../product/product.model'
+import { TradeOffer } from '../trade/trade.model'
+import { Chat } from '../chat/chat.model'
+import { Message } from '../message/message.model'
+import { io } from '../../../server'
+
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
 ): Promise<void> => {
@@ -14,12 +21,8 @@ const handleCheckoutSessionCompleted = async (
         expand: ['payment_intent', 'line_items'],
       },
     )
-    console.log(
-      '✅ Session Details Retrieved. Payment Intent:',
-      sessionWithDetails.payment_intent,
-    )
-    let lookupId: string
 
+    let lookupId: string
     if (typeof sessionWithDetails.payment_intent === 'string') {
       lookupId = sessionWithDetails.payment_intent
     } else if (sessionWithDetails.payment_intent?.id) {
@@ -32,7 +35,6 @@ const handleCheckoutSessionCompleted = async (
     mongoSession.startTransaction()
 
     try {
-      // Find and lock the payment document
       const payment = await Payment.findOne({
         $or: [
           { paymentIntentId: lookupId },
@@ -41,34 +43,168 @@ const handleCheckoutSessionCompleted = async (
       }).session(mongoSession)
 
       if (!payment) {
-        throw new Error(
-          `Payment not found for session: ${sessionWithDetails.id}`,
-        )
+        throw new Error(`Payment not found for session: ${sessionWithDetails.id}`)
       }
 
-      // Check if already processed to avoid duplicates
       if (payment.status === 'succeeded') {
         await mongoSession.commitTransaction()
         return
       }
 
-      // Update payment
       payment.status = 'succeeded'
       payment.metadata = { ...payment.metadata, ...sessionWithDetails }
       await payment.save({ session: mongoSession })
 
-      // Booking and Wallet logic removed as requested
+      const meta = (sessionWithDetails.metadata || {}) as Record<string, string>
+      const purchaseType = meta.purchaseType
+
+      // ─── BUY NOW: update order paymentStatus + product status ───────────────────
+      if (purchaseType === 'buy_now' && meta.orderId) {
+        await Order.findByIdAndUpdate(
+          meta.orderId,
+          { paymentStatus: 'paid' },
+          { session: mongoSession },
+        )
+        if (meta.productId) {
+          await Product.findByIdAndUpdate(
+            meta.productId,
+            { status: 'sold' },
+            { session: mongoSession },
+          )
+        }
+      }
+
+      // ─── AUCTION WIN: create order + mark product sold ─────────────────────────
+      if (purchaseType === 'auction_win' && meta.productId && meta.winnerId && meta.sellerId) {
+        const product = await Product.findById(meta.productId).session(mongoSession)
+        if (product) {
+          // Create order
+          const [order] = await Order.create(
+            [
+              {
+                buyerId: meta.winnerId,
+                sellerId: meta.sellerId,
+                productId: meta.productId,
+                totalPrice: product.buyNowPrice || 0,
+                purchaseType: 'auction_win',
+                paymentStatus: 'paid',
+                deliveryStatus: 'pending',
+                trackingDetails: { journeyUpdates: [] },
+              },
+            ],
+            { session: mongoSession },
+          )
+
+          // Mark product sold
+          await Product.findByIdAndUpdate(
+            meta.productId,
+            { status: 'sold', stock: 0 },
+            { session: mongoSession },
+          )
+
+          // Chat message to seller
+          const chat = await Chat.findOne({
+            participants: { $all: [meta.winnerId, meta.sellerId] },
+          })
+          if (chat) {
+            await Message.create(
+              [
+                {
+                  chatId: chat._id,
+                  sender: meta.winnerId,
+                  text: `🏆 Auction Won! Payment complete. Order #${(order as any)._id.toString().substring(0, 8).toUpperCase()} created.`,
+                  messageType: 'order_update',
+                  seen: false,
+                  metadata: { orderId: (order as any)._id.toString(), statusLabel: 'AUCTION WON 🏆' },
+                },
+              ],
+              { session: mongoSession },
+            )
+          }
+
+          // Socket notify seller
+          if (io) {
+            io.to(meta.sellerId).emit('auction-payment-received', {
+              orderId: (order as any)._id.toString(),
+              productId: meta.productId,
+              message: 'Auction payment received! Order created.',
+            })
+          }
+        }
+      }
+
+      // ─── TRADE SUPPLEMENT: complete trade ownership swap ─────────────────────
+      if (purchaseType === 'trade_supplement' && meta.tradeOfferId) {
+        const tradeOffer = await TradeOffer.findById(meta.tradeOfferId).session(mongoSession) as any
+        if (tradeOffer && tradeOffer.status === 'accepted') {
+          // Swap ownership
+          await Product.findByIdAndUpdate(
+            meta.senderProductId,
+            { sellerId: meta.receiverId, status: 'active' },
+            { session: mongoSession },
+          )
+          await Product.findByIdAndUpdate(
+            meta.receiverProductId,
+            { sellerId: meta.senderId, status: 'active' },
+            { session: mongoSession },
+          )
+
+          tradeOffer.status = 'completed'
+          tradeOffer.escrowStatus = 'released'
+          await tradeOffer.save({ session: mongoSession })
+
+          // Chat message
+          const chat = await Chat.findOne({
+            participants: { $all: [meta.senderId, meta.receiverId] },
+          })
+          if (chat) {
+            await Message.create(
+              [
+                {
+                  chatId: chat._id,
+                  sender: meta.senderId,
+                  text: 'Trade completed! Payment received and items exchanged. ✅',
+                  messageType: 'trade_proposal',
+                  seen: false,
+                  metadata: { tradeOfferId: meta.tradeOfferId, statusLabel: 'TRADE COMPLETED ✅' },
+                },
+              ],
+              { session: mongoSession },
+            )
+          }
+
+          // Notify both parties
+          if (io) {
+            [meta.senderId, meta.receiverId].forEach(uid => {
+              io!.to(uid).emit('trade-completed', {
+                tradeOfferId: meta.tradeOfferId,
+                message: 'Trade completed! Ownership transferred. ✅',
+              })
+            })
+          }
+        }
+      }
+      // ─── PRODUCT BOOST: update product isFeatured + boostedUntil ───────────────
+      if (purchaseType === 'product_boost' && meta.productId) {
+        const durationDays = Number(meta.boostDurationDays || '7')
+        const boostedUntil = new Date()
+        boostedUntil.setDate(boostedUntil.getDate() + durationDays)
+
+        await Product.findByIdAndUpdate(
+          meta.productId,
+          { isFeatured: true, boostedUntil },
+          { session: mongoSession },
+        )
+      }
 
       await mongoSession.commitTransaction()
-      console.log(
-        `Successfully processed payment for session: ${sessionWithDetails.id}`,
-      )
+      console.log(`✅ Payment processed: ${sessionWithDetails.id} [${purchaseType || 'unknown'}]`)
 
-      // Send email
+      // Send confirmation email
       await emailHelper.sendEmail({
         to: payment.userEmail,
-        subject: 'Payment Successful',
-        html: `<p>Your payment was successful.</p>`,
+        subject: 'Payment Successful ✅',
+        html: `<p>Your payment was processed successfully. Thank you for using CultureCards!</p>`,
       })
     } catch (error) {
       await mongoSession.abortTransaction()
@@ -77,8 +213,7 @@ const handleCheckoutSessionCompleted = async (
       mongoSession.endSession()
     }
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
       StatusCodes.INTERNAL_SERVER_ERROR,
       `Checkout processing failed: ${errorMessage}`,

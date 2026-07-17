@@ -16,6 +16,7 @@ const user_service_1 = require("./app/modules/user/user.service");
 const socketHelper_1 = require("./helpers/socketHelper");
 const subscription_seed_1 = require("./app/modules/subscription/subscription.seed");
 const logger_1 = require("./shared/logger");
+const tradeExpiryCron_1 = require("./task/tradeExpiryCron");
 // Uncaught exceptions
 process.on('uncaughtException', error => {
     logger_1.errorLogger.error('🔥 UncaughtException Detected:', error);
@@ -78,6 +79,8 @@ async function main() {
         // Socket helper
         socketHelper_1.socketHelper.socket(exports.io);
         global.io = exports.io;
+        // Start background cron jobs
+        (0, tradeExpiryCron_1.startTradeExpiryCron)();
         logger_1.logger.info(colors_1.default.green('🍁 Socket.IO initialized successfully'));
     }
     catch (error) {

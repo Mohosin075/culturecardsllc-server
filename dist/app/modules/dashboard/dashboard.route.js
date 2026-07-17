@@ -25,5 +25,9 @@ router.patch('/notifications/mark-all-read', (0, auth_1.default)(user_1.USER_ROL
 router.get('/reports', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getReportsData);
 router.get('/settings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getSettingsData);
 router.patch('/settings', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.updateSettingsData);
+router.patch('/seller-verifications/:userId/approve', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.approveSellerVerification);
+router.patch('/seller-verifications/:userId/reject', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.rejectSellerVerification);
+router.patch('/disputes/:id/resolve', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.resolveDispute);
+router.patch('/disputes/:id/reject', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.rejectDispute);
 exports.DashboardRoutes = router;
 exports.default = exports.DashboardRoutes;

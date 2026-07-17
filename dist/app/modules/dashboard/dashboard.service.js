@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dashboardService = void 0;
 const user_model_1 = require("../user/user.model");
@@ -10,6 +13,8 @@ const product_model_1 = require("../product/product.model");
 const category_model_1 = require("../category/category.model");
 const notification_model_1 = require("../notification/notification.model");
 const settings_model_1 = require("./settings.model");
+const http_status_codes_1 = require("http-status-codes");
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const user_1 = require("../../../enum/user");
 class DashboardService {
     // 1. GET /overview
@@ -297,6 +302,7 @@ class DashboardService {
                     'TCG',
                 ];
                 return {
+                    id: u._id.toString(),
                     name: u.fullName || u.name || 'Anonymous Professional',
                     email: u.email || 'seller@example.com',
                     requestId: `VER-${(idx + 1).toString().padStart(3, '0')}`,
@@ -389,11 +395,14 @@ class DashboardService {
                     'TCG',
                 ];
                 return {
+                    _id: s._id,
                     streamId: s._id.toString().substring(0, 8).toUpperCase(),
                     title: s.title || 'Live Streaming Auction',
                     seller: ((_a = s.sellerId) === null || _a === void 0 ? void 0 : _a.fullName) || ((_b = s.sellerId) === null || _b === void 0 ? void 0 : _b.name) || 'Seller',
                     category: categories[Math.floor(Math.random() * categories.length)],
                     viewersCount: s.viewersCount || 10,
+                    likesCount: s.likesCount || 0,
+                    chatMessages: s.chatMessages || [],
                     duration: '35m',
                 };
             });
@@ -408,6 +417,7 @@ class DashboardService {
                     'TCG',
                 ];
                 return {
+                    _id: s._id,
                     streamId: `STR-${(idx + 4).toString().padStart(3, '0')}`,
                     title: s.title || 'Scheduled stream',
                     seller: ((_a = s.sellerId) === null || _a === void 0 ? void 0 : _a.fullName) || ((_b = s.sellerId) === null || _b === void 0 ? void 0 : _b.name) || 'Seller',
@@ -420,21 +430,17 @@ class DashboardService {
                         : '2026-05-24 18:00',
                 };
             });
-            if (currentlyLive.length === 0 && scheduled.length === 0) {
-                return this.getDemoLiveStreamsData();
-            }
             return {
-                currentlyLive: currentlyLive.length > 0
-                    ? currentlyLive
-                    : this.getDemoLiveStreamsData().currentlyLive,
-                scheduled: scheduled.length > 0
-                    ? scheduled
-                    : this.getDemoLiveStreamsData().scheduled,
+                currentlyLive,
+                scheduled,
             };
         }
         catch (error) {
             console.error('Error fetching live streams:', error);
-            return this.getDemoLiveStreamsData();
+            return {
+                currentlyLive: [],
+                scheduled: [],
+            };
         }
     }
     // 6. GET /trades
@@ -701,10 +707,13 @@ class DashboardService {
                 };
             });
             if (mapped.length === 0) {
-                return this.getDemoNotificationsData();
+                return {
+                    unreadCount: 0,
+                    notifications: [],
+                };
             }
             return {
-                unreadCount: unreadCount || 3,
+                unreadCount: unreadCount || 0,
                 notifications: mapped,
             };
         }
@@ -869,6 +878,47 @@ class DashboardService {
             return this.getDemoSettingsData();
         }
     }
+    // Approve a user as a verified seller
+    async approveSellerVerification(userId) {
+        const user = await user_model_1.User.findById(userId);
+        if (!user) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
+        }
+        if (!user.roles.includes(user_1.USER_ROLES.SELLER)) {
+            user.roles.push(user_1.USER_ROLES.SELLER);
+        }
+        user.verified = true;
+        await user.save();
+        return user;
+    }
+    // Reject seller verification request
+    async rejectSellerVerification(userId, reason) {
+        const user = await user_model_1.User.findById(userId);
+        if (!user) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
+        }
+        user.verified = false;
+        // Remove seller role if they aren't verified anymore
+        user.roles = user.roles.filter(role => role !== user_1.USER_ROLES.SELLER);
+        await user.save();
+        return user;
+    }
+    // Resolve a dispute/support ticket
+    async resolveDispute(supportId) {
+        const dispute = await support_model_1.Support.findByIdAndUpdate(supportId, { status: 'solved' }, { new: true });
+        if (!dispute) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Dispute not found');
+        }
+        return dispute;
+    }
+    // Reject a dispute/support ticket
+    async rejectDispute(supportId, reason) {
+        const dispute = await support_model_1.Support.findByIdAndUpdate(supportId, { status: 'dismissed' }, { new: true });
+        if (!dispute) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Dispute not found');
+        }
+        return dispute;
+    }
     // --- PRIVATE DEMO DATA FALLBACK GENERATORS (MATCHING SCREENSHOTS) ---
     getDemoOverviewData() {
         return {
@@ -1031,6 +1081,7 @@ class DashboardService {
     getDemoSellerVerificationsData() {
         return [
             {
+                id: '60f7e271a39f6c001f3e7a01',
                 name: 'John Smith',
                 email: 'john@example.com',
                 requestId: 'VER-001',
@@ -1040,6 +1091,7 @@ class DashboardService {
                 status: 'Pending',
             },
             {
+                id: '60f7e271a39f6c001f3e7a02',
                 name: 'Emily Chen',
                 email: 'emily@example.com',
                 requestId: 'VER-002',
@@ -1049,6 +1101,7 @@ class DashboardService {
                 status: 'Pending',
             },
             {
+                id: '60f7e271a39f6c001f3e7a03',
                 name: 'David Martinez',
                 email: 'david@example.com',
                 requestId: 'VER-003',
@@ -1058,6 +1111,7 @@ class DashboardService {
                 status: 'Pending',
             },
             {
+                id: '60f7e271a39f6c001f3e7a04',
                 name: 'Lisa Anderson',
                 email: 'lisa@example.com',
                 requestId: 'VER-004',
@@ -1131,59 +1185,6 @@ class DashboardService {
                 isBoosted: false,
             },
         ];
-    }
-    getDemoLiveStreamsData() {
-        return {
-            currentlyLive: [
-                {
-                    streamId: 'STR-001',
-                    title: 'Rare Sneakers Auction - Jordan Collection',
-                    seller: 'SneakerKing',
-                    category: 'Sneakers',
-                    viewersCount: 234,
-                    duration: '45m',
-                },
-                {
-                    streamId: 'STR-002',
-                    title: 'Vintage Watch Showcase',
-                    seller: 'WatchMaster',
-                    category: 'Watches',
-                    viewersCount: 89,
-                    duration: '1h 20m',
-                },
-                {
-                    streamId: 'STR-003',
-                    title: 'Pokemon Cards Opening - Booster Box',
-                    seller: 'CardCollector99',
-                    category: 'Cards',
-                    viewersCount: 567,
-                    duration: '32m',
-                },
-            ],
-            scheduled: [
-                {
-                    streamId: 'STR-004',
-                    title: 'Limited Edition Yeezy Drop',
-                    seller: 'SneakerHub',
-                    category: 'Sneakers',
-                    scheduledTime: '2026-04-24 18:00',
-                },
-                {
-                    streamId: 'STR-005',
-                    title: 'Luxury Watch Collection Tour',
-                    seller: 'TimeKeeper',
-                    category: 'Watches',
-                    scheduledTime: '2026-04-24 20:00',
-                },
-                {
-                    streamId: 'STR-006',
-                    title: 'Trading Card Grading Session',
-                    seller: 'CardExpert',
-                    category: 'Cards',
-                    scheduledTime: '2026-04-25 15:00',
-                },
-            ],
-        };
     }
     getDemoTradesData() {
         return [

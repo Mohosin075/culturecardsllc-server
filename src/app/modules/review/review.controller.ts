@@ -43,12 +43,12 @@ const getAllReviews = catchAsync(async (req: Request, res: Response) => {
     data: result,
   })
 })
-const getReviewsByBooking = catchAsync(async (req: Request, res: Response) => {
+const getReviewsByOrder = catchAsync(async (req: Request, res: Response) => {
   const type = req.params.type as 'reviewer' | 'reviewee'
   const paginationOptions = pick(req.query, paginationFields)
-  const result = await ReviewServices.getReviewsByBooking(
+  const result = await ReviewServices.getReviewsByOrder(
     req.user!,
-    req.params.bookingId,
+    req.params.referenceId,
     type,
     paginationOptions,
   )
@@ -106,6 +106,6 @@ export const ReviewController = {
   getAllReviews,
   deleteReview,
   getSingleReview,
-  getReviewsByBooking,
+  getReviewsByOrder,
   getReviewsByProvider,
 }

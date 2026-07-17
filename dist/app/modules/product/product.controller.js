@@ -65,10 +65,22 @@ const deleteProduct = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const boostProduct = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const boostDurationDays = req.body.boostDurationDays ? Number(req.body.boostDurationDays) : 7;
+    const result = await product_service_1.ProductServices.boostProduct(req.params.id, user.userId, boostDurationDays);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Boost Checkout session created successfully.',
+        data: result,
+    });
+});
 exports.ProductControllers = {
     createProduct,
     getAllProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    boostProduct,
 };

@@ -79,6 +79,9 @@ const ProductSchema = new Schema<IProduct>(
       default: false,
       index: true,
     },
+    boostedUntil: {
+      type: Date,
+    },
     allowTrade: {
       type: Boolean,
       default: true,
