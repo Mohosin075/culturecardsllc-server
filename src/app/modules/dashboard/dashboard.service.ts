@@ -349,7 +349,7 @@ class DashboardService {
     try {
       const pendingSellers = await User.find({
         roles: USER_ROLES.SELLER,
-        verified: false,
+        sellerVerified: false,
         status: USER_STATUS.ACTIVE,
       }).limit(20)
 
@@ -372,6 +372,7 @@ class DashboardService {
             ? new Date(u.createdAt).toISOString().split('T')[0]
             : '2026-05-01',
           submittedDocuments: ['ID Card', 'Business License'],
+          documents: ['ID Card', 'Business License'],
           status: 'Pending' as any,
         }
       })
@@ -1025,6 +1026,7 @@ class DashboardService {
       user.roles.push(USER_ROLES.SELLER)
     }
     user.verified = true
+    user.sellerVerified = true
     await user.save()
 
     return user
@@ -1037,7 +1039,7 @@ class DashboardService {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
 
-    user.verified = false
+    user.sellerVerified = false
     // Remove seller role if they aren't verified anymore
     user.roles = user.roles.filter(role => role !== USER_ROLES.SELLER)
     await user.save()
@@ -1243,6 +1245,7 @@ class DashboardService {
         category: 'Sneakers',
         submitted: '2026-04-20',
         submittedDocuments: ['ID Card', 'Business License'],
+        documents: ['ID Card', 'Business License'],
         status: 'Pending',
       },
       {
@@ -1253,6 +1256,7 @@ class DashboardService {
         category: 'Cards',
         submitted: '2026-04-21',
         submittedDocuments: ['ID Card', 'Proof of Address'],
+        documents: ['ID Card', 'Proof of Address'],
         status: 'Pending',
       },
       {
@@ -1263,6 +1267,7 @@ class DashboardService {
         category: 'Watches',
         submitted: '2026-04-22',
         submittedDocuments: ['ID Card', 'Business License', 'Tax Certificate'],
+        documents: ['ID Card', 'Business License', 'Tax Certificate'],
         status: 'Pending',
       },
       {
@@ -1273,6 +1278,7 @@ class DashboardService {
         category: 'Sneakers',
         submitted: '2026-04-23',
         submittedDocuments: ['ID Card', 'Proof of Address'],
+        documents: ['ID Card', 'Proof of Address'],
         status: 'Pending',
       },
     ]

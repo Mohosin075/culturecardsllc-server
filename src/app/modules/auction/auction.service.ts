@@ -61,7 +61,7 @@ const createLiveStream = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Seller not found')
   }
 
-  if (!seller.verified) {
+  if (!seller.sellerVerified) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Your seller account is not verified yet. Please wait for admin approval.',

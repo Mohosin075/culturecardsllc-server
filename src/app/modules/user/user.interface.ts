@@ -51,6 +51,7 @@ export type IUser = {
 
   status: USER_STATUS // standardize statuses
   verified: boolean
+  sellerVerified: boolean
   address?: IAddress
   location: Point
   password: string

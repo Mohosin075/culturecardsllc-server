@@ -289,7 +289,7 @@ class DashboardService {
         try {
             const pendingSellers = await user_model_1.User.find({
                 roles: user_1.USER_ROLES.SELLER,
-                verified: false,
+                sellerVerified: false,
                 status: user_1.USER_STATUS.ACTIVE,
             }).limit(20);
             const result = pendingSellers.map((u, idx) => {
@@ -311,6 +311,7 @@ class DashboardService {
                         ? new Date(u.createdAt).toISOString().split('T')[0]
                         : '2026-05-01',
                     submittedDocuments: ['ID Card', 'Business License'],
+                    documents: ['ID Card', 'Business License'],
                     status: 'Pending',
                 };
             });
@@ -888,6 +889,7 @@ class DashboardService {
             user.roles.push(user_1.USER_ROLES.SELLER);
         }
         user.verified = true;
+        user.sellerVerified = true;
         await user.save();
         return user;
     }
@@ -897,7 +899,7 @@ class DashboardService {
         if (!user) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
         }
-        user.verified = false;
+        user.sellerVerified = false;
         // Remove seller role if they aren't verified anymore
         user.roles = user.roles.filter(role => role !== user_1.USER_ROLES.SELLER);
         await user.save();
@@ -1088,6 +1090,7 @@ class DashboardService {
                 category: 'Sneakers',
                 submitted: '2026-04-20',
                 submittedDocuments: ['ID Card', 'Business License'],
+                documents: ['ID Card', 'Business License'],
                 status: 'Pending',
             },
             {
@@ -1098,6 +1101,7 @@ class DashboardService {
                 category: 'Cards',
                 submitted: '2026-04-21',
                 submittedDocuments: ['ID Card', 'Proof of Address'],
+                documents: ['ID Card', 'Proof of Address'],
                 status: 'Pending',
             },
             {
@@ -1108,6 +1112,7 @@ class DashboardService {
                 category: 'Watches',
                 submitted: '2026-04-22',
                 submittedDocuments: ['ID Card', 'Business License', 'Tax Certificate'],
+                documents: ['ID Card', 'Business License', 'Tax Certificate'],
                 status: 'Pending',
             },
             {
@@ -1118,6 +1123,7 @@ class DashboardService {
                 category: 'Sneakers',
                 submitted: '2026-04-23',
                 submittedDocuments: ['ID Card', 'Proof of Address'],
+                documents: ['ID Card', 'Proof of Address'],
                 status: 'Pending',
             },
         ];

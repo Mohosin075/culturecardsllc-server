@@ -251,9 +251,10 @@ const switchRole = async (user, role) => {
     if (role === user_1.USER_ROLES.SELLER &&
         !isUserExist.roles.includes(user_1.USER_ROLES.SELLER)) {
         // ProfessionalProfile logic removed
-        // Add the seller role to the user
+        // Add the seller role to the user and request verification
         await user_model_1.User.findByIdAndUpdate(user.userId, {
             $addToSet: { roles: user_1.USER_ROLES.SELLER },
+            $set: { sellerVerified: false },
         });
     }
     else if (!isUserExist.roles.includes(role)) {

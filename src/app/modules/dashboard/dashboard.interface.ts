@@ -73,6 +73,7 @@ export type ISellerVerificationRequest = {
   category: 'Sneakers' | 'Cards' | 'Watches' | 'Fine Art' | 'Streetwear' | 'TCG'
   submitted: string
   submittedDocuments: string[]
+  documents?: string[]
   status: 'Pending' | 'Approved' | 'Rejected'
 }
 

@@ -37,7 +37,7 @@ const createLiveStream = async (payload) => {
     if (!seller) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Seller not found');
     }
-    if (!seller.verified) {
+    if (!seller.sellerVerified) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your seller account is not verified yet. Please wait for admin approval.');
     }
     if (!payload.agoraChannelName) {

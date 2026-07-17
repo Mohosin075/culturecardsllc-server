@@ -348,9 +348,10 @@ const switchRole = async (user: JwtPayload, role: USER_ROLES) => {
   ) {
     // ProfessionalProfile logic removed
 
-    // Add the seller role to the user
+    // Add the seller role to the user and request verification
     await User.findByIdAndUpdate(user.userId, {
       $addToSet: { roles: USER_ROLES.SELLER },
+      $set: { sellerVerified: false },
     })
   } else if (!isUserExist.roles.includes(role)) {
     // For other roles, they must already have it

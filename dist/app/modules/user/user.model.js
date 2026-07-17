@@ -17,13 +17,14 @@ const UserSchema = new mongoose_1.Schema({
     coverPhoto: { type: String, default: '' },
     phone: { type: String },
     description: { type: String },
-    interest: { type: [String], enum: Object.values(user_1.InterestCategory) },
+    interest: { type: [String] },
     status: {
         type: String,
         enum: Object.values(user_1.USER_STATUS),
         default: user_1.USER_STATUS.ACTIVE,
     },
     verified: { type: Boolean, default: false },
+    sellerVerified: { type: Boolean, default: false },
     address: {
         city: String,
         postalCode: String,

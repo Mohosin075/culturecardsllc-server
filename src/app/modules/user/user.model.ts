@@ -14,7 +14,7 @@ const UserSchema = new Schema<IUser, UserModel>(
     coverPhoto: { type: String, default: '' },
     phone: { type: String },
     description: { type: String },
-    interest: { type: [String], enum: Object.values(InterestCategory) },
+    interest: { type: [String] },
 
     status: {
       type: String,
@@ -22,6 +22,7 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: USER_STATUS.ACTIVE,
     },
     verified: { type: Boolean, default: false },
+    sellerVerified: { type: Boolean, default: false },
 
     address: {
       city: String,
