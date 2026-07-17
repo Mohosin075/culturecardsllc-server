@@ -10,7 +10,15 @@ const product_model_1 = require("./product.model");
 const mongoose_1 = require("mongoose");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const config_1 = __importDefault(require("../../../config"));
+const user_model_1 = require("../user/user.model");
 const createProduct = async (payload) => {
+    const seller = await user_model_1.User.findById(payload.sellerId);
+    if (!seller) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Seller not found');
+    }
+    if (!seller.verified) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your seller account is not verified yet. Please wait for admin approval.');
+    }
     const result = await product_model_1.Product.create(payload);
     return result;
 };

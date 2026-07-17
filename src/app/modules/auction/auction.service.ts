@@ -56,6 +56,18 @@ const generateAgoraToken = async (
 const createLiveStream = async (
   payload: Partial<ILiveStream>,
 ): Promise<ILiveStream> => {
+  const seller = await User.findById(payload.sellerId)
+  if (!seller) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Seller not found')
+  }
+
+  if (!seller.verified) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Your seller account is not verified yet. Please wait for admin approval.',
+    )
+  }
+
   if (!payload.agoraChannelName) {
     payload.agoraChannelName = `channel_${Date.now()}_${Math.floor(Math.random() * 1000)}`
   }

@@ -5,8 +5,21 @@ import { Product } from './product.model'
 import { Types } from 'mongoose'
 import stripe from '../../../config/stripe'
 import config from '../../../config'
+import { User } from '../user/user.model'
 
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
+  const seller = await User.findById(payload.sellerId)
+  if (!seller) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Seller not found')
+  }
+
+  if (!seller.verified) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Your seller account is not verified yet. Please wait for admin approval.',
+    )
+  }
+
   const result = await Product.create(payload)
   return result
 }

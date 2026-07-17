@@ -33,6 +33,13 @@ const generateAgoraToken = async (channelName, uid = 0, role = 'subscriber') => 
     };
 };
 const createLiveStream = async (payload) => {
+    const seller = await user_model_1.User.findById(payload.sellerId);
+    if (!seller) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Seller not found');
+    }
+    if (!seller.verified) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your seller account is not verified yet. Please wait for admin approval.');
+    }
     if (!payload.agoraChannelName) {
         payload.agoraChannelName = `channel_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     }

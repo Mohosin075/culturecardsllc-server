@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
 import { User } from './src/app/modules/user/user.model'
 import { Product } from './src/app/modules/product/product.model'
-import { Order } from './src/app/modules/order/order.model'
 import { Payment } from './src/app/modules/payment/payment.model'
 import { Chat } from './src/app/modules/chat/chat.model'
 import { Message } from './src/app/modules/message/message.model'
