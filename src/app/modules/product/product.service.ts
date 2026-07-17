@@ -65,20 +65,18 @@ const getAllProducts = async (filters: {
     if (maxPrice !== undefined) query.estValue.$lte = Number(maxPrice)
   }
 
-  return await Product.find(query).populate(
-    'sellerId',
-    'name fullName email image photo',
-  )
+  return await Product.find(query)
+    .populate('sellerId', 'name fullName email image photo')
+    .populate('category', 'name image icon theme')
 }
 
 const getProductById = async (id: string): Promise<IProduct> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
   }
-  const result = await Product.findById(id).populate(
-    'sellerId',
-    'name fullName email image photo stripeCustomerId',
-  )
+  const result = await Product.findById(id)
+    .populate('sellerId', 'name fullName email image photo stripeCustomerId')
+    .populate('category', 'name image icon theme')
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }

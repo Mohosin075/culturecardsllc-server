@@ -48,13 +48,17 @@ const getAllProducts = async (filters) => {
         if (maxPrice !== undefined)
             query.estValue.$lte = Number(maxPrice);
     }
-    return await product_model_1.Product.find(query).populate('sellerId', 'name fullName email image photo');
+    return await product_model_1.Product.find(query)
+        .populate('sellerId', 'name fullName email image photo')
+        .populate('category', 'name image icon theme');
 };
 const getProductById = async (id) => {
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Product ID');
     }
-    const result = await product_model_1.Product.findById(id).populate('sellerId', 'name fullName email image photo stripeCustomerId');
+    const result = await product_model_1.Product.findById(id)
+        .populate('sellerId', 'name fullName email image photo stripeCustomerId')
+        .populate('category', 'name image icon theme');
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }

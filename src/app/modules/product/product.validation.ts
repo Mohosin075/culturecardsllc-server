@@ -10,19 +10,9 @@ const createProductSchema = z.object({
       .array(z.string())
       .min(1, 'At least one product image is required'),
     video: z.string().optional(),
-    category: z.enum(
-      [
-        'Fine Art',
-        'Sports Cards',
-        'Rare Spirits',
-        'Luxury Cars',
-        'Electronics',
-        'Streetwear',
-        'TCG',
-        'Digital Assets',
-      ],
-      { required_error: 'Category is required' },
-    ),
+    category: z
+      .string({ required_error: 'Category is required' })
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Category ID format'),
     condition: z.enum(['Mint', 'Near Mint', 'Excellent', 'Good', 'Fair'], {
       required_error: 'Condition is required',
     }),
@@ -46,16 +36,8 @@ const updateProductSchema = z.object({
     images: z.array(z.string()).min(1).optional(),
     video: z.string().optional(),
     category: z
-      .enum([
-        'Fine Art',
-        'Sports Cards',
-        'Rare Spirits',
-        'Luxury Cars',
-        'Electronics',
-        'Streetwear',
-        'TCG',
-        'Digital Assets',
-      ])
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Category ID format')
       .optional(),
     condition: z
       .enum(['Mint', 'Near Mint', 'Excellent', 'Good', 'Fair'])

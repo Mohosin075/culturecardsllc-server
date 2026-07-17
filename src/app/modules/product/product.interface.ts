@@ -23,7 +23,7 @@ export type IProduct = {
   description?: string
   images: string[]
   video?: string
-  category: IProductCategory
+  category: Schema.Types.ObjectId
   condition: IProductCondition
   estValue: number
   startingBid?: number
