@@ -467,48 +467,36 @@ class DashboardService {
       ])
 
       const currentlyLive = liveStreams.map((s: any) => {
-        const categories: any[] = [
-          'Sneakers',
-          'Watches',
-          'Cards',
-          'Fine Art',
-          'Streetwear',
-          'TCG',
-        ]
+        const durationMinutes = s.createdAt 
+          ? Math.floor((Date.now() - new Date(s.createdAt).getTime()) / 60000) 
+          : 0
+
         return {
           _id: s._id,
           streamId: s._id.toString().substring(0, 8).toUpperCase(),
           title: s.title || 'Live Streaming Auction',
           seller: s.sellerId?.fullName || s.sellerId?.name || 'Seller',
-          category: categories[Math.floor(Math.random() * categories.length)],
-          viewersCount: s.viewersCount || 10,
+          category: s.pinnedProductId?.category?.name || 'General',
+          viewersCount: s.viewersCount || 0,
           likesCount: s.likesCount || 0,
           chatMessages: s.chatMessages || [],
-          duration: '35m',
+          duration: `${durationMinutes}m`,
         }
       })
 
-      const scheduled = scheduledStreams.map((s: any, idx) => {
-        const categories: any[] = [
-          'Sneakers',
-          'Watches',
-          'Cards',
-          'Fine Art',
-          'Streetwear',
-          'TCG',
-        ]
+      const scheduled = scheduledStreams.map((s: any) => {
         return {
           _id: s._id,
-          streamId: `STR-${(idx + 4).toString().padStart(3, '0')}`,
+          streamId: s._id.toString().substring(0, 8).toUpperCase(),
           title: s.title || 'Scheduled stream',
           seller: s.sellerId?.fullName || s.sellerId?.name || 'Seller',
-          category: categories[idx % categories.length],
+          category: s.pinnedProductId?.category?.name || 'General',
           scheduledTime: s.scheduledAt
             ? new Date(s.scheduledAt)
                 .toISOString()
                 .replace('T', ' ')
                 .substring(0, 16)
-            : '2026-05-24 18:00',
+            : 'Pending Schedule',
         }
       })
 
@@ -668,10 +656,10 @@ class DashboardService {
         }
       })
 
-      return result.length > 0 ? result : this.getDemoDisputesData()
+      return result
     } catch (error) {
       console.error('Error fetching disputes:', error)
-      return this.getDemoDisputesData()
+      return []
     }
   }
 
