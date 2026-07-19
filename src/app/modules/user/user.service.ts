@@ -13,6 +13,43 @@ import { IPaginationOptions } from '../../../interfaces/pagination'
 import config from '../../../config'
 import { userFilterableFields } from './user.constants'
 import { jwtHelper } from '../../../helpers/jwtHelper'
+import { TradeOffer } from '../trade/trade.model'
+import { Review } from '../review/review.model'
+import { Follow } from '../follow/follow.model'
+
+const getUserStats = async (userId: string) => {
+  const tradesCount = await TradeOffer.countDocuments({
+    $or: [{ senderId: userId }, { receiverId: userId }],
+    status: 'completed',
+  });
+
+  const reviews = await Review.find({ reviewee: userId });
+  let totalRating = 0;
+  let positiveCount = 0;
+
+  reviews.forEach((r) => {
+    totalRating += r.rating;
+    if (r.rating >= 4) { // Assuming 4 and 5 are positive
+      positiveCount++;
+    }
+  });
+
+  const rating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : "0.0";
+  const positive = reviews.length > 0 ? Math.round((positiveCount / reviews.length) * 100) : 0;
+
+  const [followers, following] = await Promise.all([
+    Follow.countDocuments({ followingId: userId }),
+    Follow.countDocuments({ followerId: userId })
+  ]);
+
+  return {
+    trades: tradesCount,
+    rating: Number(rating),
+    positive: positive, // percentage
+    followers,
+    following
+  };
+}
 
 const updateProfile = async (user: JwtPayload, payload: Partial<IUser>) => {
   console.log({ payload })
@@ -284,16 +321,18 @@ const deactivateProfile = async (
   return 'User deactivated successfully.'
 }
 
-const getUserById = async (userId: string): Promise<IUser> => {
+const getUserById = async (userId: string): Promise<any> => {
   const isUserExist = await User.findOne({
     _id: userId,
     status: { $nin: [USER_STATUS.DELETED] },
-  })
+  }).lean()
   if (!isUserExist) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
   }
 
-  return isUserExist
+  const stats = await getUserStats(userId)
+
+  return { ...isUserExist, stats }
 }
 
 const updateUserStatus = async (userId: string, data: Record<string, any>) => {
@@ -326,13 +365,17 @@ export const getProfile = async (user: JwtPayload) => {
   const isUserExist = await User.findOne({
     _id: user.userId,
     status: { $nin: [USER_STATUS.DELETED] },
-  }).select('-authentication -password -__v')
+  })
+    .select('-authentication -password -__v')
+    .lean()
 
   if (!isUserExist) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
   }
 
-  return isUserExist
+  const stats = await getUserStats(user.userId)
+
+  return { ...isUserExist, stats }
 }
 
 const switchRole = async (user: JwtPayload, role: USER_ROLES) => {

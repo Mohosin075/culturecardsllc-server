@@ -1,0 +1,40 @@
+🔑 ১. Authentication & Authorization Module (/auth)
+ Sign Up & Verification: ইমেল/ফোন নম্বর দিয়ে সাইন-আপ এবং ওটিপি (OTP) ভেরিফিকেশন।
+ Login Options: পাসওয়ার্ড-ভিত্তিক কাস্টম লগইন (ডিভাইস টোকেন সহ) এবং ফেসবুক/গুগল সোশাল লগইন।
+ Password Recovery: পাসওয়ার্ড ভুলে গেলে রিকোয়েস্ট (forget-password), ওটিপি ভেরিফাই এবং রি-সেট পাসওয়ার্ড।
+ Token Management: রিফ্রেশ টোকেন (refresh-token) এবং সিকিউর কুকি সেটআপ।
+ Account Actions: পাসওয়ার্ড পরিবর্তন (change-password), অ্যাকাউন্ট নিষ্ক্রিয়/ডিঅ্যাক্টিভেট এবং অ্যাকাউন্ট পার্মানেন্ট ডিলিট করা।
+👤 ২. User & Profile Module (/users)
+ Profile Management: প্রোফাইল ডিটেইলস দেখা এবং ইমেজ ও কভার ফটো আপলোড সহ আপডেট করা (multipart/form-data)।
+ Role Switching: buyer এবং seller রোলের মধ্যে পরিবর্তন করা।
+ Admin Actions: ইউজার ডিঅ্যাক্টিভেট, অ্যাক্টিভেট, লিস্ট দেখা এবং ডিলিট করা।
+🎴 ৩. Product Listings Module (/products)
+ Listing Management: প্রোডাক্ট তৈরি (allowTrade, buyNowPrice, startingBid, reservePrice সহ), আপডেট ও ডিলিট করা।
+ Media Support: S3 স্টোরেজের ইমেজ এবং ভিডিও ফাইল অ্যাসোসিয়েশন।
+ Search & Filters: ক্যাটাগরি, কন্ডিশন, এবং ট্রেড অপশনের ভিত্তিতে ফিল্টারিং ও পেজিনেশন।
+🎥 ৪. Live Auctions Module (/auctions)
+ Agora Integration: লাইভ স্ট্রিমের জন্য Agora RTC টোকেন জেনারেট করা।
+ Host Controls: লাইভ স্ট্রিম স্টার্ট করা এবং অকশন আইটেম/প্রোডাক্ট যুক্ত করা।
+ Real-Time Bidding: লাইভ অকশন চলাকালীন দর্শকদের জন্য বিড করা (Socket.IO ও REST API ফ্যালব্যাক)।
+🤝 ৫. Trade / Barter Swaps Module (/trades)
+ Propose Trade: একটি কার্ডের বিনিময়ে আরেকটি কার্ড এবং দরকারে বাড়তি টাকা বা ট্রেড সাপ্লিমেন্ট (cashSupplement) দিয়ে অফার পাঠানো।
+ Accept/Decline: প্রাপক কর্তৃক অফার অ্যাকসেপ্ট বা ডিক্লাইন করা। অফার অ্যাকসেপ্ট হলে আইটেম লক হয়ে যায়।
+ Auto Expiration: ২৪ ঘণ্টার মধ্যে অ্যাকসেপ্ট না করলে অফার স্বয়ংক্রিয়ভাবে এক্সপায়ার (expired) হয়ে যাওয়া (Cron Job)।
+💳 ৬. Payment & Stripe Module (/payment & /subscription)
+ Stripe Setup: পেমেন্ট মেথড সেভ করা (SetupIntent) এবং ডিফল্ট কার্ড পরিবর্তন বা ডিলিট করা।
+ Buy Now Checkout: ইনস্ট্যান্ট প্রোডাক্ট কেনার জন্য PaymentIntent এবং চেকআউট সেশন তৈরি ও ভেরিফিকেশন।
+ Trade Supplement Payment: ট্রেড অফার অ্যাকসেপ্ট হওয়ার পর বাড়তি পেমেন্ট (cashSupplement) প্রসেস ও ভেরিফিকেশন।
+ Seller Subscriptions: সেলারদের জন্য বিভিন্ন সাবস্ক্রিপশন প্ল্যান, ট্রায়াল এলিজিবিলিটি, আপগ্রেড/ক্যানসেল এবং স্ট্রাইপ বিলিং পোর্টাল ইন্টিগ্রেশন।
+ Invoicing & Refund: অর্ডারের ইনভয়েস PDF জেনারেট এবং অ্যাডমিন কর্তৃক পেমেন্ট রিফান্ড সুবিধা।
+🚚 ৭. Order Tracking & Shipping Module (/orders)
+ Order Creation: পেমেন্ট সাকসেসফুল হলে স্ট্যাটাস pending হিসেবে অর্ডার তৈরি হওয়া।
+ Journey Tracker: ট্র্যাকিং নম্বর দিয়ে অর্ডারের ডেলিভারি স্ট্যাটাস আপডেট (pending -> shipped -> delivered -> cancelled) এবং জার্নি লোকেশন পুশ করা।
+ Live Notifications: জার্নি স্ট্যাটাস আপডেট হলে অটো চ্যাট নোটিফিকেশন পাঠানো এবং পুশ নোটিফিকেশন পাঠানো।
+💬 ৮. Chat & Messaging Module (/chat & /message)
+ 1-to-1 Chat: দুই ইউজারের মধ্যে সরাসরি চ্যাট রুম এবং মেসেজ আদান-প্রদান (টেক্সট, ইমেজ, ডক ফাইল)।
+ Support Chat: সরাসরি অ্যাডমিনের সাথে সাপোর্ট চ্যাট রুম তৈরি ও মেসেজিং।
+ System Update Messages: কোনো অফার বা অর্ডার আপডেট হলে চ্যাট উইন্ডোতে রিয়েল-টাইম ইন্টারেক্টিভ মেসেজ পাঠানো (যেমন: NEW TRADE OFFER, ORDER SHIPPED)।
+⭐ ৯. Feedback, Favourites & Utility (/review, /favourite, /category, /locations, /dashboard)
+ Review: ডেলিভারি কমপ্লিট হওয়ার পর প্রোডাক্ট ও সেলারের জন্য রেটিং ও রিভিউ প্রদান।
+ Favourites: পছন্দের প্রোডাক্ট উইশলিস্টে যুক্ত ও রিমুভ করা।
+ Dashboard: অ্যাডমিন ও সেলারদের জন্য সেলস অ্যানালিটিক্স, রেভিনিউ রিপোর্ট ও স্ট্যাটিস্টিকস।
