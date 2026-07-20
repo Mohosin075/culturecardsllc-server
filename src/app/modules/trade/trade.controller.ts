@@ -20,13 +20,14 @@ const createTradeOffer = catchAsync(async (req: Request, res: Response) => {
 })
 
 const getTradeOffers = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.query.userId as string
+  const user = req.user as JwtPayload
+  const userId = (req.query.userId as string) || user.userId
   const type = (req.query.type as 'sent' | 'received') || 'received'
 
   if (!userId) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'userId is required as query parameter.',
+      'userId is required.',
     )
   }
 

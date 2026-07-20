@@ -14,26 +14,26 @@ const router = express.Router()
 // GET /methods must be before GET /:id
 router.get(
   '/methods',
-  auth(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.getMyPaymentMethods,
 )
 
 router.post(
   '/create-setup-intent',
-  auth(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.createSetupIntent,
 )
 
 // Specific PATCH must be before generic PATCH /:id
 router.patch(
   '/methods/:id/default',
-  auth(USER_ROLES.BUYER),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
   PaymentController.setDefaultPaymentMethod,
 )
 
 router.delete(
   '/methods/:id',
-  auth(USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.deletePaymentMethod,
 )
 

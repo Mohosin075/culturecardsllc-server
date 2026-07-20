@@ -4,9 +4,12 @@ import { OrderServices } from './order.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
+import { JwtPayload } from 'jsonwebtoken'
 
 const createOrder = catchAsync(async (req: Request, res: Response) => {
-  const result = await OrderServices.createOrder(req.body)
+  const user = req.user as JwtPayload
+  const payload = { ...req.body, buyerId: req.body.buyerId || user.userId }
+  const result = await OrderServices.createOrder(payload)
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -16,13 +19,14 @@ const createOrder = catchAsync(async (req: Request, res: Response) => {
 })
 
 const getOrdersForUser = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.query.userId as string
+  const user = req.user as JwtPayload
+  const userId = (req.query.userId as string) || user.userId
   const role = (req.query.role as 'buyer' | 'seller') || 'buyer'
 
   if (!userId) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'userId is required as query parameter.',
+      'userId is required.',
     )
   }
 

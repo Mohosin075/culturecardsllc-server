@@ -157,13 +157,13 @@ router.get(
 
 router.get(
   '/usage/warnings',
-  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.SUPER_ADMIN),
   SubscriptionController.getUsageWarnings,
 )
 
 router.post(
   '/billing-portal',
-  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SUPER_ADMIN),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.SUPER_ADMIN),
   validateRequest(subscriptionValidation.createBillingPortal),
   SubscriptionController.createBillingPortal,
 )

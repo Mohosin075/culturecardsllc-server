@@ -26,6 +26,13 @@ router.get(
   TradeControllers.getTradeOffers,
 )
 
+// GET /my — Alias for /offers
+router.get(
+  '/my',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  TradeControllers.getTradeOffers,
+)
+
 // POST /accept/:id — Accept a trade offer (receiver only)
 router.post(
   '/accept/:id',

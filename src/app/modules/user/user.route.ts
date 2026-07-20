@@ -47,7 +47,7 @@ router.patch(
 
 router.delete(
   '/profile',
-  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER),
+  auth(USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SELLER),
   UserController.deleteProfile,
 )
 
@@ -72,7 +72,7 @@ router
 router
   .route('/:userId')
   .get(
-    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.BUYER),
+    auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.BUYER, USER_ROLES.SELLER),
     UserController.getUserById,
   )
   .delete(

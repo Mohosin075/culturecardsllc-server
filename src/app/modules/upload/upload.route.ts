@@ -7,7 +7,7 @@ const router = express.Router()
 
 router.post(
   '/presign',
-  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.BUYER),
+  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.BUYER, USER_ROLES.SELLER),
   UploadController.presign,
 )
 
