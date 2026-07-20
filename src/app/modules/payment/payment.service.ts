@@ -23,28 +23,33 @@ import { generatePDFInvoice } from '../../../helpers/invoiceHelper'
 const createCheckoutSession = async (
   user: JwtPayload,
   payload: IPaymentPayload,
-): Promise<{ sessionId: string; url: string }> => {
+): Promise<{ clientSecret: string; ephemeralKey: string; customer: string; paymentIntentId: string }> => {
   try {
-    // Basic checkout session creation without ticket dependency
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: payload.productName || 'Payment',
-              description: payload.description,
-            },
-            unit_amount: Math.round(payload.amount * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${config.clientUrl}?session_id={CHECKOUT_SESSION_ID}&success=true`,
-      cancel_url: `${config.clientUrl}/payment/cancel?success=false`,
-      customer_email: user.email,
+    const userData = await User.findById(user.userId)
+    if (!userData) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+    }
+
+    let customerId = userData.stripeCustomerId
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: userData.fullName || userData.name || '',
+      })
+      customerId = customer.id
+      userData.stripeCustomerId = customerId
+      await userData.save()
+    }
+
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: customerId },
+      { apiVersion: '2023-10-16' }
+    )
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(payload.amount * 100),
+      currency: payload.currency || 'usd',
+      customer: customerId,
       metadata: {
         userId: user.userId.toString(),
         ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
@@ -57,20 +62,21 @@ const createCheckoutSession = async (
       bookingId: payload.bookingId,
       userEmail: user.email,
       amount: payload.amount,
-      currency: payload.currency || 'EUR',
+      currency: payload.currency || 'usd',
       paymentMethod: 'stripe',
-      paymentIntentId: session.payment_intent || session.id,
+      paymentIntentId: paymentIntent.id,
       status: 'pending',
       metadata: {
-        checkoutSessionId: session.id,
         ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
         ...payload.metadata,
       },
     })
 
     return {
-      sessionId: session.id,
-      url: session.url!,
+      clientSecret: paymentIntent.client_secret as string,
+      ephemeralKey: ephemeralKey.secret as string,
+      customer: customerId,
+      paymentIntentId: paymentIntent.id,
     }
   } catch (error: unknown) {
     const errorMessage =
@@ -84,21 +90,37 @@ const createCheckoutSession = async (
 
 const verifyCheckoutSession = async (sessionId: string): Promise<IPayment> => {
   try {
-    // Retrieve session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['payment_intent'],
-    })
+    let paymentStatus = '';
+    let paymentIntentId = '';
+    let metadata: any = {};
+    let fullStripeObject: any = null;
 
-    console.log('🔍 Verifying Checkout Session:', session.id)
-    console.log('🔍 Payment Intent:', session.payment_intent)
-    console.log('🔍 Metadata:', session.metadata)
+    if (sessionId.startsWith('pi_')) {
+      const intent = await stripe.paymentIntents.retrieve(sessionId);
+      paymentStatus = intent.status === 'succeeded' ? 'paid' : intent.status;
+      paymentIntentId = intent.id;
+      metadata = intent.metadata;
+      fullStripeObject = intent;
+      
+      console.log('🔍 Verifying Payment Intent:', intent.id)
+    } else {
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['payment_intent'],
+      });
+      paymentStatus = session.payment_status;
+      paymentIntentId = (typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id) || '';
+      metadata = session.metadata;
+      fullStripeObject = session;
+
+      console.log('🔍 Verifying Checkout Session:', session.id)
+    }
 
     // Find payment record using either paymentIntentId (legacy/direct) or metadata.checkoutSessionId (correct for checkout)
     const payment = await Payment.findOne({
       $or: [
         { paymentIntentId: sessionId },
         { 'metadata.checkoutSessionId': sessionId },
-        { paymentIntentId: session.payment_intent as string },
+        { paymentIntentId: paymentIntentId },
       ],
     }).populate('userId', 'name email')
 
@@ -106,15 +128,15 @@ const verifyCheckoutSession = async (sessionId: string): Promise<IPayment> => {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Payment not found')
     }
 
-    // Update payment status based on session
-    if (session.payment_status === 'paid' && payment.status !== 'succeeded') {
+    // Update payment status based on session or intent
+    if (paymentStatus === 'paid' && payment.status !== 'succeeded') {
       const dbSession = await Payment.startSession()
       dbSession.startTransaction()
 
       try {
         // Update payment status
         payment.status = 'succeeded'
-        payment.metadata = { ...payment.metadata, session }
+        payment.metadata = { ...payment.metadata, stripeData: fullStripeObject }
         await payment.save({ session: dbSession })
 
         // Booking and Wallet logic removed as requested
@@ -142,7 +164,7 @@ const verifyCheckoutSession = async (sessionId: string): Promise<IPayment> => {
         dbSession.endSession()
       }
     } else if (
-      session.payment_status === 'unpaid' &&
+      (paymentStatus === 'unpaid' || paymentStatus === 'requires_payment_method') &&
       payment.status !== 'failed'
     ) {
       payment.status = 'failed'

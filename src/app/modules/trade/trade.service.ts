@@ -256,7 +256,7 @@ const declineTradeOffer = async (offerId: string): Promise<ITradeOffer> => {
 const completeTradeOffer = async (
   offerId: string,
   userId: string,
-): Promise<ITradeOffer | { checkoutUrl: string }> => {
+): Promise<ITradeOffer | { clientSecret: string; ephemeralKey: string; customer: string; publishableKey?: string }> => {
   if (!Types.ObjectId.isValid(offerId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Offer ID')
   }
@@ -286,34 +286,32 @@ const completeTradeOffer = async (
     )
   }
 
-  // ── Cash supplement: create Stripe checkout if needed ──────────────────
   if (offer.cashSupplement && offer.cashSupplement !== 0) {
     const payerId = offer.cashSupplement > 0 ? offer.senderId : offer.receiverId
-    const payerUser = await User.findById(payerId).select('email')
+    const payerUser = await User.findById(payerId).select('email stripeCustomerId')
 
     if (!payerUser?.email) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Payer user email not found')
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Trade Cash Supplement',
-              description: `Supplement for trading ${offer.senderProductId.title} ↔ ${offer.receiverProductId.title}`,
-            },
-            unit_amount: Math.round(Math.abs(offer.cashSupplement) * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${config.clientUrl}?trade_complete=true&offerId=${offer._id}`,
-      cancel_url: `${config.clientUrl}/trade/cancel`,
-      customer_email: payerUser.email,
+    let customerId = payerUser.stripeCustomerId
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: payerUser.email })
+      customerId = customer.id
+      payerUser.stripeCustomerId = customerId
+      await payerUser.save()
+    }
+
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: customerId },
+      { apiVersion: '2023-10-16' }
+    )
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(Math.abs(offer.cashSupplement) * 100),
+      currency: 'usd',
+      customer: customerId,
       metadata: {
         purchaseType: 'trade_supplement',
         tradeOfferId: offer._id.toString(),
@@ -324,7 +322,11 @@ const completeTradeOffer = async (
       },
     })
 
-    return { checkoutUrl: session.url! }
+    return { 
+      clientSecret: paymentIntent.client_secret as string,
+      ephemeralKey: ephemeralKey.secret as string,
+      customer: customerId,
+    }
   }
 
   // ── No cash supplement: complete immediately ────────────────────────────
