@@ -9,6 +9,7 @@ const auction_service_1 = require("./auction.service");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const server_1 = require("../../../server");
 const generateAgoraToken = (0, catchAsync_1.default)(async (req, res) => {
     const channelName = req.query.channelName;
     const uid = req.query.uid ? Number(req.query.uid) : 0;
@@ -48,10 +49,31 @@ const getLiveStreams = (0, catchAsync_1.default)(async (req, res) => {
 });
 const createAuctionItem = (0, catchAsync_1.default)(async (req, res) => {
     const result = await auction_service_1.AuctionServices.createAuctionItem(req.body);
+    // Broadcast to all viewers in the stream room so they get the auctionItemId instantly
+    if (server_1.io && result.streamId) {
+        server_1.io.to(`stream:${result.streamId.toString()}`).emit('auction-item-started', {
+            auctionItemId: result._id,
+            streamId: result.streamId,
+            currentBid: result.currentBid,
+            bidIncrement: result.bidIncrement,
+            endsAt: result.endsAt,
+            product: result.productId,
+        });
+    }
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
         message: 'Auction item registered successfully.',
+        data: result,
+    });
+});
+const getAuctionItemsByStream = (0, catchAsync_1.default)(async (req, res) => {
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.getAuctionItemsByStream(streamId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Auction items fetched successfully.',
         data: result,
     });
 });
@@ -95,6 +117,7 @@ exports.AuctionControllers = {
     createLiveStream,
     getLiveStreams,
     createAuctionItem,
+    getAuctionItemsByStream,
     placeBidSecure,
     updateLiveStreamStatus,
     completeAuction,

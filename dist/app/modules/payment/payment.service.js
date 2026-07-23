@@ -13,32 +13,30 @@ const payment_constants_1 = require("./payment.constants");
 const mongoose_1 = require("mongoose");
 const user_model_1 = require("../user/user.model");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
-const config_1 = __importDefault(require("../../../config"));
 const webhook_service_1 = require("./webhook.service");
 const emailHelper_1 = require("../../../helpers/emailHelper");
 const invoiceHelper_1 = require("../../../helpers/invoiceHelper");
 const createCheckoutSession = async (user, payload) => {
     try {
-        // Basic checkout session creation without ticket dependency
-        const session = await stripe_1.default.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'eur',
-                        product_data: {
-                            name: payload.productName || 'Payment',
-                            description: payload.description,
-                        },
-                        unit_amount: Math.round(payload.amount * 100),
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: `${config_1.default.clientUrl}?session_id={CHECKOUT_SESSION_ID}&success=true`,
-            cancel_url: `${config_1.default.clientUrl}/payment/cancel?success=false`,
-            customer_email: user.email,
+        const userData = await user_model_1.User.findById(user.userId);
+        if (!userData) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
+        }
+        let customerId = userData.stripeCustomerId;
+        if (!customerId) {
+            const customer = await stripe_1.default.customers.create({
+                email: user.email,
+                name: userData.fullName || userData.name || '',
+            });
+            customerId = customer.id;
+            userData.stripeCustomerId = customerId;
+            await userData.save();
+        }
+        const ephemeralKey = await stripe_1.default.ephemeralKeys.create({ customer: customerId }, { apiVersion: '2023-10-16' });
+        const paymentIntent = await stripe_1.default.paymentIntents.create({
+            amount: Math.round(payload.amount * 100),
+            currency: payload.currency || 'usd',
+            customer: customerId,
             metadata: {
                 userId: user.userId.toString(),
                 ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
@@ -50,19 +48,20 @@ const createCheckoutSession = async (user, payload) => {
             bookingId: payload.bookingId,
             userEmail: user.email,
             amount: payload.amount,
-            currency: payload.currency || 'EUR',
+            currency: payload.currency || 'usd',
             paymentMethod: 'stripe',
-            paymentIntentId: session.payment_intent || session.id,
+            paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
-                checkoutSessionId: session.id,
                 ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
                 ...payload.metadata,
             },
         });
         return {
-            sessionId: session.id,
-            url: session.url,
+            clientSecret: paymentIntent.client_secret,
+            ephemeralKey: ephemeralKey.secret,
+            customer: customerId,
+            paymentIntentId: paymentIntent.id,
         };
     }
     catch (error) {
@@ -71,33 +70,49 @@ const createCheckoutSession = async (user, payload) => {
     }
 };
 const verifyCheckoutSession = async (sessionId) => {
+    var _a;
     try {
-        // Retrieve session from Stripe
-        const session = await stripe_1.default.checkout.sessions.retrieve(sessionId, {
-            expand: ['payment_intent'],
-        });
-        console.log('🔍 Verifying Checkout Session:', session.id);
-        console.log('🔍 Payment Intent:', session.payment_intent);
-        console.log('🔍 Metadata:', session.metadata);
+        let paymentStatus = '';
+        let paymentIntentId = '';
+        let metadata = {};
+        let fullStripeObject = null;
+        if (sessionId.startsWith('pi_')) {
+            const intent = await stripe_1.default.paymentIntents.retrieve(sessionId);
+            paymentStatus = intent.status === 'succeeded' ? 'paid' : intent.status;
+            paymentIntentId = intent.id;
+            metadata = intent.metadata;
+            fullStripeObject = intent;
+            console.log('🔍 Verifying Payment Intent:', intent.id);
+        }
+        else {
+            const session = await stripe_1.default.checkout.sessions.retrieve(sessionId, {
+                expand: ['payment_intent'],
+            });
+            paymentStatus = session.payment_status;
+            paymentIntentId = (typeof session.payment_intent === 'string' ? session.payment_intent : (_a = session.payment_intent) === null || _a === void 0 ? void 0 : _a.id) || '';
+            metadata = session.metadata;
+            fullStripeObject = session;
+            console.log('🔍 Verifying Checkout Session:', session.id);
+        }
         // Find payment record using either paymentIntentId (legacy/direct) or metadata.checkoutSessionId (correct for checkout)
         const payment = await payment_model_1.Payment.findOne({
             $or: [
                 { paymentIntentId: sessionId },
                 { 'metadata.checkoutSessionId': sessionId },
-                { paymentIntentId: session.payment_intent },
+                { paymentIntentId: paymentIntentId },
             ],
         }).populate('userId', 'name email');
         if (!payment) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Payment not found');
         }
-        // Update payment status based on session
-        if (session.payment_status === 'paid' && payment.status !== 'succeeded') {
+        // Update payment status based on session or intent
+        if (paymentStatus === 'paid' && payment.status !== 'succeeded') {
             const dbSession = await payment_model_1.Payment.startSession();
             dbSession.startTransaction();
             try {
                 // Update payment status
                 payment.status = 'succeeded';
-                payment.metadata = { ...payment.metadata, session };
+                payment.metadata = { ...payment.metadata, stripeData: fullStripeObject };
                 await payment.save({ session: dbSession });
                 // Booking and Wallet logic removed as requested
                 // Send confirmation email
@@ -120,7 +135,7 @@ const verifyCheckoutSession = async (sessionId) => {
                 dbSession.endSession();
             }
         }
-        else if (session.payment_status === 'unpaid' &&
+        else if ((paymentStatus === 'unpaid' || paymentStatus === 'requires_payment_method') &&
             payment.status !== 'failed') {
             payment.status = 'failed';
             await payment.save();

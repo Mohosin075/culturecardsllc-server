@@ -12,6 +12,37 @@ const paginationHelper_1 = require("../../../helpers/paginationHelper");
 const config_1 = __importDefault(require("../../../config"));
 const user_constants_1 = require("./user.constants");
 const jwtHelper_1 = require("../../../helpers/jwtHelper");
+const trade_model_1 = require("../trade/trade.model");
+const review_model_1 = require("../review/review.model");
+const follow_model_1 = require("../follow/follow.model");
+const getUserStats = async (userId) => {
+    const tradesCount = await trade_model_1.TradeOffer.countDocuments({
+        $or: [{ senderId: userId }, { receiverId: userId }],
+        status: 'completed',
+    });
+    const reviews = await review_model_1.Review.find({ reviewee: userId });
+    let totalRating = 0;
+    let positiveCount = 0;
+    reviews.forEach((r) => {
+        totalRating += r.rating;
+        if (r.rating >= 4) { // Assuming 4 and 5 are positive
+            positiveCount++;
+        }
+    });
+    const rating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : "0.0";
+    const positive = reviews.length > 0 ? Math.round((positiveCount / reviews.length) * 100) : 0;
+    const [followers, following] = await Promise.all([
+        follow_model_1.Follow.countDocuments({ followingId: userId }),
+        follow_model_1.Follow.countDocuments({ followerId: userId })
+    ]);
+    return {
+        trades: tradesCount,
+        rating: Number(rating),
+        positive: positive, // percentage
+        followers,
+        following
+    };
+};
 const updateProfile = async (user, payload) => {
     console.log({ payload });
     const isUserExist = await user_model_1.User.findOne({
@@ -207,11 +238,12 @@ const getUserById = async (userId) => {
     const isUserExist = await user_model_1.User.findOne({
         _id: userId,
         status: { $nin: [user_1.USER_STATUS.DELETED] },
-    });
+    }).lean();
     if (!isUserExist) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
-    return isUserExist;
+    const stats = await getUserStats(userId);
+    return { ...isUserExist, stats };
 };
 const updateUserStatus = async (userId, data) => {
     if (userId.startsWith('60f7e271a39f6c00')) {
@@ -235,11 +267,14 @@ const getProfile = async (user) => {
     const isUserExist = await user_model_1.User.findOne({
         _id: user.userId,
         status: { $nin: [user_1.USER_STATUS.DELETED] },
-    }).select('-authentication -password -__v');
+    })
+        .select('-authentication -password -__v')
+        .lean();
     if (!isUserExist) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
-    return isUserExist;
+    const stats = await getUserStats(user.userId);
+    return { ...isUserExist, stats };
 };
 exports.getProfile = getProfile;
 const switchRole = async (user, role) => {

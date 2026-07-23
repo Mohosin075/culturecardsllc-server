@@ -10,7 +10,9 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const createOrder = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await order_service_1.OrderServices.createOrder(req.body);
+    const user = req.user;
+    const payload = { ...req.body, buyerId: req.body.buyerId || user.userId };
+    const result = await order_service_1.OrderServices.createOrder(payload);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
@@ -19,10 +21,11 @@ const createOrder = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const getOrdersForUser = (0, catchAsync_1.default)(async (req, res) => {
-    const userId = req.query.userId;
+    const user = req.user;
+    const userId = req.query.userId || user.userId;
     const role = req.query.role || 'buyer';
     if (!userId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'userId is required as query parameter.');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'userId is required.');
     }
     const result = await order_service_1.OrderServices.getOrdersForUser(userId, role);
     (0, sendResponse_1.default)(res, {

@@ -54,13 +54,46 @@ const getLiveStreams = async (status) => {
         .populate('pinnedProductId');
 };
 const createAuctionItem = async (payload) => {
-    const auction = await auction_model_1.AuctionItem.create(payload);
+    const { startingBid, ...rest } = payload;
+    const duration = rest.timerDuration || 60;
+    const endsAt = rest.endsAt || new Date(Date.now() + duration * 1000);
+    const auction = await auction_model_1.AuctionItem.create({
+        ...rest,
+        currentBid: startingBid !== null && startingBid !== void 0 ? startingBid : 0,
+        status: 'active',
+        endsAt,
+    });
     return auction;
 };
 const placeBidSecure = async (auctionItemId, bidderId, bidAmount) => {
     if (!mongoose_1.Types.ObjectId.isValid(auctionItemId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID');
     }
+    // ── DEBUG: Fetch current state before the atomic update ──────
+    const currentState = await auction_model_1.AuctionItem.findById(auctionItemId).select('status currentBid highestBidderId endsAt');
+    console.log(`\n[BID-DEBUG] ──────────────────────────────────────`);
+    console.log(`[BID-DEBUG] auctionItemId : ${auctionItemId}`);
+    console.log(`[BID-DEBUG] bidderId      : ${bidderId}`);
+    console.log(`[BID-DEBUG] bidAmount     : ${bidAmount}`);
+    if (!currentState) {
+        console.log(`[BID-DEBUG] RESULT: ITEM NOT FOUND IN DB`);
+    }
+    else {
+        console.log(`[BID-DEBUG] DB status     : ${currentState.status}`);
+        console.log(`[BID-DEBUG] DB currentBid : ${currentState.currentBid}`);
+        console.log(`[BID-DEBUG] DB endsAt     : ${currentState.endsAt}`);
+        const statusOk = currentState.status === 'active';
+        const bidOk = bidAmount > currentState.currentBid || currentState.currentBid === 0;
+        console.log(`[BID-DEBUG] status=active?: ${statusOk}  |  bid>currentBid?: ${bidOk}`);
+        if (!statusOk)
+            console.log(`[BID-DEBUG] ❌ FAIL REASON: status is "${currentState.status}", expected "active"`);
+        if (!bidOk)
+            console.log(`[BID-DEBUG] ❌ FAIL REASON: bidAmount (${bidAmount}) is NOT greater than currentBid (${currentState.currentBid})`);
+        if (statusOk && bidOk)
+            console.log(`[BID-DEBUG] ✅ Should PASS atomic update`);
+    }
+    console.log(`[BID-DEBUG] ──────────────────────────────────────\n`);
+    // ── END DEBUG ────────────────────────────────────────────────
     // 1. Atomically find and update ONLY if the new bid is higher than the current bid
     // This uses a concurrency-safe atomic query lock to protect against over-bidding race conditions.
     const updatedAuction = await auction_model_1.AuctionItem.findOneAndUpdate({
@@ -85,7 +118,27 @@ const placeBidSecure = async (auctionItemId, bidderId, bidAmount) => {
         });
         updatedAuction.endsAt = extendedTime;
     }
+    // 3. Broadcast new-bid event to all stream room viewers
+    if (server_1.io && updatedAuction.streamId) {
+        const bidderInfo = await user_model_1.User.findById(bidderId).select('name fullName email image photo');
+        server_1.io.to(`stream:${updatedAuction.streamId.toString()}`).emit('new-bid', {
+            streamId: updatedAuction.streamId.toString(),
+            auctionItemId: updatedAuction._id,
+            currentBid: updatedAuction.currentBid,
+            highestBidder: bidderInfo,
+            endsAt: updatedAuction.endsAt,
+        });
+    }
     return updatedAuction;
+};
+// Get active auction items for a live stream
+const getAuctionItemsByStream = async (streamId) => {
+    if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID');
+    }
+    return await auction_model_1.AuctionItem.find({ streamId: new mongoose_1.Types.ObjectId(streamId) })
+        .populate('productId')
+        .sort({ createdAt: -1 });
 };
 const updateLiveStreamStatus = async (streamId, userId, userRole, status) => {
     if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
@@ -195,6 +248,7 @@ exports.AuctionServices = {
     createLiveStream,
     getLiveStreams,
     createAuctionItem,
+    getAuctionItemsByStream,
     placeBidSecure,
     updateLiveStreamStatus,
     completeAuction,

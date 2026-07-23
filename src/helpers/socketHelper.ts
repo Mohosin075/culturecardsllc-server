@@ -110,7 +110,8 @@ const socket = (io: Server) => {
       },
     )
 
-    socket.on('leave-stream', async (streamId: string) => {
+    socket.on('leave-stream', async (data: any) => {
+      const streamId = typeof data === 'string' ? data : data?.streamId
       if (streamId) {
         const streamRoom = `stream:${streamId}`
         socket.leave(streamRoom)

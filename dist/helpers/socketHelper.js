@@ -90,7 +90,8 @@ const socket = (io) => {
                 }
             }
         });
-        socket.on('leave-stream', async (streamId) => {
+        socket.on('leave-stream', async (data) => {
+            const streamId = typeof data === 'string' ? data : data === null || data === void 0 ? void 0 : data.streamId;
             if (streamId) {
                 const streamRoom = `stream:${streamId}`;
                 socket.leave(streamRoom);

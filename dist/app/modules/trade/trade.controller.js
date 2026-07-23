@@ -22,10 +22,11 @@ const createTradeOffer = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const getTradeOffers = (0, catchAsync_1.default)(async (req, res) => {
-    const userId = req.query.userId;
+    const user = req.user;
+    const userId = req.query.userId || user.userId;
     const type = req.query.type || 'received';
     if (!userId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'userId is required as query parameter.');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'userId is required.');
     }
     const result = await trade_service_1.TradeServices.getTradeOffers(userId, type);
     (0, sendResponse_1.default)(res, {

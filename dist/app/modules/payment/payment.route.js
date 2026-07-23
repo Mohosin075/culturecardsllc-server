@@ -15,11 +15,11 @@ const router = express_1.default.Router();
 // 1. PAYMENT METHOD MANAGEMENT (BUYER ONLY)
 // ============================================
 // GET /methods must be before GET /:id
-router.get('/methods', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.getMyPaymentMethods);
-router.post('/create-setup-intent', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.createSetupIntent);
+router.get('/methods', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.getMyPaymentMethods);
+router.post('/create-setup-intent', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.createSetupIntent);
 // Specific PATCH must be before generic PATCH /:id
-router.patch('/methods/:id/default', (0, auth_1.default)(user_1.USER_ROLES.BUYER), payment_controller_1.PaymentController.setDefaultPaymentMethod);
-router.delete('/methods/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.deletePaymentMethod);
+router.patch('/methods/:id/default', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), payment_controller_1.PaymentController.setDefaultPaymentMethod);
+router.delete('/methods/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.deletePaymentMethod);
 // ============================================
 // 2. CHECKOUT & INTENTS
 // ============================================

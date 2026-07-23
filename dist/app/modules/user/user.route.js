@@ -15,7 +15,7 @@ const router = express_1.default.Router();
 router.patch('/switch-role', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), (0, validateRequest_1.default)(user_validation_1.switchRoleSchema), user_controller_1.UserController.switchRole);
 router.get('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), user_controller_1.UserController.getProfile);
 router.patch('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), (0, processReqBody_1.fileAndBodyProcessorUsingDiskStorage)(), (0, validateRequest_1.default)(user_validation_1.updateUserSchema), user_controller_1.UserController.updateProfile);
-router.delete('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER), user_controller_1.UserController.deleteProfile);
+router.delete('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), user_controller_1.UserController.deleteProfile);
 router.patch('/deactivate-profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.deactivateProfile);
 // Removed missing ProfessionalProfileController stripe connect routes
 router
@@ -23,7 +23,7 @@ router
     .get((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), user_controller_1.UserController.getAllUsers);
 router
     .route('/:userId')
-    .get((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.BUYER), user_controller_1.UserController.getUserById)
+    .get((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), user_controller_1.UserController.getUserById)
     .delete((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.deleteUser)
     .patch((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(user_validation_1.updateUserStatusSchema), user_controller_1.UserController.updateUserStatus);
 exports.UserRoutes = router;

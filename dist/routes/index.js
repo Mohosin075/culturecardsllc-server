@@ -23,6 +23,7 @@ const auction_route_1 = require("../app/modules/auction/auction.route");
 const trade_route_1 = require("../app/modules/trade/trade.route");
 const order_route_1 = require("../app/modules/order/order.route");
 const dashboard_route_1 = require("../app/modules/dashboard/dashboard.route");
+const follow_route_1 = require("../app/modules/follow/follow.route");
 const router = express_1.default.Router();
 const apiRoutes = [
     {
@@ -53,6 +54,7 @@ const apiRoutes = [
     { path: '/trades', route: trade_route_1.TradeRoutes },
     { path: '/orders', route: order_route_1.OrderRoutes },
     { path: '/dashboard', route: dashboard_route_1.DashboardRoutes },
+    { path: '/follow', route: follow_route_1.FollowRoutes },
 ];
 apiRoutes.forEach(route => {
     router.use(route.path, route.route);

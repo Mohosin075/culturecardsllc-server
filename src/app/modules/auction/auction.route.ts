@@ -41,6 +41,13 @@ router.post(
   AuctionControllers.placeBidSecure,
 )
 
+// GET /stream/:streamId/items — Get auction items for a stream (authenticated users)
+router.get(
+  '/stream/:streamId/items',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.getAuctionItemsByStream,
+)
+
 // PATCH /stream/:streamId/status — Update stream status (seller/admin)
 router.patch(
   '/stream/:streamId/status',

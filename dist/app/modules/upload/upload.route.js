@@ -9,5 +9,5 @@ const upload_controller_1 = require("./upload.controller");
 const auth_1 = __importDefault(require("../../middleware/auth"));
 const user_1 = require("../../../enum/user");
 const router = express_1.default.Router();
-router.post('/presign', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER), upload_controller_1.UploadController.presign);
+router.post('/presign', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), upload_controller_1.UploadController.presign);
 exports.UploadRoutes = router;

@@ -5,6 +5,7 @@ import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
 import { JwtPayload } from 'jsonwebtoken'
+import { io } from '../../../server'
 
 const generateAgoraToken = catchAsync(async (req: Request, res: Response) => {
   const channelName = req.query.channelName as string
@@ -57,10 +58,34 @@ const getLiveStreams = catchAsync(async (req: Request, res: Response) => {
 
 const createAuctionItem = catchAsync(async (req: Request, res: Response) => {
   const result = await AuctionServices.createAuctionItem(req.body)
+
+  // Broadcast to all viewers in the stream room so they get the auctionItemId instantly
+  if (io && result.streamId) {
+    io.to(`stream:${result.streamId.toString()}`).emit('auction-item-started', {
+      auctionItemId: result._id,
+      streamId: result.streamId,
+      currentBid: result.currentBid,
+      bidIncrement: result.bidIncrement,
+      endsAt: result.endsAt,
+      product: result.productId,
+    })
+  }
+
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
     message: 'Auction item registered successfully.',
+    data: result,
+  })
+})
+
+const getAuctionItemsByStream = catchAsync(async (req: Request, res: Response) => {
+  const { streamId } = req.params
+  const result = await AuctionServices.getAuctionItemsByStream(streamId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Auction items fetched successfully.',
     data: result,
   })
 })
@@ -119,6 +144,7 @@ export const AuctionControllers = {
   createLiveStream,
   getLiveStreams,
   createAuctionItem,
+  getAuctionItemsByStream,
   placeBidSecure,
   updateLiveStreamStatus,
   completeAuction,

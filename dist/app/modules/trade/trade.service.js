@@ -14,7 +14,6 @@ const mongoose_1 = require("mongoose");
 const server_1 = require("../../../server");
 const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const user_model_1 = require("../user/user.model");
-const config_1 = __importDefault(require("../../../config"));
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const createTradeOffer = async (payload) => {
     const { senderProductId, receiverProductId, senderId, receiverId } = payload;
@@ -200,32 +199,24 @@ const completeTradeOffer = async (offerId, userId) => {
     if (!isSender && !isReceiver) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You are not authorized to complete this trade.');
     }
-    // ── Cash supplement: create Stripe checkout if needed ──────────────────
     if (offer.cashSupplement && offer.cashSupplement !== 0) {
         const payerId = offer.cashSupplement > 0 ? offer.senderId : offer.receiverId;
-        const payerUser = await user_model_1.User.findById(payerId).select('email');
+        const payerUser = await user_model_1.User.findById(payerId).select('email stripeCustomerId');
         if (!(payerUser === null || payerUser === void 0 ? void 0 : payerUser.email)) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Payer user email not found');
         }
-        const session = await stripe_1.default.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: 'Trade Cash Supplement',
-                            description: `Supplement for trading ${offer.senderProductId.title} ↔ ${offer.receiverProductId.title}`,
-                        },
-                        unit_amount: Math.round(Math.abs(offer.cashSupplement) * 100),
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: `${config_1.default.clientUrl}?trade_complete=true&offerId=${offer._id}`,
-            cancel_url: `${config_1.default.clientUrl}/trade/cancel`,
-            customer_email: payerUser.email,
+        let customerId = payerUser.stripeCustomerId;
+        if (!customerId) {
+            const customer = await stripe_1.default.customers.create({ email: payerUser.email });
+            customerId = customer.id;
+            payerUser.stripeCustomerId = customerId;
+            await payerUser.save();
+        }
+        const ephemeralKey = await stripe_1.default.ephemeralKeys.create({ customer: customerId }, { apiVersion: '2023-10-16' });
+        const paymentIntent = await stripe_1.default.paymentIntents.create({
+            amount: Math.round(Math.abs(offer.cashSupplement) * 100),
+            currency: 'usd',
+            customer: customerId,
             metadata: {
                 purchaseType: 'trade_supplement',
                 tradeOfferId: offer._id.toString(),
@@ -235,7 +226,11 @@ const completeTradeOffer = async (offerId, userId) => {
                 receiverProductId: offer.receiverProductId._id.toString(),
             },
         });
-        return { checkoutUrl: session.url };
+        return {
+            clientSecret: paymentIntent.client_secret,
+            ephemeralKey: ephemeralKey.secret,
+            customer: customerId,
+        };
     }
     // ── No cash supplement: complete immediately ────────────────────────────
     const session = await trade_model_1.TradeOffer.startSession();
