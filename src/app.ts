@@ -17,6 +17,29 @@ import swaggerDocs from './utils/swagger'
 
 const app = express()
 
+// ✅ CORS MUST be first — before helmet, session, passport, everything
+// This ensures preflight OPTIONS requests get correct headers
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      const allowedOrigins = config.cors_origins.length > 0
+        ? config.cors_origins
+        : ['http://localhost:3000']
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true)
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+      return callback(new Error(`CORS: Origin ${origin} not allowed`), false)
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept'],
+  }),
+)
+// Handle preflight requests for all routes
+app.options('*', cors())
+
 // Security headers
 app.use(helmet())
 
@@ -58,13 +81,7 @@ app.use(
 app.use(passport.initialize())
 app.use(passport.session())
 
-// CORS - Using env based origins
-app.use(
-  cors({
-    origin: config.cors_origins.length > 0 ? config.cors_origins : ['*'],
-    credentials: true,
-  }),
-)
+// CORS is already applied at the top of the middleware stack
 
 // Cookie parser
 app.use(cookieParser())
