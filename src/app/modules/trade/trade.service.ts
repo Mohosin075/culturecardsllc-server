@@ -26,11 +26,26 @@ const createTradeOffer = async (
     )
   }
 
-  if (!senderProduct.allowTrade || !receiverProduct.allowTrade) {
+  // Allow trade/offer if sender allows trade, and receiver allows trade or offers
+  const isSenderTradeAllowed = senderProduct.allowTrade
+  const isReceiverTradeOrOfferAllowed = receiverProduct.allowTrade || receiverProduct.allowOffers
+
+  if (!isSenderTradeAllowed || !isReceiverTradeOrOfferAllowed) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'One or both items are not configured to allow trading.',
+      'One or both items are not configured to allow trading or custom offers.',
     )
+  }
+
+  // Validate minimum offer amount if configured on receiver product
+  if (receiverProduct.allowOffers && receiverProduct.minOfferAmount && receiverProduct.minOfferAmount > 0) {
+    const totalOfferValue = (senderProduct.estValue || 0) + (payload.cashSupplement || 0)
+    if (totalOfferValue < receiverProduct.minOfferAmount) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `Your offer total value ($${totalOfferValue}) is below the seller's minimum acceptable offer ($${receiverProduct.minOfferAmount}).`,
+      )
+    }
   }
 
   if (

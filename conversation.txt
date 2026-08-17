@@ -1,0 +1,1602 @@
+Md Mohosin
+Md Mohosin
+Yeah, hello?
+Andrew Jones
+Andrew Jones
+10:17
+Oh, how are you doing?
+Md Mohosin
+Md Mohosin
+10:20
+Yeah, we're good, and how are you?
+Andrew Jones
+Andrew Jones
+10:23
+I'm Lou.
+Md Mohosin
+Md Mohosin
+10:25
+Yeah, thank you for joining.
+Okay, me, your second developer, and also Rimon, your app developer, joined.
+Andrew Jones
+Andrew Jones
+10:40
+Okay.
+Md Mohosin
+Md Mohosin
+10:51
+So first of all, we almost confiscate the backend part. Also, we…
+integrated the AP integration in the app, so now…
+I request Rimon to share his screen.
+Andrew Jones
+Andrew Jones
+11:09
+Okay.
+I will get you… I will get you the numbers tomorrow. Well, I ran into an issue with that, actually. I can get you the EIN number, tomorrow, though, to link everything, to.
+For the banking.
+Md Mohosin
+Md Mohosin
+11:34
+Isn't worry. Okay.
+Rimon islam
+Rimon islam
+11:38
+Hello?
+Can you hear me, Andrew?
+Andrew Jones
+Andrew Jones
+11:42
+Yes, I can hear you.
+Rimon islam
+Rimon islam
+11:43
+How are you?
+Andrew Jones
+Andrew Jones
+11:45
+I'm Will, how are you doing?
+Rimon islam
+Rimon islam
+11:47
+Yeah, I'm good, so…
+We are almost complete our API integration, and that can take. So, now I share with you everything, the feature.
+Andrew Jones
+Andrew Jones
+12:00
+Okay.
+Rimon islam
+Rimon islam
+12:06
+Can you see my screen?
+Andrew Jones
+Andrew Jones
+12:07
+Yes, sir, I can see it.
+Rimon islam
+Rimon islam
+12:15
+So, I already opened two emulators, this is the one, and…
+Also, one is here, okay? So, I would need two devices for streaming testing, right?
+Andrew Jones
+Andrew Jones
+12:35
+Yes.
+Rimon islam
+Rimon islam
+12:36
+So, first of all, I share with you, our core feature, some basic feature, like, our feature collectibles, okay? So, this is our test item.
+You understand? Okay.
+So, here is our,
+Andrew Jones
+Andrew Jones
+12:56
+It stopped… it stopped screen sharing, hold on. Oh, there it goes, okay, I can see it again, thank you.
+Rimon islam
+Rimon islam
+13:02
+Can you see?
+Andrew Jones
+Andrew Jones
+13:04
+Yeah.
+Rimon islam
+Rimon islam
+13:05
+So, this is, our trade details, right?
+Okay?
+So, Isida our seller?
+Seller profile. So I go to the seller profile, and here is the seller profile, okay?
+So, this is a seller, chat feature. So, already we test some,
+item, make, offer, and streaming. So, this is a, one offering
+test, okay? This is right now pending, okay? So, and already complete our status, like, our delivery status.
+Okay, this is an already confirmed offer.
+And… So, I go to messaging, feature, which is… Conflict, already, full dynamic.
+Andrew Jones
+Andrew Jones
+14:11
+Yeah, it looks really good.
+Rimon islam
+Rimon islam
+14:14
+Thank you.
+So, here is our discovery bar, like, our all items and some, live streaming show in here, okay? When, open our live streaming, any seller
+Yeah, please.
+Andrew Jones
+Andrew Jones
+14:32
+And when it says live now, whenever there's people live, they can, like, scroll between the lives, though?
+Rimon islam
+Rimon islam
+14:41
+Yeah, here is show when, right now, any live streaming open, okay? And also showing this in,
+Live now.
+Right now, when open any live, okay? This is showing…
+So, no worry, I'll show it to you, one streaming. So, first of all, I'll share with you our other feature.
+So, this is a… And auction life, and…
+offering item. So, here is, one offer item.
+Andrew Jones
+Andrew Jones
+15:18
+Yeah.
+Rimon islam
+Rimon islam
+15:19
+Salaries, customer.
+And this is the item, and you can, make your offer.
+Okay, so, custom offer and my listing offer. That means…
+My listing means your listing item, okay? Or customer is your, another item, okay? So, here is item title, like, each item.
+And your item value.
+Andrew Jones
+Andrew Jones
+15:52
+I like that.
+Rimon islam
+Rimon islam
+15:55
+$500. Thank you, thank you, brother. So, estimated value for this item, past $500, and this item category is here, and it's come from our, admin dashboard, totally dynamic, okay?
+Andrew Jones
+Andrew Jones
+16:11
+Alright.
+Rimon islam
+Rimon islam
+16:12
+Yes, and our item, customer item condition.
+Yeah.
+Okay, so…
+Value Delta right now is $0, because our customer offer item and our make offer from, seller 500, it's similar value, okay? That's why Value Delta is zero, okay? Yep.
+Okay, so send the offer.
+Look at, okay.
+add cash supplement, enter the cash amount you would like to add to this rate offer.
+Md Mohosin
+Md Mohosin
+16:58
+Not too much, so…
+Rimon islam
+Rimon islam
+16:59
+Okay, okay, I want to add… Hey, Miz.
+My, custom image.
+Andrew Jones
+Andrew Jones
+17:08
+Yo.
+Rimon islam
+Rimon islam
+17:10
+So, as in… Okay, 100%. So…
+Before time, some issue for, these emails, okay? We…
+Send offer, but, we not send our offer at emails, okay?
+Andrew Jones
+Andrew Jones
+17:27
+Alright.
+Could we possibly, before it goes live, do a test, like, where I have a auction, like, where I have an item for sale, and we can, also, like, test it in the live and, try to swipe it and everything, make sure everything functions well on that end also?
+Md Mohosin
+Md Mohosin
+17:52
+Yeah, sure.
+Rimon islam
+Rimon islam
+17:52
+Yeah, you can.
+Md Mohosin
+Md Mohosin
+17:54
+Because without testing, it's… it's… Possibly.
+Andrew Jones
+Andrew Jones
+17:57
+It doesn't. Yeah, it doesn't have to be now. I see that you're still doing the trade, showing me the trades and everything. I love how it looks, as well. Thank you, guys.
+Md Mohosin
+Md Mohosin
+18:07
+Yeah, yeah.
+Rimon islam
+Rimon islam
+18:08
+Thank you, brother.
+And we, pay the effort in this project, okay? So, our needs some, clarified with you, so that's why we need…
+Meeting… in this meeting, okay, so…
+Can you hear, this mechan offer already created?
+Andrew Jones
+Andrew Jones
+18:27
+Great.
+Rimon islam
+Rimon islam
+18:28
+So, I make offer,
+this, but it's pending right now, okay? So, when seller is, accept this offer, then we'll, move forward for delivery, okay?
+Andrew Jones
+Andrew Jones
+18:42
+And when we have them print the labels, is it a… can we make it as simple of a printing format form as possible, basically, where they can almost just press print, and it pops up, you know, said shipping label?
+Rimon islam
+Rimon islam
+19:01
+Meeting later, motionless shipping ya, double check.
+Andrew Jones
+Andrew Jones
+19:05
+Yeah, so say… because whenever they press… say they accept that trade, whenever it comes time to print that shipping label, can it… we.
+Rimon islam
+Rimon islam
+19:14
+Oh, yeah, yeah, I understand, yeah, I understand. When, I, sent a offer, for buyer, then he, Buyer site, he,
+At shipping level, right?
+Andrew Jones
+Andrew Jones
+19:29
+Yes, sir.
+Rimon islam
+Rimon islam
+19:30
+Delivery, shipping level, right?
+Andrew Jones
+Andrew Jones
+19:32
+Yes.
+Rimon islam
+Rimon islam
+19:33
+Okay, okay, so, then, buyer showing this, shipping, price, and details, everything.
+In this set.
+Andrew Jones
+Andrew Jones
+19:48
+Yes, we… at that point, we can have the, like, buyer pay, well, if it's a trade, have both of them buy their own shipping label and send it to us, and we would just take, like, a…
+We can come up with a set value for verifying, you know, the authenticity of the items and verifying the conditions before sending it out.
+So I just… just to make it as easy for them to be able to get to that shipping label, because I've had some apps that, when it came time to print, I had no idea how to even get to it.
+Rimon islam
+Rimon islam
+20:25
+Okay, I understand your concern. So, we… me and my backend developer plan this, okay?
+Andrew Jones
+Andrew Jones
+20:37
+Because I assume, like, when we have the live auctions happening, say somebody has, you know, a show…
+where they sold a thousand items after that show is over, I just want it to be as easy as possible for printing on the trades and live streaming aspect, and hope… and maybe if, like, somebody bought multiple items from one of the live streams, where it's bundled into the…
+You know, kind of in the same order, maybe.
+Rimon islam
+Rimon islam
+21:09
+Okay.
+Okay, so I understand. Motion by electric.
+Md Mohosin
+Md Mohosin
+21:20
+Okay.
+Rimon islam
+Rimon islam
+21:21
+Rakuten.
+Md Mohosin
+Md Mohosin
+21:22
+I said, as much as an applicant.
+Rimon islam
+Rimon islam
+21:25
+So, okay, so, we can move, forward, okay? So, I think you understand our, how to work, make an offer, okay, brother?
+Andrew Jones
+Andrew Jones
+21:35
+Yes, sir.
+Rimon islam
+Rimon islam
+21:37
+Okay, thank you. So, here is our… as a, user profile.
+Andrew Jones
+Andrew Jones
+21:43
+I like it.
+Rimon islam
+Rimon islam
+21:45
+Okay, thank you. Our active listing here, 3 active listings. Okay.
+So, activity hour, so, all purchases… And purchase one.
+And there is our setting. And, we complete our seller account verified authentication, okay? It's authenticated, from our,
+admin dashboard, okay? First of all, this user, normal user, but, buyer user, okay? So, he can…
+He can request for seller account, then you accept your administrator, okay?
+Andrew Jones
+Andrew Jones
+22:23
+Yes, sir. After… if they do become a seller, can we make on their, profile, where it says the listings, activities, and all that, can we have an option for, to show upcoming live streams?
+Have maybe upcoming shows as one of the first ones, and then maybe listings, and, stuff like that.
+Rimon islam
+Rimon islam
+22:50
+Did I?
+Andrew Jones
+Andrew Jones
+22:58
+That'd only be after they were approved and stuff, though, to be a seller and everything, just so if people pressed on their profile, they can see all their items, plus the live shows coming up.
+Md Mohosin
+Md Mohosin
+23:10
+Yeah, sure.
+So, first of all, seller needs to verify their account.
+Then, when they verify it, this time, user… when user visits their profile, user will show their activities.
+Andrew Jones
+Andrew Jones
+23:28
+Alright.
+And I know we said for 3 months was included in the fee for you guys to help me with the technical side, but if I wanted to keep you guys on monthly to help me with the technical side, to keep things, you know, in accordance and everything, what would that be per month, that price?
+Md Mohosin
+Md Mohosin
+23:49
+Yeah, yeah, sure.
+Andrew Jones
+Andrew Jones
+23:52
+Or we could even talk about that after, I just figured while I had you guys on, I could, you know, just figure out for myself.
+Rimon islam
+Rimon islam
+24:09
+Easily celebrar, but in my…
+Md Mohosin
+Md Mohosin
+24:24
+Okay, could you please, clear the last part again?
+Rimon islam
+Rimon islam
+24:37
+Hello, Andrew.
+Andrew Jones
+Andrew Jones
+24:38
+Yes, sir, could you repeat that?
+Rimon islam
+Rimon islam
+24:40
+So, can you explain again, last feature, how to work this seller account or buyer account?
+Andrew Jones
+Andrew Jones
+24:46
+Yeah, so how it says up there, the, whenever… if their account has been approved as a seller, whenever other people on the application press on their account, could we have an option that shows, maybe live shows or upcoming shows as well?
+Md Mohosin
+Md Mohosin
+25:05
+Yeah, yeah, this part, we totally understand.
+Andrew Jones
+Andrew Jones
+25:08
+Appreciate, appreciate you.
+Md Mohosin
+Md Mohosin
+25:10
+Welcome.
+It's okay, we've moved forward, given the content.
+Rimon islam
+Rimon islam
+25:16
+Okay, so, this is our edit profile, normally, every, app, this feature, okay, so here is our, profile information, security password, okay? So, I, update our profile information, password, payment method, everything.
+So Here is my purchase and my trade.
+And sold item.
+So, first of all, my purchase item is here.
+Andrew Jones
+Andrew Jones
+25:46
+I like that.
+Rimon islam
+Rimon islam
+25:47
+This already delivered this item, so here is our status is, complete dynamic, okay?
+Andrew Jones
+Andrew Jones
+25:56
+I like that.
+Rimon islam
+Rimon islam
+25:58
+So… I go to Beauty Tales.
+Here is our status and item details.
+And also, address…
+Andrew Jones
+Andrew Jones
+26:08
+Alright.
+Rimon islam
+Rimon islam
+26:09
+We have filtering system for, status, and… That is our MyThreads.
+And, some…
+before time I make an offer, one item, so here is show, and already this is pending, okay, right?
+And complete, not complete item, so just pending item is here.
+Great.
+And also, you can chat with.
+Seller in here, in this…
+Md Mohosin
+Md Mohosin
+26:39
+principle.
+Rimon islam
+Rimon islam
+26:41
+T-screen, okay.
+Andrew Jones
+Andrew Jones
+26:42
+I like that, too. You guys have done great work, I appreciate it.
+Rimon islam
+Rimon islam
+26:47
+Okay, bro, thank you.
+So, here is our sold item, total sold item, this…
+Processing, sheet, and delivered. Already one delivered item.
+And cancels item is here, okay?
+So, everything is… works good, and here is our, terms and conditions. So, it's… I need when we publish this project, okay? So, right now it's,
+Static. So, when our need-based terms and conditions, we,
+Tell you in our publishing phase.
+Andrew Jones
+Andrew Jones
+27:26
+Oh yeah, so are all the terms… all the terms and conditions are in compliance with, you know, state laws and everything, correct?
+Rimon islam
+Rimon islam
+27:36
+Yeah, yeah.
+Andrew Jones
+Andrew Jones
+27:37
+Okay, and when we do the spin wheel, we cannot… I seen, things… I don't want it to be gambling. If people use the spin wheel, they all have to receive the same item, which, you know, we could send in, messages and stuff to…
+them. It's not even, I don't think, a requirement, but if we make it where, you know, everybody gets the same, at least, item.
+Then…
+they know before signing up, it's not like, you know, oh, you're gonna get this, or this or this. It's like you're all getting the same item, but, you know, you may… one person make it that, just so it's not gambling, they know beforehand.
+Rimon islam
+Rimon islam
+28:16
+Yeah, with some, restriction, added in our publishing phase. Okay.
+Andrew Jones
+Andrew Jones
+28:25
+Or I can even send it in messages later.
+Rimon islam
+Rimon islam
+28:28
+development process, so we complete our development feature, everything, okay? So, our one more feature already,
+Md Mohosin
+Md Mohosin
+28:39
+Okay, if you think, if anything, we miss anything, just send us a message in Pythorpe, we'll review and try to implement.
+Andrew Jones
+Andrew Jones
+28:50
+No, it all looks, great. I even like the details.
+Md Mohosin
+Md Mohosin
+28:53
+You guys are.
+Andrew Jones
+Andrew Jones
+28:54
+And in the shipment, how it shows the shipping, process that's the delivery out for delivery, I like that.
+Md Mohosin
+Md Mohosin
+29:01
+Yeah, thank you.
+Rimon islam
+Rimon islam
+29:03
+So, I, start one streaming, or show it to you again.
+Md Mohosin
+Md Mohosin
+29:08
+Yeah, Rimon Bay, actually, age product?
+Rimon islam
+Rimon islam
+29:12
+Bullets.
+So, I first, create one product in our Create Trade feature.
+Md Mohosin
+Md Mohosin
+29:19
+Okay, so I had some…
+Rimon islam
+Rimon islam
+29:22
+He missed?
+And our item name is…
+So, here is our item category.
+Andrew Jones
+Andrew Jones
+29:51
+Dude.
+Rimon islam
+Rimon islam
+29:51
+It's totally dynamic, okay.
+Andrew Jones
+Andrew Jones
+29:53
+Yes, sir.
+Rimon islam
+Rimon islam
+29:54
+And our item condition… Item spice.
+Buy now price is, do you know, what is this? Buy now price?
+Andrew Jones
+Andrew Jones
+30:08
+Yes.
+Rimon islam
+Rimon islam
+30:10
+Okay, thank you.
+And right now, when user can buy this, hard…
+Andrew Jones
+Andrew Jones
+30:17
+I like that,
+Rimon islam
+Rimon islam
+30:18
+For price… Oh, sorry.
+Okay.
+Right?
+Andrew Jones
+Andrew Jones
+30:26
+Yeah.
+Rimon islam
+Rimon islam
+30:28
+So…
+Andrew Jones
+Andrew Jones
+30:28
+Are we able to… are we able to add, since that's a buy now price, are we able to add a send offer option, maybe even, like, above a certain price? Like, say, estimated value is $500, but they are saying they'll buy it for, you know, buy now price $450? Are we allowed to…
+Well, we can, but are you able to put an option for, accept offers over, like, say, in this instance, $350?
+Md Mohosin
+Md Mohosin
+30:59
+Yeah, sure, it's possible.
+Andrew Jones
+Andrew Jones
+31:02
+Sorry.
+Md Mohosin
+Md Mohosin
+31:05
+She created it.
+Rimon islam
+Rimon islam
+31:06
+So, decision what you want, and what you're looking for.
+Andrew Jones
+Andrew Jones
+31:12
+Yes, sir.
+Rimon islam
+Rimon islam
+31:13
+You'll invite us.
+Md Mohosin
+Md Mohosin
+31:16
+For example.
+Rimon islam
+Rimon islam
+31:16
+sample.
+Md Mohosin
+Md Mohosin
+31:17
+Target, get it.
+Rimon islam
+Rimon islam
+31:19
+February, any target February.
+From this…
+So, trade has been posted successfully, okay?
+Md Mohosin
+Md Mohosin
+31:40
+Right.
+Rimon islam
+Rimon islam
+31:43
+Okay.
+Md Mohosin
+Md Mohosin
+31:44
+Excellent.
+Rimon islam
+Rimon islam
+31:44
+There is the item, new item, test item, okay.
+And our main price is this, and right now, buying fries this, okay?
+Okay, so I go to one…
+Md Mohosin
+Md Mohosin
+32:07
+That's true.
+Rimon islam
+Rimon islam
+32:07
+of French.
+So, here is our… all item is showing, okay?
+Md Mohosin
+Md Mohosin
+32:15
+And then.
+Andrew Jones
+Andrew Jones
+32:16
+Okay, so even the items that you, in the trades and everything can show up in the live streaming, yeah, yeah.
+Md Mohosin
+Md Mohosin
+32:30
+Painting it from a direct converter.
+Rimon islam
+Rimon islam
+32:36
+I chose one, my listing options.
+Md Mohosin
+Md Mohosin
+32:37
+Product?
+Rimon islam
+Rimon islam
+32:39
+It's starting the, yeah, our…
+Md Mohosin
+Md Mohosin
+32:42
+Yeah, for that.
+Rimon islam
+Rimon islam
+32:42
+Starting with, like, intro, 300, and we increment every, we are increment for Oh, $20? Yeah.
+Andrew Jones
+Andrew Jones
+32:57
+Could we make… could, yeah, could we make, just the starting bid a specific price? Well, I guess you have bid increments,
+I just don't think a whole lot of large items will be in… will be sold at first, so could we just do, just bids will go up by a dollar, starting out, but could we, implement an option where we put the weight of the items?
+Since the seller will already have where they're shipping from, and then the buyer will have where they're getting it shipped to, so if we put the shipping weight already in it.
+Then, it can pretty much make up the shipping label as soon as it's done, even.
+Md Mohosin
+Md Mohosin
+33:40
+Yeah, yeah, it's a good thing.
+Andrew Jones
+Andrew Jones
+33:43
+Thank you.
+Md Mohosin
+Md Mohosin
+33:44
+Yeah.
+Yeah, yeah, sure, we won't wait.
+Rimon islam
+Rimon islam
+33:50
+So, here is our pit timer field. You choose any pit timer.
+For buyer.
+Okay, so, world life now.
+Md Mohosin
+Md Mohosin
+34:01
+Mr. Father.
+Rimon islam
+Rimon islam
+34:02
+So, here is our… Offend the streaming.
+And…
+Andrew Jones
+Andrew Jones
+34:08
+I like that.
+Rimon islam
+Rimon islam
+34:12
+Where my phone is sounding short.
+Andrew Jones
+Andrew Jones
+34:14
+It's okay.
+Rimon islam
+Rimon islam
+34:23
+You can see, one streaming showing… in this country.
+Andrew Jones
+Andrew Jones
+34:27
+I've seen at the end of… I've seen at the end of that, could we have an option, though? I don't know if it showed one where it has, like, a show livestream details, where it maybe just has a list of how much items they sold per price, or something like that, and then have a
+print shipping labels option directly from there, so it can be made up and, you know, sent to their email, or they could just print even directly from there if they wanted, I don't know.
+Md Mohosin
+Md Mohosin
+34:56
+Yeah, sure. So, we… at a details space, like…
+Yeah, sure.
+Rimon islam
+Rimon islam
+35:21
+Camera, camera…
+be basic.
+Md Mohosin
+Md Mohosin
+35:28
+Tell us?
+Rimon islam
+Rimon islam
+35:30
+John was saying that again.
+That's a meh about us.
+So, brother, don't worry, our device, some issue.
+Andrew Jones
+Andrew Jones
+35:46
+Oh, it's okay.
+Rimon islam
+Rimon islam
+35:47
+phone.
+Andrew Jones
+Andrew Jones
+35:48
+No, I get it. I get the, I get the gist of it, though. I see everything. Like I said, man, it truly looks amazing.
+Rimon islam
+Rimon islam
+35:56
+Okay, thank you, thank you for understanding.
+So, it's, totally dynamic, okay? So, right now, our camera is not working.
+Md Mohosin
+Md Mohosin
+36:05
+Okay, okay. So, Rimon by, company just AIC, or Meeting System Tech MLC, or with other tech anarchy?
+To get the camera boosters in microscopic functioning.
+Rimon islam
+Rimon islam
+36:19
+Rakuten.
+Md Mohosin
+Md Mohosin
+36:23
+kudin.
+Rimon islam
+Rimon islam
+36:32
+The data that I host you most support this.
+What's in?
+Md Mohosin
+Md Mohosin
+36:37
+Huh?
+Rimon islam
+Rimon islam
+36:37
+tegen na.
+Md Mohosin
+Md Mohosin
+36:40
+Huh.
+Rimon islam
+Rimon islam
+36:41
+Post site.
+Md Mohosin
+Md Mohosin
+36:42
+Hey, to buy outside it again?
+listening.
+Bye.
+Oh, okay, and don't keep us one moment.
+Andrew Jones
+Andrew Jones
+37:16
+No, you're… you're fine.
+Md Mohosin
+Md Mohosin
+37:18
+Yeah.
+Rimon islam
+Rimon islam
+37:32
+Fantastic.
+Hello, Andrew, can you hear me?
+Andrew Jones
+Andrew Jones
+37:44
+Yes, I can.
+Rimon islam
+Rimon islam
+37:47
+Okay, so I ran again by another device. Give me some time.
+Md Mohosin
+Md Mohosin
+37:54
+Former's gonna come in.
+There it goes.
+Andrew Jones
+Andrew Jones
+38:25
+But yes, and whenever they're typing, or… could we have an option even to where people can, you know, tap the screens or something, and hearts, pop up, and it can maybe even show how many likes they've got, and…
+We had even trained.
+Rimon islam
+Rimon islam
+38:40
+They are showing the thing.
+Md Mohosin
+Md Mohosin
+38:42
+It's already implemented.
+Rimon islam
+Rimon islam
+38:44
+Buyer likes, your comments, everything show as you host.
+I open this device via the stream.
+Device.
+Take me some time, yeah, it's running already.
+Andrew Jones
+Andrew Jones
+39:59
+If it won't run, it's perfectly fine. You guys can handle that on y'all's end, and we could always even, you know, call back and everything, but I like how it looks. Whenever that goes to start, though, are you able to press
+You know, start bid, and then it just pops up for whatever time, and could we add a, like, 5-second option, 10-second option, 15, like, all the way up to, like, you guys have it?
+Md Mohosin
+Md Mohosin
+40:27
+Okay, cool.
+Andrew Jones
+Andrew Jones
+40:38
+But yeah, if it's not wanting to run, it's a… it's perfectly fine. I can see, though, based off that.
+Md Mohosin
+Md Mohosin
+40:44
+Yeah, yeah. And we already tested it in our end, but, you know, in the same device, when we run to a live stream this time, have some issues. Right, I know.
+Andrew Jones
+Andrew Jones
+40:56
+and we're still in the whole testing, and it's not even out and all that. It's perfectly fine, man. You guys keep doing what you're doing. I can't emphasize enough how good it looks.
+Md Mohosin
+Md Mohosin
+41:06
+Yeah, so now we're showing you the feeding system given by you.
+Rimon islam
+Rimon islam
+41:11
+Yeah.
+Md Mohosin
+Md Mohosin
+41:11
+If that's through the bidding system, how it works.
+Rimon islam
+Rimon islam
+41:17
+Portable one.
+Also, is that Urantha Hook?
+Md Mohosin
+Md Mohosin
+41:25
+Oh, okay, okay.
+Rimon islam
+Rimon islam
+41:26
+Not with Instagram.
+So, Andrew, give me some time, just, I show everything, how to work, so I need some time. So, our office starts, before 8.
+Yeah, so we don't have time, everything is, open, okay? So, give me some time.
+Md Mohosin
+Md Mohosin
+41:51
+That's true.
+Andrew Jones
+Andrew Jones
+41:52
+Alright, if you want, we can schedule…
+Rimon islam
+Rimon islam
+41:55
+every streaming app some, MID time for run, okay? Because, this… Project, some heavy, okay?
+Andrew Jones
+Andrew Jones
+42:05
+Right.
+It'd be… it's okay, I still have to, you know, get people onto the app and still get it out onto the app stores and stuff, man, you guys keep up the good work.
+Rimon islam
+Rimon islam
+42:16
+Yeah.
+Andrew Jones
+Andrew Jones
+42:37
+Whoa.
+If you guys would… oh, there we go.
+Rimon islam
+Rimon islam
+42:54
+Do you publish in App Store and Play Store?
+Andrew Jones
+Andrew Jones
+42:57
+Yeah.
+Rimon islam
+Rimon islam
+42:59
+Okay.
+So, our next phase is a publishing phase, and before we test
+Every HR, everything, okay? So, you know.
+Andrew Jones
+Andrew Jones
+43:13
+Nice.
+Rimon islam
+Rimon islam
+43:14
+Our next phase is the operation phase.
+Andrew Jones
+Andrew Jones
+43:19
+Alright. How… so how far out do you guys think we are from everything getting worked out and then published onto both of the app stores, for people to be able to download and begin? It's… I'm not rushing you guys or anything, just so I kinda have a gist myself.
+Rimon islam
+Rimon islam
+43:41
+Yeah, easily can, install AP1 in App Store and Play Store.
+Andrew Jones
+Andrew Jones
+44:03
+And I will probably let you guys be involved with the, you know, back-end stuff and everything for a while as well, while we see how everything goes. I will probably, you know, be in contact with you guys throughout the process. I won't be blowing your guys' phone up or anything, but…
+Well, it's probably because you guys got a whole bunch of stuff you're working on.
+I got a lot of apps, I like that, man, you guys continue to do what y'all are doing.
+Rimon islam
+Rimon islam
+45:52
+So, it's already, processing for install this app.
+Md Mohosin
+Md Mohosin
+46:02
+Yeah, so… Andrew, so if you have time, we arrange another meeting, if you don't mind.
+Andrew Jones
+Andrew Jones
+46:12
+Yes, if we could probably schedule it, if you would like to do it soon, we could do it the same time tomorrow, or the day after, whenever you guys prefer.
+Md Mohosin
+Md Mohosin
+46:24
+Yeah, sure, in… you know…
+Rimon islam
+Rimon islam
+46:28
+Has que possible.
+Md Mohosin
+Md Mohosin
+46:30
+Our available time, you know, our office time, 8 AM…
+to 4 or 5 p.m. Bangladesh time.
+Andrew Jones
+Andrew Jones
+46:41
+We can schedule it, we can schedule it for the same time tomorrow, if you think it will be worked out by that time. I don't want you to feel rushed, though I get, you know.
+Md Mohosin
+Md Mohosin
+46:51
+Yeah, yeah, sure, sure. Tomorrow will be better.
+No problem.
+Rimon islam
+Rimon islam
+46:58
+10, 10 a.m. or 11 a.m.
+Yeah, let alone.
+I said, okay, so…
+Md Mohosin
+Md Mohosin
+47:04
+Shit up.
+No, no, we both say same time, Eric.
+Rimon islam
+Rimon islam
+47:09
+Oscar again.
+Md Mohosin
+Md Mohosin
+47:09
+Noida, no go ahead.
+Andrew Jones
+Andrew Jones
+47:13
+Okay, well, I appreciate it. You guys have a great rest of your night, well, I guess your morning, actually, but I thank you guys again, for everything you did. Like I said, I can get the gist of what I'm seeing and everything, and you guys have done great work. I appreciate it again.
+Md Mohosin
+Md Mohosin
+47:30
+Yeah, yeah, thank you. Also, tomorrow, we will show you that dashboard, but, you know, we have already admin portal.
+Andrew Jones
+Andrew Jones
+47:37
+Yes, sir.
+Md Mohosin
+Md Mohosin
+47:38
+Yeah, so tomorrow we will be showing you the dashboard part, so it's for… it's… it's for good understanding how work admin part, how work, seller part, how work is that part.
+Andrew Jones
+Andrew Jones
+47:52
+Alright, that sounds good.
+Md Mohosin
+Md Mohosin
+47:54
+Okay, yeah, yeah, sure. So…
+Rimon islam
+Rimon islam
+48:01
+Then… So, thank you, Angelo, for joining.
+Md Mohosin
+Md Mohosin
+48:06
+So, we… We hope tomorrow we will join again.
+Andrew Jones
+Andrew Jones
+48:13
+Yes.
+Md Mohosin
+Md Mohosin
+48:13
+And discuss, the remaining part.
+Andrew Jones
+Andrew Jones
+48:17
+Okay, that sounds great. You guys have a good, day today, and I will speak to you first thing in the morning, your time.
+Md Mohosin
+Md Mohosin
+48:25
+Yeah, yeah, thank you. And, how… how your time now, like, what time zone?
+Andrew Jones
+Andrew Jones
+48:31
+Yeah, I'm about to get me some sleep right now. Y'all are just waking up, and I'm just getting some sleep.
+Md Mohosin
+Md Mohosin
+48:37
+Oh, okay, okay.
+Andrew Jones
+Andrew Jones
+48:38
+Hey, we make it work, though you guys keep up the great work. Thank you again.
+Md Mohosin
+Md Mohosin
+48:43
+Yeah, yeah, okay, thank you. So, have a good night.
+Andrew Jones
+Andrew Jones
+48:47
+And her YouTube, but…
+Md Mohosin
+Md Mohosin
+Yeah, okay.
+
+
+
+
+
+
+
+
+
+Andrew Jones
+01:11
+Oh, how are you doing?
+
+Md Mohosin
+01:15
+Yeah, hello.
+
+Andrew Jones
+01:19
+How are you doing this morning?
+
+Md Mohosin
+01:21
+Yeah, yeah. It's good. All good, and how are you?
+
+Andrew Jones
+01:25
+Not too bad, man.
+
+Md Mohosin
+01:30
+What?
+So, how are you? I cannot get your point.
+
+Andrew Jones
+01:44
+Could you repeat that one more time?
+
+Md Mohosin
+01:47
+So, I just asked you, how are you?
+
+Andrew Jones
+01:50
+Oh, I'm doing well. How are you doing, man?
+
+Md Mohosin
+01:52
+Yeah, yeah, we are also fine.
+
+Andrew Jones
+01:55
+There you go.
+
+Md Mohosin
+01:56
+Okay, so… I share my screen.
+
+Andrew Jones
+02:01
+ye…
+
+Md Mohosin
+02:14
+I don't care.
+Can you see my screen?
+
+Andrew Jones
+02:19
+Cheers.
+Okay.
+
+Md Mohosin
+02:22
+Okay, so… So, first of all, I…
+Give you a overview, your admin panel.
+Peace.
+So, yeah.
+
+Andrew Jones
+02:44
+I like the layout.
+
+Md Mohosin
+02:46
+Thank you. So, first of all, I logged out, and this is the admin login.
+It's clean.
+So, first of all, when you…
+Browse this site, report your admin credential.
+And click sign in.
+Yeah, this is the fast ways.
+And here, you can see your all states, like Total Leader, total active seller, live stream now.
+The total trades today, total revenue, pending, so this kind of thing. And here you will see the revenue, user growth.
+And here are also the recent order, recent trade, flagged activities. So, this is the overview phase, actually.
+And after that, we'll move into the user.
+management base, so here you need to see all user. So, here you see, this is… this on user is buyer-seller, both role.
+And, yeah, some user, like, this user only buyer.
+And this user only seller, so this kind of thing here you will see as admin.
+So, here also source and filter systems.
+And after that, this is the seller verification page here. You will see the all, seller. And as admin, you need to approve their request.
+
+Andrew Jones
+04:25
+Alright.
+
+Md Mohosin
+04:25
+like, when a buyer want to seller, this time they requested you, I want to be a seller. So, if I approve, then this user
+Now, Bayern Hill are both thrown.
+
+Andrew Jones
+04:44
+Alright.
+
+Md Mohosin
+04:45
+Yeah, I'm working on it.
+
+Andrew Jones
+04:46
+And we have a way to verify their information, correct?
+
+Md Mohosin
+04:51
+Yeah, yeah, yeah. Yeah, sure. Yeah, sure. When the cart…
+When you see the card, here, you see their document, like… They're licensed.
+
+Andrew Jones
+05:04
+Yeah, as long as we're covered on our end.
+
+Md Mohosin
+05:09
+Yeah.
+This is the manual verification.
+
+Andrew Jones
+05:13
+Alright.
+
+Md Mohosin
+05:14
+Yeah. So, after that, here, you see all listing. Right. Here, the action button, if you want, toggle, boost, and delete, view all.
+So, this kind of thing. And…
+After that, where do you see it?
+live streams screen here, you will see all, live auctions, scheduled stream, I currently have no…
+Yeah, currently here, no schedule stream, that's why I hear a message, like, no schedule stream. Here, you can see the on-live stream. If you want, you can view the stream. Currently, the host not stopped the live.
+And here, if you want, as admin, you send a message like this kind of thing.
+
+Andrew Jones
+06:13
+gear.
+
+Md Mohosin
+06:14
+Okay, and here you see the trade piece.
+They are all, greatly sure, and they are… after that.
+In the order screen, here you see the all order list.
+Yeah, the details page. You know, and this is the first version. We also improved.
+The all functionality and based user experience.
+And after that, dispute, if any user… if any report or any other thing, this time you…
+Yeah, you… you will check this, and it's resolved or reject. Kindly, show two or three dummy data, because in our database, we have no data right now.
+
+Andrew Jones
+07:10
+That's great.
+
+Md Mohosin
+07:11
+Yeah, after that, payment section, here, all payment list showing. Here you can see the state's total revenue, commission earning, pending payout, and complete payout, this kind of thing.
+And after that, here, boosted listing.
+If, any seller wants…
+They… if they want, they boost their listing.
+Yeah, and… yeah, up to that here, the category section. If you want, as admin, you…
+It's new category.
+
+Andrew Jones
+07:54
+Okay, if you don't mind, if I can later on, maybe tomorrow morning… well, it'll probably be here tomorrow morning, but if I have a list to you guys, or I can pull out my MacBook if I'm able to get into the admin portal…
+And start adding categories, or if it's easier, though, I could even send you guys a list of probably the most popular categories that would most likely be being used.
+
+Md Mohosin
+08:22
+Yeah, yeah, sure.
+
+Andrew Jones
+08:23
+Right.
+
+Md Mohosin
+08:24
+Okay.
+Okay, so, okay.
+This category I recently added.
+And… After that, you know, notification.
+And, you will… you will see the all, notification.
+And after that, the reports… The screen here, you see all reports, like total sales, active user, average transition.
+And here, in this section, you will see the…
+Sales by category, and top seller, this kind of thing.
+And here, you will see the states, like, most rated item. All are dynamic now, but, all that are demo, but it's all functional.
+And… After that, here, some settings, section.
+If you want, you can… Let's, toggle this, and…
+We need to work this part more, but I think it's workable now.
+Yeah, the… yeah, so…
+
+Andrew Jones
+09:45
+I need to get the EIN as well. The EIN will be the first thing that I get, which I still have plenty of time, it's not even out, but just so everything's taken care of on that end as well.
+For the business account for everything to go to.
+
+Md Mohosin
+10:05
+Yeah, yeah.
+So, yeah, here you will see the all information when a buyer wants to be a seller.
+
+Andrew Jones
+10:15
+Alright.
+
+Md Mohosin
+10:16
+Okay, so…
+So this, this is the admin type of thing. Also, after the meeting, I will share the link, so you will see in your int.
+Okay, so now, I talk with my teammate Rimon.
+Remind me.
+Okay, okay, so now I stop my screen, and Rimon will, share his screen.
+
+Andrew Jones
+10:53
+Alright.
+Thank you.
+
+Md Mohosin
+10:55
+Okay.
+
+Andrew Jones
+10:56
+It looks great on that end as well.
+
+Md Mohosin
+10:58
+Yeah, thank you.
+Can we activate this or not?
+
+Rimon islam
+11:12
+So, hello. Howdy.
+
+Andrew Jones
+11:15
+Oh, how are you doing, Rimon?
+
+Rimon islam
+11:17
+Yeah, I'm good. So, can you see my screen?
+
+Andrew Jones
+11:20
+Yes, sir.
+
+Rimon islam
+11:22
+So today, our main goal is, streaming. Okay, so I also, you started showing everything, every feature.
+So, yesterday, not showing this streaming main feature, our… our app main feature. Okay.
+So, I minimize this stream.
+And when we… back to our app, and it's showing this card, okay?
+I explained.
+So…
+So, first of all, I share, our host site. This is our, host
+post site, and this user showing her item, and her item is test item, and last bid price is $100, okay? Okay. So, already we test some bidding.
+And… Post, comment in this field.
+Send this comment. So, it's showing our…
+user site. So, our, I, our streaming this.
+Okay, connect to a stream.
+Give me some time, okay? So, our screen is showing, okay? So, user can beat in this, button.
+So, our, increment bid is…
+$5, okay? So, user already beat $105, and right now, beat prices $110, $110, okay?
+
+Andrew Jones
+13:24
+Right.
+
+Rimon islam
+13:25
+Okay, so our streaming, streaming timer, 300… 300 seconds, okay?
+So, here is our custom.
+bidding. User can, run a custom bid. So… 120.
+So, confirm this bit.
+Wait, our last… Sweet.
+
+Md Mohosin
+13:58
+Actually.
+
+Andrew Jones
+14:02
+I get…
+Hey, I get the gist of it, though. Like, I get what y'all are showing me. Even if you… if it's not working perfectly right now, I… I understand, though.
+It looks super good.
+
+Md Mohosin
+14:17
+Yeah, think of it. I think it's working. Click, confirm it.
+
+Rimon islam
+14:22
+Okay, so our, now, bid placed is $1, $20, so now bid price is $125, okay? So, increment is $5, every bidding, okay?
+Because it's, we, decide in our… when we start our streaming.
+I think you understand.
+
+Andrew Jones
+14:44
+Yes.
+
+Rimon islam
+14:46
+Okay, so, also here is our, luck.
+Reject button.
+Yeah, so… And… This is our host site.
+And when our increment is, done, and our winner confirmed, then we… our winner confirm, okay? Our last bidder, actually winner, okay?
+
+Md Mohosin
+15:19
+Or the camera on off, like, like a screen, microphone on off.
+
+Rimon islam
+15:23
+Look as correct.
+Yeah, now our background… Back camera.
+
+Md Mohosin
+15:30
+Actually, this is our OPH environment.
+
+Andrew Jones
+15:34
+I like that y'all got a whole setup.
+
+Rimon islam
+15:36
+And that is our, okay, our calculating result. So, here is our auction complete, and our winner is, Tester Rimon, last winner. So, winning amount is, $200, $120, $120.
+So, we go to our, buyer skin. So, here is auction win. This is a buyer, actually, bidder, actually, okay?
+
+Andrew Jones
+16:06
+Can we even, can we have it where that pops up?
+quick, and it just automatically, pays where, like, it says auction won, kind of like that. It's, and it wears, like, congratulations, you won this item for $120, and then it just goes away back to the stream automatically, possibly.
+
+Md Mohosin
+16:30
+Yeah, yeah, yeah.
+
+Andrew Jones
+16:31
+That way, like, as soon as they know, like, as soon as they're swiping and they swipe to bid, it's automatically processes as soon as it's done, as long as their card payments inserted,
+
+Md Mohosin
+16:43
+Yeah, yeah.
+Yeah, yeah, it's possible.
+
+Rimon islam
+16:49
+What do we implement in this, feature? So, we, improve that more, okay?
+
+Md Mohosin
+17:02
+Yeah, come on, like, click Proceed Payment.
+
+Rimon islam
+17:06
+About the digital.
+How would the hell not be?
+
+Md Mohosin
+17:13
+Are they happy to keep people safe? How about making people decisions?
+
+Rimon islam
+17:17
+Personally?
+
+Md Mohosin
+17:18
+Okay, okay. So, when we click, proceed to payment, then the payment flow started.
+And after that, they view their all status quo.
+Everyone, by… please go to the profile page, and…
+
+Rimon islam
+17:37
+Profess.
+
+Md Mohosin
+17:38
+coaching side is not also. Oh, that he can't go with this in.
+
+Rimon islam
+17:45
+No account canceled now. Payment for inactive.
+
+Andrew Jones
+17:48
+So… unrelated, I… this, I see all of this as well.
+But I seen you guys have a whole team behind you guys and everything. Is it possible…
+
+Md Mohosin
+18:00
+Further.
+
+Andrew Jones
+18:00
+a video to be made, like, a little advertisement video where it shows somebody possibly… Huh.
+
+Md Mohosin
+18:09
+Yeah. You know…
+
+Andrew Jones
+18:10
+selling a Pokemon card for an expensive amount, and then person getting it, and then trading it on our little thing, and it's showing them receiving an enrollment, or something like that.
+
+Md Mohosin
+18:23
+Yeah, yeah, it's possible, but before making a video for advertisement, we want to… we want to try more improvement in this.
+
+Andrew Jones
+18:35
+Oh, yeah, yeah, for sure, for sure. I just figured I would, while I was thinking about it, because I seen you had some people, but…
+
+Md Mohosin
+18:43
+Yeah.
+Because, you know, we already completed most of the work and main features, but we have needed some improvement, you know.
+
+Andrew Jones
+18:53
+Yes, sir.
+
+Md Mohosin
+18:55
+Yeah.
+So, also, you know, our working process, we, start our, Figma UI UI design, then we work front-end design. After that, we make the backend logic, and now we implement the all API connected.
+So, and after that, you know, our two main parts remaining, that is…
+And deployment, and… deployment publishing and, testing. So, this is the two-phase, you know, in our agreement and other things.
+
+Andrew Jones
+19:33
+Yeah, and whenever they post the live, are they able to post, like, a photo, the live photo, kind of a thumbnail, and then maybe even a video, so after a second, like, say you're sitting on the live now.
+
+Md Mohosin
+19:48
+Yeah, I think… Already, already implemented, we implemented this type of thing.
+
+Andrew Jones
+19:54
+You guys beat me to it, thank you.
+
+Md Mohosin
+19:56
+Yeah, no, no, we… we tried to make better, and, just,
+I talk about our working process. So, you know, after this phase, we have a testing and deployment publishing phase. So, you know, our timeline ends soon.
+We have only… I think…
+some days for this phase, so we want to move forward, and we want to, deliver this
+project, this phase, not full project, we want to deliver this phase, and after that, we want to start our testing and final polishing phase, like, QA testing.
+
+Andrew Jones
+20:45
+Yes, sir.
+
+Md Mohosin
+20:46
+So, if you give us permission, so we want to deliver this phase.
+
+Andrew Jones
+20:52
+Yeah, yeah.
+
+Md Mohosin
+20:54
+Okay, excellent.
+
+Andrew Jones
+20:55
+I have plenty of time, I'm all ears, and I'm 100% on this.
+
+Md Mohosin
+21:00
+Okay, okay, so thank you, and after that, don't worry, we test full app, and also we sent you the APK and the dashboard link, so you will test in your end. If you find any bug errors, or if you, in your minds, this thing need to improve, just
+Just you give us feedback, we are available to
+solve any kind of issue. You already see we have a big team. Yeah.
+So, I think there's enough today.
+And after the meeting, we say… we delivered this project. Kindly accept this, and after that, if need, we arrange another meeting, so don't worry.
+
+Andrew Jones
+21:47
+Okay, thank you guys again, it looks great.
+
+Md Mohosin
+21:49
+Yeah, yeah, thank you.
+
+Andrew Jones
+21:52
+You guys have a good day.
+
+Md Mohosin
+21:53
+Yeah, it's nighttime. Have a good night.
+
+Andrew Jones
+Dang.
+
+Md Mohosin
+21:57
+Okay, thank you.
+

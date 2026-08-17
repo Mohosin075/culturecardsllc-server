@@ -34,6 +34,9 @@ export type IProduct = {
   isFeatured: boolean
   boostedUntil?: Date
   allowTrade: boolean
+  shippingWeight?: number
+  allowOffers?: boolean
+  minOfferAmount?: number
   createdAt: Date
   updatedAt: Date
 } & Document

@@ -72,6 +72,13 @@ const OrderSchema = new Schema<IOrder>(
         },
       ],
     },
+    shippingWeight: {
+      type: Number,
+      default: 0,
+    },
+    shippingLabelUrl: {
+      type: String,
+    },
   },
   {
     timestamps: true,

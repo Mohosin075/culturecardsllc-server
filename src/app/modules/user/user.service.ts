@@ -16,6 +16,7 @@ import { jwtHelper } from '../../../helpers/jwtHelper'
 import { TradeOffer } from '../trade/trade.model'
 import { Review } from '../review/review.model'
 import { Follow } from '../follow/follow.model'
+import { LiveStream } from '../auction/auction.model'
 
 const getUserStats = async (userId: string) => {
   const tradesCount = await TradeOffer.countDocuments({
@@ -332,7 +333,16 @@ const getUserById = async (userId: string): Promise<any> => {
 
   const stats = await getUserStats(userId)
 
-  return { ...isUserExist, stats }
+  const upcomingShows = await LiveStream.find({
+    sellerId: userId,
+    status: 'scheduled',
+    scheduledAt: { $gt: new Date() }
+  })
+    .populate('pinnedProductId')
+    .sort({ scheduledAt: 1 })
+    .lean()
+
+  return { ...isUserExist, stats, upcomingShows }
 }
 
 const updateUserStatus = async (userId: string, data: Record<string, any>) => {
@@ -375,7 +385,16 @@ export const getProfile = async (user: JwtPayload) => {
 
   const stats = await getUserStats(user.userId)
 
-  return { ...isUserExist, stats }
+  const upcomingShows = await LiveStream.find({
+    sellerId: user.userId,
+    status: 'scheduled',
+    scheduledAt: { $gt: new Date() }
+  })
+    .populate('pinnedProductId')
+    .sort({ scheduledAt: 1 })
+    .lean()
+
+  return { ...isUserExist, stats, upcomingShows }
 }
 
 const switchRole = async (user: JwtPayload, role: USER_ROLES) => {

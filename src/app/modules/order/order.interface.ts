@@ -41,6 +41,8 @@ export type IOrder = {
     estimatedDelivery?: Date
     journeyUpdates: IJourneyUpdate[]
   }
+  shippingWeight?: number
+  shippingLabelUrl?: string
   createdAt: Date
   updatedAt: Date
 } & Document

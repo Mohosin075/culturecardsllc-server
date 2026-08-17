@@ -78,6 +78,18 @@ const ProductSchema = new Schema<IProduct>(
       default: true,
       index: true,
     },
+    shippingWeight: {
+      type: Number,
+      default: 0,
+    },
+    allowOffers: {
+      type: Boolean,
+      default: false,
+    },
+    minOfferAmount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

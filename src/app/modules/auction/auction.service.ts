@@ -9,6 +9,10 @@ import stripe from '../../../config/stripe'
 import { Product } from '../product/product.model'
 import { User } from '../user/user.model'
 import { io } from '../../../server'
+import { Order } from '../order/order.model'
+import { initializeOrderShipping } from '../../../helpers/shippingHelper'
+import { Chat } from '../chat/chat.model'
+import { Message } from '../message/message.model'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -280,20 +284,165 @@ const completeAuction = async (
     )
   }
 
-  // Mark product pending (escrow-like hold)
+  // Get winner info
+  const winner = await User.findById(auctionItem.highestBidderId)
+  if (!winner) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Winner profile not found')
+  }
+
+  let isAutoPaid = false
+  let paymentIntentId: string | undefined
+
+  // 1. Try automatic off-session charge if the winner has saved card details on Stripe
+  if (winner.stripeCustomerId) {
+    try {
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: winner.stripeCustomerId,
+        type: 'card',
+      })
+
+      if (paymentMethods.data.length > 0) {
+        const paymentMethodId = paymentMethods.data[0].id
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(auctionItem.currentBid * 100),
+          currency: 'usd',
+          customer: winner.stripeCustomerId,
+          payment_method: paymentMethodId,
+          off_session: true,
+          confirm: true,
+          metadata: {
+            purchaseType: 'auction_win',
+            productId: product._id.toString(),
+            sellerId: stream?.sellerId?.toString() || '',
+            winnerId: auctionItem.highestBidderId.toString(),
+            auctionItemId: auctionItemId,
+          },
+        })
+
+        if (paymentIntent.status === 'succeeded') {
+          isAutoPaid = true
+          paymentIntentId = paymentIntent.id
+          console.log(`[AUTO-PAY] Instant card charge succeeded for Auction:${auctionItemId}`)
+        }
+      }
+    } catch (autoPayError) {
+      console.error('[AUTO-PAY] Automatic charge failed. Falling back to checkout session:', autoPayError)
+    }
+  }
+
+  // 2. If charged successfully, create the paid Order immediately
+  if (isAutoPaid) {
+    const shippingAddress = {
+      street: winner.address?.presentAddress || '123 Collectors St',
+      city: winner.address?.city || 'Collector City',
+      state: 'AP',
+      postalCode: winner.address?.postalCode || '10001',
+      country: winner.address?.country || 'US',
+    }
+
+    const orderPayload: any = {
+      buyerId: auctionItem.highestBidderId,
+      sellerId: stream?.sellerId,
+      productId: product._id,
+      purchaseType: 'auction_win' as const,
+      paymentStatus: 'paid' as const,
+      deliveryStatus: 'pending' as const,
+      shippingAddress,
+      paymentIntentId,
+      amountDetails: {
+        itemSubtotal: auctionItem.currentBid,
+        shipping: 0,
+        taxes: 0,
+        processingFee: 0,
+        charityContribution: 0,
+        totalPaid: auctionItem.currentBid,
+      },
+    }
+
+    // Initialize shipping weight, rate, tracking, and label PDF on disk (supports bundling)
+    const existingOrder = await Order.findOne({
+      buyerId: auctionItem.highestBidderId,
+      sellerId: stream?.sellerId,
+      deliveryStatus: 'pending',
+      purchaseType: 'auction_win',
+      createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
+    })
+
+    if (existingOrder) {
+      orderPayload.trackingDetails = {
+        carrier: existingOrder.trackingDetails.carrier,
+        trackingNumber: existingOrder.trackingDetails.trackingNumber,
+        estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
+        journeyUpdates: []
+      }
+      orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl
+      orderPayload.shippingWeight = 0
+      orderPayload.amountDetails.shipping = 0
+    } else {
+      await initializeOrderShipping(orderPayload, product)
+    }
+
+    const [order] = await Order.create([orderPayload])
+
+    // Mark product sold
+    await Product.findByIdAndUpdate(product._id, { status: 'sold', stock: 0 })
+
+    // Mark auction completed
+    auctionItem.status = 'completed'
+    await auctionItem.save()
+
+    // 1. Create order update message in chat
+    try {
+      const chat = await Chat.findOne({
+        participants: { $all: [auctionItem.highestBidderId.toString(), stream.sellerId.toString()] },
+      })
+      if (chat) {
+        await Message.create({
+          chatId: chat._id,
+          sender: auctionItem.highestBidderId,
+          text: `🏆 Auction Won! Payment complete. Order #${(order as any)._id.toString().substring(0, 8).toUpperCase()} created.`,
+          messageType: 'order_update',
+          seen: false,
+          metadata: { orderId: (order as any)._id.toString(), statusLabel: 'AUCTION WON 🏆' },
+        })
+      }
+    } catch (chatError) {
+      console.error('Failed to create auction win chat message:', chatError)
+    }
+
+    // 2. Notify seller via socket
+    if (io && stream?.sellerId) {
+      io.to(stream.sellerId.toString()).emit('auction-payment-received', {
+        orderId: (order as any)._id.toString(),
+        productId: product._id.toString(),
+        message: 'Auction payment received! Order created.',
+      })
+    }
+
+    // 3. Notify winner via socket
+    if (io) {
+      io.to(auctionItem.highestBidderId.toString()).emit('auction-won', {
+        auctionItemId,
+        productTitle: product.title,
+        winningBid: auctionItem.currentBid,
+        isAutoPaid: true,
+        message: `🏆 Congratulations! You won the auction for ${product.title}. Payment of $${auctionItem.currentBid} was charged automatically!`,
+      })
+    }
+
+    return { checkoutUrl: '', auctionItem }
+  }
+
+  // 3. Fallback: Create Stripe checkout session for manual payment
   await Product.findByIdAndUpdate(product._id, { status: 'pending' })
 
-  // Mark auction completed
   auctionItem.status = 'completed'
   await auctionItem.save()
 
-  // Get winner info
-  const winner = await User.findById(auctionItem.highestBidderId).select('email name')
-  if (!winner?.email) {
+  if (!winner.email) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Winner email not found')
   }
 
-  // Create Stripe checkout session for winner
   const stripeSession = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [

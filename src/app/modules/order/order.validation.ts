@@ -40,6 +40,8 @@ const createOrderSchema = z.object({
       { required_error: 'Shipping address is required' },
     ),
     paymentIntentId: z.string().optional(),
+    shippingWeight: z.number().nonnegative().optional(),
+    shippingLabelUrl: z.string().optional(),
   }),
 })
 

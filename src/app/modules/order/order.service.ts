@@ -7,6 +7,7 @@ import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
 import { Types } from 'mongoose'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
+import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 
 const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   const product = await Product.findById(payload.productId)
@@ -17,6 +18,9 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   if (product.stock <= 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Product is out of stock.')
   }
+
+  // Populate shipping weight, tracking number, and mock PDF label
+  await initializeOrderShipping(payload, product)
 
   const session = await Order.startSession()
   session.startTransaction()

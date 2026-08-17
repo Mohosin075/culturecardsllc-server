@@ -9,6 +9,8 @@ import { TradeOffer } from '../trade/trade.model'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
 import { io } from '../../../server'
+import { User } from '../user/user.model'
+import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
@@ -78,22 +80,62 @@ const handleCheckoutSessionCompleted = async (
       if (purchaseType === 'auction_win' && meta.productId && meta.winnerId && meta.sellerId) {
         const product = await Product.findById(meta.productId).session(mongoSession)
         if (product) {
+          const totalPaid = (sessionWithDetails.amount_total || 0) / 100
+          const buyerUser = await User.findById(meta.winnerId).session(mongoSession)
+          const shippingAddress = {
+            street: buyerUser?.address?.presentAddress || '123 Collectors St',
+            city: buyerUser?.address?.city || 'Collector City',
+            state: 'AP',
+            postalCode: buyerUser?.address?.postalCode || '10001',
+            country: buyerUser?.address?.country || 'US',
+          }
+
+          // Check if there is an existing pending order for the same buyer, seller, and stream in the last 12 hours
+          const existingOrder = await Order.findOne({
+            buyerId: meta.winnerId,
+            sellerId: meta.sellerId,
+            deliveryStatus: 'pending',
+            purchaseType: 'auction_win',
+            createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
+          }).session(mongoSession)
+
+          const orderPayload: any = {
+            buyerId: meta.winnerId,
+            sellerId: meta.sellerId,
+            productId: meta.productId,
+            purchaseType: 'auction_win' as const,
+            paymentStatus: 'paid' as const,
+            deliveryStatus: 'pending' as const,
+            shippingAddress,
+            amountDetails: {
+              itemSubtotal: totalPaid,
+              shipping: 0,
+              taxes: 0,
+              processingFee: 0,
+              charityContribution: 0,
+              totalPaid: totalPaid,
+            },
+          }
+
+          if (existingOrder) {
+            // Bundle order: Reuse tracking details and shipping label, set shipping rate to $0
+            orderPayload.trackingDetails = {
+              carrier: existingOrder.trackingDetails.carrier,
+              trackingNumber: existingOrder.trackingDetails.trackingNumber,
+              estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
+              journeyUpdates: []
+            }
+            orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl
+            orderPayload.shippingWeight = 0
+            orderPayload.amountDetails.shipping = 0
+            orderPayload.amountDetails.totalPaid = totalPaid
+          } else {
+            // New order: Initialize full shipping weight, rate, tracking, and PDF label on disk
+            await initializeOrderShipping(orderPayload, product)
+          }
+
           // Create order
-          const [order] = await Order.create(
-            [
-              {
-                buyerId: meta.winnerId,
-                sellerId: meta.sellerId,
-                productId: meta.productId,
-                totalPrice: product.buyNowPrice || 0,
-                purchaseType: 'auction_win',
-                paymentStatus: 'paid',
-                deliveryStatus: 'pending',
-                trackingDetails: { journeyUpdates: [] },
-              },
-            ],
-            { session: mongoSession },
-          )
+          const [order] = await Order.create([orderPayload], { session: mongoSession })
 
           // Mark product sold
           await Product.findByIdAndUpdate(
