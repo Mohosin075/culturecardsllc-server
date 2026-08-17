@@ -9,7 +9,6 @@ import { Types } from 'mongoose'
 import { io } from '../../../server'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 import { User } from '../user/user.model'
-import config from '../../../config'
 import stripe from '../../../config/stripe'
 
 const createTradeOffer = async (

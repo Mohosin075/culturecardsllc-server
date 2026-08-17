@@ -4,6 +4,8 @@ export const PaymentValidations = {
   create: z.object({
     body: z.object({
       bookingId: z.string().optional(),
+      orderId: z.string().optional(),
+      tradeOfferId: z.string().optional(),
       amount: z.number().min(1, 'Amount must be at least 1').optional(),
       currency: z.string().default('EUR'),
       productName: z.string().optional(),

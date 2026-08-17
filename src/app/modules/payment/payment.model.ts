@@ -12,6 +12,14 @@ const paymentSchema = new Schema<IPayment, PaymentModel>(
       type: Schema.Types.ObjectId,
       ref: 'Booking',
     },
+    orderId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Order',
+    },
+    tradeOfferId: {
+      type: Schema.Types.ObjectId,
+      ref: 'TradeOffer',
+    },
     userEmail: {
       type: String,
       required: true,

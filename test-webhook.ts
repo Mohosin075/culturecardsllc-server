@@ -107,10 +107,7 @@ async function runWebhookAndShippingSimulation() {
 
     // Verify chat was created automatically during order creation
     const chat = await Chat.findOne({
-      $or: [
-        { creator: buyer._id, participant: seller._id },
-        { creator: seller._id, participant: buyer._id },
-      ],
+      participants: { $all: [buyer._id, seller._id] },
     })
     console.log(`✅ Verification: Chat room exists. ID: ${chat?._id}`)
 

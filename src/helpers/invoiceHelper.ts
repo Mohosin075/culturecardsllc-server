@@ -27,11 +27,11 @@ export const generatePDFInvoice = async (
     doc
       .fillColor('#444444')
       .fontSize(20)
-      .text('ARIES', 50, 57)
+      .text('CULTURECARDS', 50, 57)
       .fontSize(10)
-      .text('Aries Marketplace', 200, 50, { align: 'right' })
-      .text('123 Digital Square', 200, 65, { align: 'right' })
-      .text('Tech City, TC 10101', 200, 80, { align: 'right' })
+      .text('CultureCards LLC', 200, 50, { align: 'right' })
+      .text('123 Collectors Square', 200, 65, { align: 'right' })
+      .text('Card Town, CC 10101', 200, 80, { align: 'right' })
       .moveDown()
 
     // --- Line Divider ---
@@ -88,10 +88,22 @@ export const generatePDFInvoice = async (
 
     // --- Table Item ---
     const itemRowTop = tableTop + 30
+    let description = 'Marketplace Purchase'
+    const purchaseType = payment.metadata?.purchaseType
+    if (purchaseType === 'auction_win') {
+      description = 'Auction Item Purchase'
+    } else if (purchaseType === 'buy_now') {
+      description = 'Direct Buy Now Purchase'
+    } else if (purchaseType === 'trade_supplement') {
+      description = 'Trade Cash Supplement Payment'
+    } else if (purchaseType === 'product_boost') {
+      description = 'Product Boost Listing Service'
+    }
+
     doc
       .font('Helvetica')
       .fontSize(10)
-      .text('Professional Booking Service', 50, itemRowTop)
+      .text(description, 50, itemRowTop)
       .text(payment.paymentIntentId || 'N/A', 250, itemRowTop)
       .text(
         `${payment.amount.toLocaleString()} ${payment.currency.toUpperCase()}`,
@@ -126,7 +138,7 @@ export const generatePDFInvoice = async (
       .fontSize(10)
       .fillColor('#aaaaaa')
       .text(
-        'Thank you for choosing Aries. For assistance, contact support@aries.com',
+        'Thank you for choosing CultureCards. For assistance, contact support@culturecardsapp.com',
         50,
         700,
         { align: 'center', width: 500 },

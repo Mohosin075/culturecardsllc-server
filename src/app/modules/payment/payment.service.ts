@@ -14,7 +14,6 @@ import { paymentSearchableFields } from './payment.constants'
 import { Types } from 'mongoose'
 import { User } from '../user/user.model'
 import stripe from '../../../config/stripe'
-import config from '../../../config'
 
 import { WebhookService } from './webhook.service'
 import { emailHelper } from '../../../helpers/emailHelper'
@@ -53,6 +52,8 @@ const createCheckoutSession = async (
       metadata: {
         userId: user.userId.toString(),
         ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
+        ...(payload.orderId && { orderId: payload.orderId.toString() }),
+        ...(payload.tradeOfferId && { tradeOfferId: payload.tradeOfferId.toString() }),
         ...payload.metadata,
       },
     })
@@ -60,6 +61,8 @@ const createCheckoutSession = async (
     await Payment.create({
       userId: user.userId,
       bookingId: payload.bookingId,
+      orderId: payload.orderId,
+      tradeOfferId: payload.tradeOfferId,
       userEmail: user.email,
       amount: payload.amount,
       currency: payload.currency || 'usd',
@@ -68,6 +71,8 @@ const createCheckoutSession = async (
       status: 'pending',
       metadata: {
         ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
+        ...(payload.orderId && { orderId: payload.orderId.toString() }),
+        ...(payload.tradeOfferId && { tradeOfferId: payload.tradeOfferId.toString() }),
         ...payload.metadata,
       },
     })
@@ -204,11 +209,6 @@ const createPaymentIntent = async (
   status: string
 }> => {
   try {
-    // ---- Booking Validation ----
-    if (!payload.bookingId) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Booking ID is required')
-    }
-
     // Determine payable amount from payload (as Booking is missing)
     const payableAmount =
       typeof payload.amount === 'number' ? Number(payload.amount.toFixed(2)) : 0
@@ -216,7 +216,7 @@ const createPaymentIntent = async (
     if (payableAmount <= 0) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
-        'No payable amount found for this booking',
+        'No payable amount found for this payment',
       )
     }
 
@@ -246,7 +246,9 @@ const createPaymentIntent = async (
       metadata: {
         userId: user.userId,
         userEmail,
-        bookingId: payload.bookingId,
+        ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
+        ...(payload.orderId && { orderId: payload.orderId.toString() }),
+        ...(payload.tradeOfferId && { tradeOfferId: payload.tradeOfferId.toString() }),
         ...payload.metadata,
       },
     }
@@ -267,6 +269,8 @@ const createPaymentIntent = async (
     await Payment.create({
       userId: user.userId,
       bookingId: payload.bookingId,
+      orderId: payload.orderId,
+      tradeOfferId: payload.tradeOfferId,
       userEmail,
       amount: payableAmount,
       currency: 'EUR',
@@ -275,7 +279,9 @@ const createPaymentIntent = async (
       status: paymentIntent.status === 'succeeded' ? 'succeeded' : 'pending',
       metadata: {
         userId: user.userId,
-        bookingId: payload.bookingId,
+        ...(payload.bookingId && { bookingId: payload.bookingId.toString() }),
+        ...(payload.orderId && { orderId: payload.orderId.toString() }),
+        ...(payload.tradeOfferId && { tradeOfferId: payload.tradeOfferId.toString() }),
         usedSavedCard: !!payload.paymentMethodId,
         ...payload.metadata,
       },

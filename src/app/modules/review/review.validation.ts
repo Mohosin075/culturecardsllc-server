@@ -2,9 +2,12 @@ import { z } from 'zod'
 
 export const createReviewSchema = z.object({
   body: z.object({
-    bookingId: z.string(),
-    reviewee: z.string().optional(),
-    rating: z.number(),
+    orderId: z.string().optional(),
+    tradeOfferId: z.string().optional(),
+    reviewee: z.string({
+      required_error: 'Reviewee is required',
+    }),
+    rating: z.number().min(1).max(5),
     review: z.string(),
   }),
 })
@@ -12,7 +15,8 @@ export const createReviewSchema = z.object({
 export const updateReviewSchema = z.object({
   body: z.object({
     reviewee: z.string().optional(),
-    rating: z.number().optional(),
+    rating: z.number().min(1).max(5).optional(),
     review: z.string().optional(),
   }),
 })
+

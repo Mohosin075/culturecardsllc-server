@@ -3,6 +3,8 @@ import { Model, Types } from 'mongoose'
 export type IPaymentPayload = {
   amount: number
   bookingId?: string
+  orderId?: string
+  tradeOfferId?: string
   currency?: string
   productName?: string
   description?: string
@@ -21,6 +23,8 @@ export type IPayment = {
   _id: Types.ObjectId
   userId: Types.ObjectId
   bookingId?: Types.ObjectId
+  orderId?: Types.ObjectId
+  tradeOfferId?: Types.ObjectId
   userEmail: string
   amount: number
   currency: string
@@ -35,3 +39,4 @@ export type IPayment = {
 }
 
 export type PaymentModel = Model<IPayment>
+

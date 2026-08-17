@@ -276,10 +276,7 @@ const runLiveDatabaseScenarios = async () => {
     await Order.deleteOne({ _id: order._id })
 
     const mutualChat = await Chat.findOne({
-      $or: [
-        { creator: buyer._id, participant: seller._id },
-        { creator: seller._id, participant: buyer._id },
-      ],
+      participants: { $all: [buyer._id, seller._id] },
     })
     if (mutualChat) {
       await Message.deleteMany({ chatId: mutualChat._id })

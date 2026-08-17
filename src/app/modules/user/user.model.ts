@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose'
 import bcrypt from 'bcrypt'
 import { IUser, UserModel } from './user.interface'
-import { InterestCategory, USER_ROLES, USER_STATUS } from '../../../enum/user'
+import { USER_ROLES, USER_STATUS } from '../../../enum/user'
 
 // ------------------ USER SCHEMA ------------------
 const UserSchema = new Schema<IUser, UserModel>(
