@@ -670,61 +670,83 @@ class DashboardService {
     query: Record<string, any>,
   ): Promise<IDashboardPaymentsResponse> {
     try {
-      const totalRevenueDb = await Order.aggregate([
-        { $match: { paymentStatus: 'paid' } },
-        { $group: { _id: null, total: { $sum: '$amountDetails.totalPaid' } } },
-      ])
+      // 1. Get all successful payments
+      const payments = await Payment.find({ status: 'succeeded' })
+        .sort({ createdAt: -1 })
+        .populate('userId', 'name fullName email')
 
-      const totalRevenue = totalRevenueDb[0]?.total || 0
-      if (totalRevenue === 0) {
-        return this.getDemoPaymentsData()
-      }
+      // Calculate totals
+      let totalRevenue = 0
+      let commissionEarned = 0
 
-      const commissionEarned = parseFloat((totalRevenue * 0.05).toFixed(2))
-      const completedPayouts = parseFloat((totalRevenue * 0.8).toFixed(2))
-      const pendingPayouts = parseFloat((totalRevenue * 0.15).toFixed(2))
+      const recentTransactions: ITransactionItem[] = payments.map((p: any) => {
+        const amount = p.amount || 0
+        totalRevenue += amount
 
-      const orders = await Order.find({ paymentStatus: 'paid' })
-        .limit(30)
-        .populate('buyerId', 'name fullName')
-        .populate('sellerId', 'name fullName')
+        const purchaseType = p.metadata?.purchaseType || 'purchase'
+        let txType: 'Purchase' | 'Trade' | 'Boost' = 'Purchase'
+        let commission = 0
 
-      const recentTransactions: ITransactionItem[] = orders.map(
-        (o: any, idx) => {
-          return {
-            transactionId: `TXN-${(idx + 7001).toString()}`,
-            user: o.sellerId?.fullName || o.sellerId?.name || 'Seller',
-            type: 'Purchase',
-            amount: o.amountDetails?.totalPaid || 0,
-            commission: parseFloat(
-              ((o.amountDetails?.totalPaid || 0) * 0.05).toFixed(2),
-            ),
-            date: o.createdAt
-              ? new Date(o.createdAt).toISOString().split('T')[0]
-              : '2026-04-24',
-            status: 'Completed',
-          }
-        },
-      )
+        if (purchaseType === 'product_boost') {
+          txType = 'Boost'
+          commission = amount // 100% commission for boosts
+        } else if (purchaseType === 'trade_supplement') {
+          txType = 'Trade'
+          commission = amount // 100% commission for trade supplement
+        } else {
+          txType = 'Purchase'
+          commission = parseFloat((amount * 0.05).toFixed(2)) // 5% commission
+        }
+
+        commissionEarned += commission
+
+        return {
+          transactionId: p.paymentIntentId || p._id.toString(),
+          user: p.userId?.fullName || p.userId?.name || p.userEmail || 'User',
+          type: txType,
+          amount,
+          commission,
+          date: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : '2026-04-24',
+          status: 'Completed',
+        }
+      })
+
+      // 2. Compute completed and pending payouts dynamically based on order delivery status
+      const paidOrders = await Order.find({ paymentStatus: 'paid' })
+      let completedPayouts = 0
+      let pendingPayouts = 0
+
+      paidOrders.forEach((o: any) => {
+        const sellerShare = parseFloat(((o.amountDetails?.totalPaid || 0) * 0.95).toFixed(2))
+        if (o.deliveryStatus === 'delivered') {
+          completedPayouts += sellerShare
+        } else {
+          pendingPayouts += sellerShare
+        }
+      })
 
       return {
         summary: {
-          totalRevenue,
-          commissionEarned,
-          pendingPayouts,
-          completedPayouts,
+          totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+          commissionEarned: parseFloat(commissionEarned.toFixed(2)),
+          completedPayouts: parseFloat(completedPayouts.toFixed(2)),
+          pendingPayouts: parseFloat(pendingPayouts.toFixed(2)),
         },
-        recentTransactions:
-          recentTransactions.length > 0
-            ? recentTransactions
-            : this.getDemoPaymentsData().recentTransactions,
+        recentTransactions,
       }
     } catch (error) {
       console.error('Error fetching payments details:', error)
-      return this.getDemoPaymentsData()
+      return {
+        summary: {
+          totalRevenue: 0,
+          commissionEarned: 0,
+          pendingPayouts: 0,
+          completedPayouts: 0,
+        },
+        recentTransactions: [],
+      }
     }
   }
-
   // 10. GET /boosted-listings
   async getBoostedListingsData(
     query: Record<string, any>,

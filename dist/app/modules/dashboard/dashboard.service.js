@@ -568,52 +568,79 @@ class DashboardService {
     }
     // 9. GET /payments
     async getPaymentsData(query) {
-        var _a;
         try {
-            const totalRevenueDb = await order_model_1.Order.aggregate([
-                { $match: { paymentStatus: 'paid' } },
-                { $group: { _id: null, total: { $sum: '$amountDetails.totalPaid' } } },
-            ]);
-            const totalRevenue = ((_a = totalRevenueDb[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
-            if (totalRevenue === 0) {
-                return this.getDemoPaymentsData();
-            }
-            const commissionEarned = parseFloat((totalRevenue * 0.05).toFixed(2));
-            const completedPayouts = parseFloat((totalRevenue * 0.8).toFixed(2));
-            const pendingPayouts = parseFloat((totalRevenue * 0.15).toFixed(2));
-            const orders = await order_model_1.Order.find({ paymentStatus: 'paid' })
-                .limit(30)
-                .populate('buyerId', 'name fullName')
-                .populate('sellerId', 'name fullName');
-            const recentTransactions = orders.map((o, idx) => {
-                var _a, _b, _c, _d;
+            // 1. Get all successful payments
+            const payments = await payment_model_1.Payment.find({ status: 'succeeded' })
+                .sort({ createdAt: -1 })
+                .populate('userId', 'name fullName email');
+            // Calculate totals
+            let totalRevenue = 0;
+            let commissionEarned = 0;
+            const recentTransactions = payments.map((p) => {
+                var _a, _b, _c;
+                const amount = p.amount || 0;
+                totalRevenue += amount;
+                const purchaseType = ((_a = p.metadata) === null || _a === void 0 ? void 0 : _a.purchaseType) || 'purchase';
+                let txType = 'Purchase';
+                let commission = 0;
+                if (purchaseType === 'product_boost') {
+                    txType = 'Boost';
+                    commission = amount; // 100% commission for boosts
+                }
+                else if (purchaseType === 'trade_supplement') {
+                    txType = 'Trade';
+                    commission = amount; // 100% commission for trade supplement
+                }
+                else {
+                    txType = 'Purchase';
+                    commission = parseFloat((amount * 0.05).toFixed(2)); // 5% commission
+                }
+                commissionEarned += commission;
                 return {
-                    transactionId: `TXN-${(idx + 7001).toString()}`,
-                    user: ((_a = o.sellerId) === null || _a === void 0 ? void 0 : _a.fullName) || ((_b = o.sellerId) === null || _b === void 0 ? void 0 : _b.name) || 'Seller',
-                    type: 'Purchase',
-                    amount: ((_c = o.amountDetails) === null || _c === void 0 ? void 0 : _c.totalPaid) || 0,
-                    commission: parseFloat(((((_d = o.amountDetails) === null || _d === void 0 ? void 0 : _d.totalPaid) || 0) * 0.05).toFixed(2)),
-                    date: o.createdAt
-                        ? new Date(o.createdAt).toISOString().split('T')[0]
-                        : '2026-04-24',
+                    transactionId: p.paymentIntentId || p._id.toString(),
+                    user: ((_b = p.userId) === null || _b === void 0 ? void 0 : _b.fullName) || ((_c = p.userId) === null || _c === void 0 ? void 0 : _c.name) || p.userEmail || 'User',
+                    type: txType,
+                    amount,
+                    commission,
+                    date: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : '2026-04-24',
                     status: 'Completed',
                 };
             });
+            // 2. Compute completed and pending payouts dynamically based on order delivery status
+            const paidOrders = await order_model_1.Order.find({ paymentStatus: 'paid' });
+            let completedPayouts = 0;
+            let pendingPayouts = 0;
+            paidOrders.forEach((o) => {
+                var _a;
+                const sellerShare = parseFloat(((((_a = o.amountDetails) === null || _a === void 0 ? void 0 : _a.totalPaid) || 0) * 0.95).toFixed(2));
+                if (o.deliveryStatus === 'delivered') {
+                    completedPayouts += sellerShare;
+                }
+                else {
+                    pendingPayouts += sellerShare;
+                }
+            });
             return {
                 summary: {
-                    totalRevenue,
-                    commissionEarned,
-                    pendingPayouts,
-                    completedPayouts,
+                    totalRevenue: parseFloat(totalRevenue.toFixed(2)),
+                    commissionEarned: parseFloat(commissionEarned.toFixed(2)),
+                    completedPayouts: parseFloat(completedPayouts.toFixed(2)),
+                    pendingPayouts: parseFloat(pendingPayouts.toFixed(2)),
                 },
-                recentTransactions: recentTransactions.length > 0
-                    ? recentTransactions
-                    : this.getDemoPaymentsData().recentTransactions,
+                recentTransactions,
             };
         }
         catch (error) {
             console.error('Error fetching payments details:', error);
-            return this.getDemoPaymentsData();
+            return {
+                summary: {
+                    totalRevenue: 0,
+                    commissionEarned: 0,
+                    pendingPayouts: 0,
+                    completedPayouts: 0,
+                },
+                recentTransactions: [],
+            };
         }
     }
     // 10. GET /boosted-listings
