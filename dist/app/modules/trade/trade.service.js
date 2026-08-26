@@ -22,8 +22,18 @@ const createTradeOffer = async (payload) => {
     if (!senderProduct || !receiverProduct) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'One or both of the products were not found.');
     }
-    if (!senderProduct.allowTrade || !receiverProduct.allowTrade) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'One or both items are not configured to allow trading.');
+    // Allow trade/offer if sender allows trade, and receiver allows trade or offers
+    const isSenderTradeAllowed = senderProduct.allowTrade;
+    const isReceiverTradeOrOfferAllowed = receiverProduct.allowTrade || receiverProduct.allowOffers;
+    if (!isSenderTradeAllowed || !isReceiverTradeOrOfferAllowed) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'One or both items are not configured to allow trading or custom offers.');
+    }
+    // Validate minimum offer amount if configured on receiver product
+    if (receiverProduct.allowOffers && receiverProduct.minOfferAmount && receiverProduct.minOfferAmount > 0) {
+        const totalOfferValue = (senderProduct.estValue || 0) + (payload.cashSupplement || 0);
+        if (totalOfferValue < receiverProduct.minOfferAmount) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `Your offer total value ($${totalOfferValue}) is below the seller's minimum acceptable offer ($${receiverProduct.minOfferAmount}).`);
+        }
     }
     if (senderProduct.status !== 'active' ||
         receiverProduct.status !== 'active') {

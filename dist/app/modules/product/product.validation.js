@@ -25,6 +25,9 @@ const createProductSchema = zod_1.z.object({
         reservePrice: zod_1.z.number().nonnegative().optional(),
         buyNowPrice: zod_1.z.number().nonnegative().optional(),
         allowTrade: zod_1.z.boolean().optional(),
+        shippingWeight: zod_1.z.number().nonnegative().optional(),
+        allowOffers: zod_1.z.boolean().optional(),
+        minOfferAmount: zod_1.z.number().nonnegative().optional(),
         sellerId: zod_1.z
             .string({ required_error: 'Seller ID is required' })
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Seller ID format'),
@@ -48,6 +51,9 @@ const updateProductSchema = zod_1.z.object({
         reservePrice: zod_1.z.number().nonnegative().optional(),
         buyNowPrice: zod_1.z.number().nonnegative().optional(),
         allowTrade: zod_1.z.boolean().optional(),
+        shippingWeight: zod_1.z.number().nonnegative().optional(),
+        allowOffers: zod_1.z.boolean().optional(),
+        minOfferAmount: zod_1.z.number().nonnegative().optional(),
         status: zod_1.z.enum(['active', 'sold', 'unsold', 'pending']).optional(),
         stock: zod_1.z.number().nonnegative().optional(),
         isFeatured: zod_1.z.boolean().optional(),

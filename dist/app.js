@@ -20,6 +20,27 @@ const helmet_1 = __importDefault(require("helmet"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const swagger_1 = __importDefault(require("./utils/swagger"));
 const app = (0, express_1.default)();
+// ✅ CORS MUST be first — before helmet, session, passport, everything
+// This ensures preflight OPTIONS requests get correct headers
+app.use((0, cors_1.default)({
+    origin: (origin, callback) => {
+        const allowedOrigins = config_1.default.cors_origins.length > 0
+            ? config_1.default.cors_origins
+            : ['http://localhost:3000'];
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS: Origin ${origin} not allowed`), false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Cache-Control', 'Pragma', 'Accept'],
+}));
+// Handle preflight requests for all routes
+app.options('*', (0, cors_1.default)());
 // Security headers
 app.use((0, helmet_1.default)());
 // Rate limiting
@@ -37,8 +58,8 @@ if (config_1.default.node_env !== 'development') {
 app.use(webhook_1.default);
 // -------------------- Middleware --------------------
 // Body parsers must come after webhook
-app.use(express_1.default.json());
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use(express_1.default.json({ limit: '50mb' }));
+app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 // Session must come before passport
 app.use((0, express_session_1.default)({
     secret: config_1.default.jwt.jwt_secret || 'secret',
@@ -53,11 +74,7 @@ app.use((0, express_session_1.default)({
 // Initialize Passport
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
-// CORS - Using env based origins
-app.use((0, cors_1.default)({
-    origin: config_1.default.cors_origins.length > 0 ? config_1.default.cors_origins : ['*'],
-    credentials: true,
-}));
+// CORS is already applied at the top of the middleware stack
 // Cookie parser
 app.use((0, cookie_parser_1.default)());
 // Logging

@@ -14,6 +14,10 @@ const stripe_1 = __importDefault(require("../../../config/stripe"));
 const product_model_1 = require("../product/product.model");
 const user_model_1 = require("../user/user.model");
 const server_1 = require("../../../server");
+const order_model_1 = require("../order/order.model");
+const shippingHelper_1 = require("../../../helpers/shippingHelper");
+const chat_model_1 = require("../chat/chat.model");
+const message_model_1 = require("../message/message.model");
 const generateAgoraToken = async (channelName, uid = 0, role = 'subscriber') => {
     const appId = config_1.default.agora.app_id;
     const appCertificate = config_1.default.agora.app_certificate;
@@ -160,7 +164,7 @@ const updateLiveStreamStatus = async (streamId, userId, userRole, status) => {
 };
 // ── Complete auction + trigger winner Stripe checkout ────────────────────────────
 const completeAuction = async (auctionItemId, requestingUserId) => {
-    var _a;
+    var _a, _b, _c, _d, _e, _f;
     if (!mongoose_1.Types.ObjectId.isValid(auctionItemId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID');
     }
@@ -193,17 +197,149 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
         requestingUserId !== 'admin') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Only the auction host can complete this auction.');
     }
-    // Mark product pending (escrow-like hold)
+    // Get winner info
+    const winner = await user_model_1.User.findById(auctionItem.highestBidderId);
+    if (!winner) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Winner profile not found');
+    }
+    let isAutoPaid = false;
+    let paymentIntentId;
+    // 1. Try automatic off-session charge if the winner has saved card details on Stripe
+    if (winner.stripeCustomerId) {
+        try {
+            const paymentMethods = await stripe_1.default.paymentMethods.list({
+                customer: winner.stripeCustomerId,
+                type: 'card',
+            });
+            if (paymentMethods.data.length > 0) {
+                const paymentMethodId = paymentMethods.data[0].id;
+                const paymentIntent = await stripe_1.default.paymentIntents.create({
+                    amount: Math.round(auctionItem.currentBid * 100),
+                    currency: 'usd',
+                    customer: winner.stripeCustomerId,
+                    payment_method: paymentMethodId,
+                    off_session: true,
+                    confirm: true,
+                    metadata: {
+                        purchaseType: 'auction_win',
+                        productId: product._id.toString(),
+                        sellerId: ((_a = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _a === void 0 ? void 0 : _a.toString()) || '',
+                        winnerId: auctionItem.highestBidderId.toString(),
+                        auctionItemId: auctionItemId,
+                    },
+                });
+                if (paymentIntent.status === 'succeeded') {
+                    isAutoPaid = true;
+                    paymentIntentId = paymentIntent.id;
+                    console.log(`[AUTO-PAY] Instant card charge succeeded for Auction:${auctionItemId}`);
+                }
+            }
+        }
+        catch (autoPayError) {
+            console.error('[AUTO-PAY] Automatic charge failed. Falling back to checkout session:', autoPayError);
+        }
+    }
+    // 2. If charged successfully, create the paid Order immediately
+    if (isAutoPaid) {
+        const shippingAddress = {
+            street: ((_b = winner.address) === null || _b === void 0 ? void 0 : _b.presentAddress) || '123 Collectors St',
+            city: ((_c = winner.address) === null || _c === void 0 ? void 0 : _c.city) || 'Collector City',
+            state: 'AP',
+            postalCode: ((_d = winner.address) === null || _d === void 0 ? void 0 : _d.postalCode) || '10001',
+            country: ((_e = winner.address) === null || _e === void 0 ? void 0 : _e.country) || 'US',
+        };
+        const orderPayload = {
+            buyerId: auctionItem.highestBidderId,
+            sellerId: stream === null || stream === void 0 ? void 0 : stream.sellerId,
+            productId: product._id,
+            purchaseType: 'auction_win',
+            paymentStatus: 'paid',
+            deliveryStatus: 'pending',
+            shippingAddress,
+            paymentIntentId,
+            amountDetails: {
+                itemSubtotal: auctionItem.currentBid,
+                shipping: 0,
+                taxes: 0,
+                processingFee: 0,
+                charityContribution: 0,
+                totalPaid: auctionItem.currentBid,
+            },
+        };
+        // Initialize shipping weight, rate, tracking, and label PDF on disk (supports bundling)
+        const existingOrder = await order_model_1.Order.findOne({
+            buyerId: auctionItem.highestBidderId,
+            sellerId: stream === null || stream === void 0 ? void 0 : stream.sellerId,
+            deliveryStatus: 'pending',
+            purchaseType: 'auction_win',
+            createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
+        });
+        if (existingOrder) {
+            orderPayload.trackingDetails = {
+                carrier: existingOrder.trackingDetails.carrier,
+                trackingNumber: existingOrder.trackingDetails.trackingNumber,
+                estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
+                journeyUpdates: []
+            };
+            orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl;
+            orderPayload.shippingWeight = 0;
+            orderPayload.amountDetails.shipping = 0;
+        }
+        else {
+            await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
+        }
+        const [order] = await order_model_1.Order.create([orderPayload]);
+        // Mark product sold
+        await product_model_1.Product.findByIdAndUpdate(product._id, { status: 'sold', stock: 0 });
+        // Mark auction completed
+        auctionItem.status = 'completed';
+        await auctionItem.save();
+        // 1. Create order update message in chat
+        try {
+            const chat = await chat_model_1.Chat.findOne({
+                participants: { $all: [auctionItem.highestBidderId.toString(), stream.sellerId.toString()] },
+            });
+            if (chat) {
+                await message_model_1.Message.create({
+                    chatId: chat._id,
+                    sender: auctionItem.highestBidderId,
+                    text: `🏆 Auction Won! Payment complete. Order #${order._id.toString().substring(0, 8).toUpperCase()} created.`,
+                    messageType: 'order_update',
+                    seen: false,
+                    metadata: { orderId: order._id.toString(), statusLabel: 'AUCTION WON 🏆' },
+                });
+            }
+        }
+        catch (chatError) {
+            console.error('Failed to create auction win chat message:', chatError);
+        }
+        // 2. Notify seller via socket
+        if (server_1.io && (stream === null || stream === void 0 ? void 0 : stream.sellerId)) {
+            server_1.io.to(stream.sellerId.toString()).emit('auction-payment-received', {
+                orderId: order._id.toString(),
+                productId: product._id.toString(),
+                message: 'Auction payment received! Order created.',
+            });
+        }
+        // 3. Notify winner via socket
+        if (server_1.io) {
+            server_1.io.to(auctionItem.highestBidderId.toString()).emit('auction-won', {
+                auctionItemId,
+                productTitle: product.title,
+                winningBid: auctionItem.currentBid,
+                isAutoPaid: true,
+                message: `🏆 Congratulations! You won the auction for ${product.title}. Payment of $${auctionItem.currentBid} was charged automatically!`,
+            });
+        }
+        return { checkoutUrl: '', auctionItem };
+    }
+    // 3. Fallback: Create Stripe checkout session for manual payment
     await product_model_1.Product.findByIdAndUpdate(product._id, { status: 'pending' });
-    // Mark auction completed
     auctionItem.status = 'completed';
     await auctionItem.save();
-    // Get winner info
-    const winner = await user_model_1.User.findById(auctionItem.highestBidderId).select('email name');
-    if (!(winner === null || winner === void 0 ? void 0 : winner.email)) {
+    if (!winner.email) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Winner email not found');
     }
-    // Create Stripe checkout session for winner
     const stripeSession = await stripe_1.default.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -226,7 +362,7 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
         metadata: {
             purchaseType: 'auction_win',
             productId: product._id.toString(),
-            sellerId: ((_a = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _a === void 0 ? void 0 : _a.toString()) || '',
+            sellerId: ((_f = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _f === void 0 ? void 0 : _f.toString()) || '',
             winnerId: auctionItem.highestBidderId.toString(),
             auctionItemId: auctionItemId,
         },

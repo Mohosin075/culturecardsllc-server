@@ -6,6 +6,8 @@ exports.PaymentValidations = {
     create: zod_1.z.object({
         body: zod_1.z.object({
             bookingId: zod_1.z.string().optional(),
+            orderId: zod_1.z.string().optional(),
+            tradeOfferId: zod_1.z.string().optional(),
             amount: zod_1.z.number().min(1, 'Amount must be at least 1').optional(),
             currency: zod_1.z.string().default('EUR'),
             productName: zod_1.z.string().optional(),

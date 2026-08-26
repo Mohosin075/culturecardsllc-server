@@ -78,6 +78,18 @@ const ProductSchema = new mongoose_1.Schema({
         default: true,
         index: true,
     },
+    shippingWeight: {
+        type: Number,
+        default: 0,
+    },
+    allowOffers: {
+        type: Boolean,
+        default: false,
+    },
+    minOfferAmount: {
+        type: Number,
+        default: 0,
+    },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

@@ -36,6 +36,8 @@ const createOrderSchema = zod_1.z.object({
             country: zod_1.z.string({ required_error: 'Country is required' }),
         }, { required_error: 'Shipping address is required' }),
         paymentIntentId: zod_1.z.string().optional(),
+        shippingWeight: zod_1.z.number().nonnegative().optional(),
+        shippingLabelUrl: zod_1.z.string().optional(),
     }),
 });
 const updateOrderJourneySchema = zod_1.z.object({

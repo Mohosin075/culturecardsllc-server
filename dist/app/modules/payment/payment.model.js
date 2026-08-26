@@ -12,6 +12,14 @@ const paymentSchema = new mongoose_1.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Booking',
     },
+    orderId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Order',
+    },
+    tradeOfferId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'TradeOffer',
+    },
     userEmail: {
         type: String,
         required: true,

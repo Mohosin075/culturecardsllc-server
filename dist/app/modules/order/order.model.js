@@ -72,6 +72,13 @@ const OrderSchema = new mongoose_1.Schema({
             },
         ],
     },
+    shippingWeight: {
+        type: Number,
+        default: 0,
+    },
+    shippingLabelUrl: {
+        type: String,
+    },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

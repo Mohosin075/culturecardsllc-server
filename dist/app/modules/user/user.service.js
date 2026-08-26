@@ -15,6 +15,7 @@ const jwtHelper_1 = require("../../../helpers/jwtHelper");
 const trade_model_1 = require("../trade/trade.model");
 const review_model_1 = require("../review/review.model");
 const follow_model_1 = require("../follow/follow.model");
+const auction_model_1 = require("../auction/auction.model");
 const getUserStats = async (userId) => {
     const tradesCount = await trade_model_1.TradeOffer.countDocuments({
         $or: [{ senderId: userId }, { receiverId: userId }],
@@ -243,7 +244,15 @@ const getUserById = async (userId) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
     const stats = await getUserStats(userId);
-    return { ...isUserExist, stats };
+    const upcomingShows = await auction_model_1.LiveStream.find({
+        sellerId: userId,
+        status: 'scheduled',
+        scheduledAt: { $gt: new Date() }
+    })
+        .populate('pinnedProductId')
+        .sort({ scheduledAt: 1 })
+        .lean();
+    return { ...isUserExist, stats, upcomingShows };
 };
 const updateUserStatus = async (userId, data) => {
     if (userId.startsWith('60f7e271a39f6c00')) {
@@ -274,7 +283,15 @@ const getProfile = async (user) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
     const stats = await getUserStats(user.userId);
-    return { ...isUserExist, stats };
+    const upcomingShows = await auction_model_1.LiveStream.find({
+        sellerId: user.userId,
+        status: 'scheduled',
+        scheduledAt: { $gt: new Date() }
+    })
+        .populate('pinnedProductId')
+        .sort({ scheduledAt: 1 })
+        .lean();
+    return { ...isUserExist, stats, upcomingShows };
 };
 exports.getProfile = getProfile;
 const switchRole = async (user, role) => {

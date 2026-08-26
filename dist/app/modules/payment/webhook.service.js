@@ -15,8 +15,10 @@ const trade_model_1 = require("../trade/trade.model");
 const chat_model_1 = require("../chat/chat.model");
 const message_model_1 = require("../message/message.model");
 const server_1 = require("../../../server");
+const user_model_1 = require("../user/user.model");
+const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const handleCheckoutSessionCompleted = async (sessionData) => {
-    var _a;
+    var _a, _b, _c, _d, _e;
     try {
         console.log('🔔 Processing Checkout Session Completed:', sessionData.id);
         const sessionWithDetails = await stripe_1.default.checkout.sessions.retrieve(sessionData.id, {
@@ -64,19 +66,59 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
             if (purchaseType === 'auction_win' && meta.productId && meta.winnerId && meta.sellerId) {
                 const product = await product_model_1.Product.findById(meta.productId).session(mongoSession);
                 if (product) {
-                    // Create order
-                    const [order] = await order_model_1.Order.create([
-                        {
-                            buyerId: meta.winnerId,
-                            sellerId: meta.sellerId,
-                            productId: meta.productId,
-                            totalPrice: product.buyNowPrice || 0,
-                            purchaseType: 'auction_win',
-                            paymentStatus: 'paid',
-                            deliveryStatus: 'pending',
-                            trackingDetails: { journeyUpdates: [] },
+                    const totalPaid = (sessionWithDetails.amount_total || 0) / 100;
+                    const buyerUser = await user_model_1.User.findById(meta.winnerId).session(mongoSession);
+                    const shippingAddress = {
+                        street: ((_b = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _b === void 0 ? void 0 : _b.presentAddress) || '123 Collectors St',
+                        city: ((_c = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _c === void 0 ? void 0 : _c.city) || 'Collector City',
+                        state: 'AP',
+                        postalCode: ((_d = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _d === void 0 ? void 0 : _d.postalCode) || '10001',
+                        country: ((_e = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _e === void 0 ? void 0 : _e.country) || 'US',
+                    };
+                    // Check if there is an existing pending order for the same buyer, seller, and stream in the last 12 hours
+                    const existingOrder = await order_model_1.Order.findOne({
+                        buyerId: meta.winnerId,
+                        sellerId: meta.sellerId,
+                        deliveryStatus: 'pending',
+                        purchaseType: 'auction_win',
+                        createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
+                    }).session(mongoSession);
+                    const orderPayload = {
+                        buyerId: meta.winnerId,
+                        sellerId: meta.sellerId,
+                        productId: meta.productId,
+                        purchaseType: 'auction_win',
+                        paymentStatus: 'paid',
+                        deliveryStatus: 'pending',
+                        shippingAddress,
+                        amountDetails: {
+                            itemSubtotal: totalPaid,
+                            shipping: 0,
+                            taxes: 0,
+                            processingFee: 0,
+                            charityContribution: 0,
+                            totalPaid: totalPaid,
                         },
-                    ], { session: mongoSession });
+                    };
+                    if (existingOrder) {
+                        // Bundle order: Reuse tracking details and shipping label, set shipping rate to $0
+                        orderPayload.trackingDetails = {
+                            carrier: existingOrder.trackingDetails.carrier,
+                            trackingNumber: existingOrder.trackingDetails.trackingNumber,
+                            estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
+                            journeyUpdates: []
+                        };
+                        orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl;
+                        orderPayload.shippingWeight = 0;
+                        orderPayload.amountDetails.shipping = 0;
+                        orderPayload.amountDetails.totalPaid = totalPaid;
+                    }
+                    else {
+                        // New order: Initialize full shipping weight, rate, tracking, and PDF label on disk
+                        await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
+                    }
+                    // Create order
+                    const [order] = await order_model_1.Order.create([orderPayload], { session: mongoSession });
                     // Mark product sold
                     await product_model_1.Product.findByIdAndUpdate(meta.productId, { status: 'sold', stock: 0 }, { session: mongoSession });
                     // Chat message to seller

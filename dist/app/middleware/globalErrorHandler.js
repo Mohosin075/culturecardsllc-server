@@ -10,16 +10,17 @@ const handleCastError_1 = __importDefault(require("../../errors/handleCastError"
 const handleValidationError_1 = __importDefault(require("../../errors/handleValidationError"));
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const logger_1 = require("../../shared/logger");
-const globalErrorHandler = (error, req, res, next) => {
+const globalErrorHandler = (error, req, res, _next) => {
     var _a, _b;
     // Safe logging using Winston
-    if (config_1.default.node_env === 'development') {
-        if (error instanceof ApiError_1.default) {
-            logger_1.errorLogger.error(`[ApiError] ${error.statusCode} - ${error.message}`);
-        }
-        else {
-            logger_1.errorLogger.error('Inside Global Error Handler🪐', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-        }
+    if (error instanceof ApiError_1.default) {
+        logger_1.errorLogger.error(`[ApiError] ${error.statusCode} - ${error.message}`);
+    }
+    else {
+        const errorDetails = error
+            ? JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+            : 'No error details';
+        logger_1.errorLogger.error(`Inside Global Error Handler🪐: ${errorDetails}`);
     }
     let statusCode = 500;
     let message = 'Something went wrong!';

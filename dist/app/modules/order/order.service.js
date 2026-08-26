@@ -12,6 +12,7 @@ const chat_model_1 = require("../chat/chat.model");
 const message_model_1 = require("../message/message.model");
 const mongoose_1 = require("mongoose");
 const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
+const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const createOrder = async (payload) => {
     const product = await product_model_1.Product.findById(payload.productId);
     if (!product) {
@@ -20,6 +21,8 @@ const createOrder = async (payload) => {
     if (product.stock <= 0) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Product is out of stock.');
     }
+    // Populate shipping weight, tracking number, and mock PDF label
+    await (0, shippingHelper_1.initializeOrderShipping)(payload, product);
     const session = await order_model_1.Order.startSession();
     session.startTransaction();
     try {
