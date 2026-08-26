@@ -181,6 +181,9 @@ export type IBoostedListingItem = {
   impressions: number
   feePaid: number
   status: 'Active' | 'Expiring Soon' | 'Expired'
+  productId?: string
+  image?: string
+  price?: number
 }
 
 export type ICategoryManagementItem = {
