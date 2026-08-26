@@ -7,6 +7,7 @@ import mongoose from 'mongoose'
 import { User } from '../user/user.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
+import { NotificationIntegration } from '../notification/notification.integration'
 // import { redisClient } from '../../../helpers/redis';
 
 const createReview = async (user: JwtPayload, payload: IReview) => {
@@ -73,6 +74,20 @@ const createReview = async (user: JwtPayload, payload: IReview) => {
     // Booking, Service and ProfessionalProfile logic has been removed as per request
 
     await session.commitTransaction()
+
+    if (payload.reviewee) {
+      const revieweeId = (payload.reviewee as any)._id
+        ? (payload.reviewee as any)._id.toString()
+        : (payload.reviewee as any).toString()
+
+      NotificationIntegration.onNewReview(
+        user.userId,
+        revieweeId,
+        payload.rating,
+        result[0]._id.toString()
+      ).catch(err => console.error('Failed to send review notification:', err))
+    }
+
     return result[0]
   } catch (error) {
     console.log({ error })

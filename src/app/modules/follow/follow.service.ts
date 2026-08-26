@@ -4,6 +4,7 @@ import { Follow } from './follow.model'
 import { User } from '../user/user.model'
 import { paginationHelper } from '../../../helpers/paginationHelper'
 import { IPaginationOptions } from '../../../interfaces/pagination'
+import { NotificationIntegration } from '../notification/notification.integration'
 
 const toggleFollow = async (followerId: string, followingId: string) => {
   if (followerId === followingId) {
@@ -24,6 +25,9 @@ const toggleFollow = async (followerId: string, followingId: string) => {
   } else {
     // Follow
     await Follow.create({ followerId, followingId })
+    NotificationIntegration.onNewFollow(followerId, followingId).catch(err =>
+      console.error('Failed to send follow notification:', err),
+    )
     return { followed: true, message: 'Followed successfully' }
   }
 }

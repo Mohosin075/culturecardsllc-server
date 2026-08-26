@@ -13,6 +13,9 @@ import { Order } from '../order/order.model'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
+import { NotificationIntegration } from '../notification/notification.integration'
+import { NotificationServices } from '../notification/notification.service'
+import { NotificationType, NotificationChannel, NotificationPriority } from '../notification/notification.interface'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -223,6 +226,15 @@ const updateLiveStreamStatus = async (
 
   stream.status = status
   await stream.save()
+
+  if (status === 'live') {
+    NotificationIntegration.onLiveStreamGoLive(
+      stream.sellerId.toString(),
+      streamId,
+      stream.title
+    ).catch(err => console.error('Failed to send go-live notification to followers:', err))
+  }
+
   return stream
 }
 
@@ -430,6 +442,15 @@ const completeAuction = async (
       })
     }
 
+    // 4. Send Push Notification to winner
+    NotificationIntegration.onAuctionWon(
+      auctionItem.highestBidderId,
+      stream?.sellerId || '',
+      product.title,
+      auctionItem.currentBid,
+      auctionItemId
+    ).catch(err => console.error('Failed to send auction won push notification:', err))
+
     return { checkoutUrl: '', auctionItem }
   }
 
@@ -481,6 +502,23 @@ const completeAuction = async (
       message: `🏆 You won the auction for ${product.title}! Please complete your payment.`,
     })
   }
+
+  // Send Push Notification to winner for manual checkout
+  NotificationServices.createNotification({
+    userId: auctionItem.highestBidderId.toString(),
+    title: 'Auction Won! 🏆',
+    content: `Congratulations! You won the auction for "${product.title}" for $${auctionItem.currentBid}. Please complete your payment.`,
+    type: NotificationType.AUCTION_WON,
+    channel: NotificationChannel.PUSH,
+    priority: NotificationPriority.HIGH,
+    metadata: {
+      sellerId: stream?.sellerId?.toString() || '',
+      auctionItemId,
+      bidAmount: auctionItem.currentBid.toString(),
+    },
+    actionUrl: stripeSession.url || undefined,
+    actionText: 'Pay Now',
+  }).catch(err => console.error('Failed to create manual payment auction won notification:', err))
 
   return { checkoutUrl: stripeSession.url!, auctionItem }
 }
