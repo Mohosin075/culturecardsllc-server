@@ -538,6 +538,7 @@ class DashboardService {
                     high: 'High',
                 };
                 return {
+                    id: d._id.toString(),
                     disputeId: `DIS-${(idx + 1).toString().padStart(3, '0')}`,
                     status: (statusMap[d.status] || 'Open'),
                     severity: (severityMap[d.priority] || 'Medium'),

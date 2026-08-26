@@ -635,6 +635,7 @@ class DashboardService {
         }
 
         return {
+          id: d._id.toString(),
           disputeId: `DIS-${(idx + 1).toString().padStart(3, '0')}`,
           status: (statusMap[d.status] || 'Open') as any,
           severity: (severityMap[d.priority] || 'Medium') as any,

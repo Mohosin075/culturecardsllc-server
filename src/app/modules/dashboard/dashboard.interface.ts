@@ -140,6 +140,7 @@ export type IDashboardOrderItem = {
 }
 
 export type IDashboardDisputeItem = {
+  id?: string
   disputeId: string
   status: 'Open' | 'Reviewing' | 'Resolved' | 'Rejected'
   severity: 'Low' | 'Medium' | 'High'
