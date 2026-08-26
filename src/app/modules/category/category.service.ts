@@ -4,6 +4,7 @@ import { ICategory, ICategoryFilterables } from './category.interface'
 import { Category } from './category.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
+import { Product } from '../product/product.model'
 
 const createCategory = async (payload: ICategory) => {
   const existingCategory = await Category.findOne({ name: payload.name })
@@ -69,6 +70,16 @@ const getAllCategories = async (
     Category.countDocuments(whereConditions),
   ])
 
+  const dataWithCounts = await Promise.all(
+    result.map(async (cat: any) => {
+      const count = await Product.countDocuments({ category: cat._id })
+      return {
+        ...cat.toObject(),
+        listingsCount: count,
+      }
+    })
+  )
+
   return {
     meta: {
       page,
@@ -76,7 +87,7 @@ const getAllCategories = async (
       total,
       totalPages: Math.ceil(total / limit),
     },
-    data: result,
+    data: dataWithCounts,
   }
 }
 

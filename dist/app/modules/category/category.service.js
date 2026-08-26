@@ -8,6 +8,7 @@ const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const category_model_1 = require("./category.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
+const product_model_1 = require("../product/product.model");
 const createCategory = async (payload) => {
     const existingCategory = await category_model_1.Category.findOne({ name: payload.name });
     if (existingCategory) {
@@ -52,6 +53,13 @@ const getAllCategories = async (filters, paginationOptions) => {
             .sort({ [sortBy]: sortOrder }),
         category_model_1.Category.countDocuments(whereConditions),
     ]);
+    const dataWithCounts = await Promise.all(result.map(async (cat) => {
+        const count = await product_model_1.Product.countDocuments({ category: cat._id });
+        return {
+            ...cat.toObject(),
+            listingsCount: count,
+        };
+    }));
     return {
         meta: {
             page,
@@ -59,7 +67,7 @@ const getAllCategories = async (filters, paginationOptions) => {
             total,
             totalPages: Math.ceil(total / limit),
         },
-        data: result,
+        data: dataWithCounts,
     };
 };
 const getSingleCategory = async (id) => {

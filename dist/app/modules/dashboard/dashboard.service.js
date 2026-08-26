@@ -656,11 +656,11 @@ class DashboardService {
                 });
                 const subnames = subs.map(s => s.name);
                 const listingsCount = await product_model_1.Product.countDocuments({
-                    category: c.name,
+                    category: c._id,
                 });
                 return {
                     name: c.name,
-                    listingsCount: listingsCount || Math.floor(Math.random() * 500),
+                    listingsCount: listingsCount || 0,
                     subcategories: subnames.length > 0 ? subnames : ['General'],
                 };
             }));
