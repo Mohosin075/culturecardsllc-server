@@ -10,6 +10,7 @@ const review_model_1 = require("./review.model");
 const mongoose_1 = __importDefault(require("mongoose"));
 const user_model_1 = require("../user/user.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
+const notification_integration_1 = require("../notification/notification.integration");
 // import { redisClient } from '../../../helpers/redis';
 const createReview = async (user, payload) => {
     payload.reviewer = user.userId;
@@ -58,6 +59,12 @@ const createReview = async (user, payload) => {
         ], { session, new: true });
         // Booking, Service and ProfessionalProfile logic has been removed as per request
         await session.commitTransaction();
+        if (payload.reviewee) {
+            const revieweeId = payload.reviewee._id
+                ? payload.reviewee._id.toString()
+                : payload.reviewee.toString();
+            notification_integration_1.NotificationIntegration.onNewReview(user.userId, revieweeId, payload.rating, result[0]._id.toString()).catch(err => console.error('Failed to send review notification:', err));
+        }
         return result[0];
     }
     catch (error) {

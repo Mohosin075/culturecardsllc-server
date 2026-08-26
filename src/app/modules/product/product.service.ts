@@ -6,6 +6,7 @@ import { Types } from 'mongoose'
 import stripe from '../../../config/stripe'
 import config from '../../../config'
 import { User } from '../user/user.model'
+import { Payment } from '../payment/payment.model'
 
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   const seller = await User.findById(payload.sellerId)
@@ -125,6 +126,11 @@ const boostProduct = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
 
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+  }
+
   if (product.sellerId.toString() !== userId) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'You are not authorized to boost this product')
   }
@@ -155,6 +161,23 @@ const boostProduct = async (
       purchaseType: 'product_boost',
       productId: productId,
       boostDurationDays: boostDurationDays.toString(),
+    },
+  })
+
+  // Create Payment record for tracking & webhook safety
+  await Payment.create({
+    userId: userId,
+    userEmail: user.email,
+    amount: totalAmount,
+    currency: 'usd',
+    paymentMethod: 'stripe',
+    paymentIntentId: session.id,
+    status: 'pending',
+    metadata: {
+      purchaseType: 'product_boost',
+      productId: productId,
+      boostDurationDays: boostDurationDays.toString(),
+      checkoutSessionId: session.id,
     },
   })
 

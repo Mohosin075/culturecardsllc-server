@@ -18,6 +18,10 @@ const order_model_1 = require("../order/order.model");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const chat_model_1 = require("../chat/chat.model");
 const message_model_1 = require("../message/message.model");
+const notification_integration_1 = require("../notification/notification.integration");
+const notification_service_1 = require("../notification/notification.service");
+const notification_interface_1 = require("../notification/notification.interface");
+const payment_model_1 = require("../payment/payment.model");
 const generateAgoraToken = async (channelName, uid = 0, role = 'subscriber') => {
     const appId = config_1.default.agora.app_id;
     const appCertificate = config_1.default.agora.app_certificate;
@@ -160,11 +164,14 @@ const updateLiveStreamStatus = async (streamId, userId, userRole, status) => {
     }
     stream.status = status;
     await stream.save();
+    if (status === 'live') {
+        notification_integration_1.NotificationIntegration.onLiveStreamGoLive(stream.sellerId.toString(), streamId, stream.title).catch(err => console.error('Failed to send go-live notification to followers:', err));
+    }
     return stream;
 };
 // ── Complete auction + trigger winner Stripe checkout ────────────────────────────
 const completeAuction = async (auctionItemId, requestingUserId) => {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     if (!mongoose_1.Types.ObjectId.isValid(auctionItemId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID');
     }
@@ -331,6 +338,8 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
                 message: `🏆 Congratulations! You won the auction for ${product.title}. Payment of $${auctionItem.currentBid} was charged automatically!`,
             });
         }
+        // 4. Send Push Notification to winner
+        notification_integration_1.NotificationIntegration.onAuctionWon(auctionItem.highestBidderId, (stream === null || stream === void 0 ? void 0 : stream.sellerId) || '', product.title, auctionItem.currentBid, auctionItemId).catch(err => console.error('Failed to send auction won push notification:', err));
         return { checkoutUrl: '', auctionItem };
     }
     // 3. Fallback: Create Stripe checkout session for manual payment
@@ -367,6 +376,24 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
             auctionItemId: auctionItemId,
         },
     });
+    // Create Payment record for tracking & webhook safety
+    await payment_model_1.Payment.create({
+        userId: auctionItem.highestBidderId,
+        userEmail: winner.email,
+        amount: auctionItem.currentBid,
+        currency: 'usd',
+        paymentMethod: 'stripe',
+        paymentIntentId: stripeSession.id,
+        status: 'pending',
+        metadata: {
+            purchaseType: 'auction_win',
+            productId: product._id.toString(),
+            sellerId: ((_g = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _g === void 0 ? void 0 : _g.toString()) || '',
+            winnerId: auctionItem.highestBidderId.toString(),
+            auctionItemId: auctionItemId,
+            checkoutSessionId: stripeSession.id,
+        },
+    });
     // Notify winner via socket
     if (server_1.io) {
         server_1.io.to(auctionItem.highestBidderId.toString()).emit('auction-won', {
@@ -377,6 +404,22 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
             message: `🏆 You won the auction for ${product.title}! Please complete your payment.`,
         });
     }
+    // Send Push Notification to winner for manual checkout
+    notification_service_1.NotificationServices.createNotification({
+        userId: auctionItem.highestBidderId.toString(),
+        title: 'Auction Won! 🏆',
+        content: `Congratulations! You won the auction for "${product.title}" for $${auctionItem.currentBid}. Please complete your payment.`,
+        type: notification_interface_1.NotificationType.AUCTION_WON,
+        channel: notification_interface_1.NotificationChannel.PUSH,
+        priority: notification_interface_1.NotificationPriority.HIGH,
+        metadata: {
+            sellerId: ((_h = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _h === void 0 ? void 0 : _h.toString()) || '',
+            auctionItemId,
+            bidAmount: auctionItem.currentBid.toString(),
+        },
+        actionUrl: stripeSession.url || undefined,
+        actionText: 'Pay Now',
+    }).catch(err => console.error('Failed to create manual payment auction won notification:', err));
     return { checkoutUrl: stripeSession.url, auctionItem };
 };
 exports.AuctionServices = {

@@ -214,6 +214,7 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
     }
 };
 const handleCheckoutSessionExpired = async (session) => {
+    var _a, _b;
     const mongoSession = await payment_model_1.Payment.startSession();
     mongoSession.startTransaction();
     try {
@@ -227,6 +228,13 @@ const handleCheckoutSessionExpired = async (session) => {
             payment.status = 'failed';
             payment.metadata = { ...payment.metadata, ...session, expired: true };
             await payment.save({ session: mongoSession });
+            const metadata = (payment.metadata || {});
+            const purchaseType = metadata.purchaseType || ((_a = session.metadata) === null || _a === void 0 ? void 0 : _a.purchaseType);
+            const productId = metadata.productId || ((_b = session.metadata) === null || _b === void 0 ? void 0 : _b.productId);
+            if (purchaseType === 'auction_win' && productId) {
+                await product_model_1.Product.findByIdAndUpdate(productId, { status: 'active' }, { session: mongoSession });
+                console.log(`[Webhook-Expiry] Reverted product ${productId} status to active (Auction Win expired)`);
+            }
         }
         await mongoSession.commitTransaction();
     }

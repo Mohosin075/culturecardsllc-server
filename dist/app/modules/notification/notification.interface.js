@@ -11,6 +11,10 @@ var NotificationType;
     NotificationType["WELCOME"] = "WELCOME";
     NotificationType["PASSWORD_RESET"] = "PASSWORD_RESET";
     NotificationType["ACCOUNT_VERIFICATION"] = "ACCOUNT_VERIFICATION";
+    NotificationType["AUCTION_WON"] = "AUCTION_WON";
+    NotificationType["NEW_FOLLOW"] = "NEW_FOLLOW";
+    NotificationType["STREAM_LIVE"] = "STREAM_LIVE";
+    NotificationType["NEW_REVIEW"] = "NEW_REVIEW";
 })(NotificationType || (exports.NotificationType = NotificationType = {}));
 var NotificationChannel;
 (function (NotificationChannel) {

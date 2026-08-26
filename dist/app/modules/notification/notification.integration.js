@@ -5,6 +5,7 @@ const notification_service_1 = require("./notification.service");
 const notification_interface_1 = require("./notification.interface");
 const payment_model_1 = require("../payment/payment.model");
 const user_model_1 = require("../user/user.model");
+const follow_model_1 = require("../follow/follow.model");
 class NotificationIntegration {
     static async onPaymentSuccess(paymentId) {
         try {
@@ -113,6 +114,109 @@ class NotificationIntegration {
         }
         catch (error) {
             console.error('Error creating account verification notification:', error);
+        }
+    }
+    static async onAuctionWon(winnerId, sellerId, productName, bidAmount, auctionItemId) {
+        try {
+            await notification_service_1.NotificationServices.createNotification({
+                userId: winnerId,
+                title: 'Auction Won! 🏆',
+                content: `Congratulations! You won the auction for "${productName}" with a bid of $${bidAmount}.`,
+                type: notification_interface_1.NotificationType.AUCTION_WON,
+                channel: notification_interface_1.NotificationChannel.PUSH,
+                priority: notification_interface_1.NotificationPriority.HIGH,
+                metadata: {
+                    sellerId: sellerId.toString(),
+                    auctionItemId: auctionItemId.toString(),
+                    bidAmount: bidAmount.toString(),
+                },
+            });
+        }
+        catch (error) {
+            console.error('Error creating auction won notification:', error);
+        }
+    }
+    static async onNewFollow(followerId, followingId) {
+        try {
+            const follower = await user_model_1.User.findById(followerId);
+            if (!follower)
+                return;
+            const followerName = follower.fullName || follower.name || 'Someone';
+            await notification_service_1.NotificationServices.createNotification({
+                userId: followingId,
+                title: 'New Follower! 👤',
+                content: `${followerName} started following you.`,
+                type: notification_interface_1.NotificationType.NEW_FOLLOW,
+                channel: notification_interface_1.NotificationChannel.PUSH,
+                priority: notification_interface_1.NotificationPriority.MEDIUM,
+                metadata: {
+                    followerId: followerId.toString(),
+                },
+            });
+        }
+        catch (error) {
+            console.error('Error creating new follower notification:', error);
+        }
+    }
+    static async onLiveStreamGoLive(sellerId, streamId, streamTitle) {
+        try {
+            const seller = await user_model_1.User.findById(sellerId);
+            if (!seller)
+                return;
+            const sellerName = seller.fullName || seller.name || 'Host';
+            // Find all followers
+            const followers = await follow_model_1.Follow.find({ followingId: sellerId }).select('followerId');
+            if (followers.length === 0)
+                return;
+            // Create notifications for all followers
+            const promises = followers.map(async (f) => {
+                try {
+                    await notification_service_1.NotificationServices.createNotification({
+                        userId: f.followerId,
+                        title: 'Live Now! 🎥',
+                        content: `${sellerName} is live now: "${streamTitle}". Tap to join!`,
+                        type: notification_interface_1.NotificationType.STREAM_LIVE,
+                        channel: notification_interface_1.NotificationChannel.PUSH,
+                        priority: notification_interface_1.NotificationPriority.HIGH,
+                        metadata: {
+                            streamId: streamId.toString(),
+                            sellerId: sellerId.toString(),
+                        },
+                        actionUrl: `/streams/${streamId}`,
+                    });
+                }
+                catch (err) {
+                    console.error(`Failed to send stream live notification to follower ${f.followerId}:`, err);
+                }
+            });
+            await Promise.allSettled(promises);
+        }
+        catch (error) {
+            console.error('Error creating live stream notifications:', error);
+        }
+    }
+    static async onNewReview(reviewerId, revieweeId, rating, reviewId) {
+        try {
+            const reviewer = await user_model_1.User.findById(reviewerId);
+            if (!reviewer)
+                return;
+            const reviewerName = reviewer.fullName || reviewer.name || 'Someone';
+            await notification_service_1.NotificationServices.createNotification({
+                userId: revieweeId,
+                title: 'New Review Received ⭐️',
+                content: `${reviewerName} left you a ${rating}-star review.`,
+                type: notification_interface_1.NotificationType.NEW_REVIEW,
+                channel: notification_interface_1.NotificationChannel.PUSH,
+                priority: notification_interface_1.NotificationPriority.MEDIUM,
+                metadata: {
+                    reviewerId: reviewerId.toString(),
+                    rating: rating.toString(),
+                    reviewId: reviewId.toString(),
+                },
+            });
+        }
+        catch (error) {
+            console.error('Error creating review notification:', error);
         }
     }
 }

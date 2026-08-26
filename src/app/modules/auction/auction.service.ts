@@ -16,6 +16,7 @@ import { Message } from '../message/message.model'
 import { NotificationIntegration } from '../notification/notification.integration'
 import { NotificationServices } from '../notification/notification.service'
 import { NotificationType, NotificationChannel, NotificationPriority } from '../notification/notification.interface'
+import { Payment } from '../payment/payment.model'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -489,6 +490,25 @@ const completeAuction = async (
       sellerId: stream?.sellerId?.toString() || '',
       winnerId: auctionItem.highestBidderId.toString(),
       auctionItemId: auctionItemId,
+    },
+  })
+
+  // Create Payment record for tracking & webhook safety
+  await Payment.create({
+    userId: auctionItem.highestBidderId,
+    userEmail: winner.email,
+    amount: auctionItem.currentBid,
+    currency: 'usd',
+    paymentMethod: 'stripe',
+    paymentIntentId: stripeSession.id,
+    status: 'pending',
+    metadata: {
+      purchaseType: 'auction_win',
+      productId: product._id.toString(),
+      sellerId: stream?.sellerId?.toString() || '',
+      winnerId: auctionItem.highestBidderId.toString(),
+      auctionItemId: auctionItemId,
+      checkoutSessionId: stripeSession.id,
     },
   })
 

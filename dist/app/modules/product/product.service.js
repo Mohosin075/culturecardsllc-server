@@ -11,6 +11,7 @@ const mongoose_1 = require("mongoose");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const config_1 = __importDefault(require("../../../config"));
 const user_model_1 = require("../user/user.model");
+const payment_model_1 = require("../payment/payment.model");
 const createProduct = async (payload) => {
     const seller = await user_model_1.User.findById(payload.sellerId);
     if (!seller) {
@@ -95,6 +96,10 @@ const boostProduct = async (productId, userId, boostDurationDays = 7) => {
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }
+    const user = await user_model_1.User.findById(userId);
+    if (!user) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
+    }
     if (product.sellerId.toString() !== userId) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You are not authorized to boost this product');
     }
@@ -123,6 +128,22 @@ const boostProduct = async (productId, userId, boostDurationDays = 7) => {
             purchaseType: 'product_boost',
             productId: productId,
             boostDurationDays: boostDurationDays.toString(),
+        },
+    });
+    // Create Payment record for tracking & webhook safety
+    await payment_model_1.Payment.create({
+        userId: userId,
+        userEmail: user.email,
+        amount: totalAmount,
+        currency: 'usd',
+        paymentMethod: 'stripe',
+        paymentIntentId: session.id,
+        status: 'pending',
+        metadata: {
+            purchaseType: 'product_boost',
+            productId: productId,
+            boostDurationDays: boostDurationDays.toString(),
+            checkoutSessionId: session.id,
         },
     });
     return {

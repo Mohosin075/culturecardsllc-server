@@ -50,21 +50,6 @@ exports.default = {
         client_secret: envVars.GOOGLE_CLIENT_SECRET,
         callback_url: envVars.GOOGLE_CALLBACK_URL,
     },
-    facebook: {
-        app_id: process.env.FACEBOOK_APP_ID,
-        app_secret: process.env.FACEBOOK_APP_SECRET,
-        callback_url: process.env.FACEBOOK_CALLBACK_URL,
-    },
-    instagram: {
-        client_id: process.env.INSTAGRAM_CLIENT_ID,
-        client_secret: process.env.INSTAGRAM_CLIENT_SECRET,
-        callback_url: process.env.INSTAGRAM_CALLBACK_URL,
-    },
-    tikok: {
-        client_id: process.env.TIKTOK_CLIENT_ID,
-        client_secret: process.env.TIKTOK_CLIENT_SECRET,
-        callback_url: process.env.TIKTOK_CALLBACK_URL,
-    },
     aws: {
         access_key_id: process.env.AWS_ACCESS_KEY_ID,
         secret_access_key: process.env.AWS_SECRET_ACCESS_KEY,
@@ -92,7 +77,6 @@ exports.default = {
     },
     application_fee: process.env.APPLICATION_FEE,
     instant_transfer_fee: process.env.INSTANT_TRANSFER_FEE,
-    openAi_api_key: process.env.OPENAI_API_KEY,
     email: {
         from: process.env.EMAIL_FROM,
         user: envVars.EMAIL_USER,
@@ -100,16 +84,6 @@ exports.default = {
         host: process.env.EMAIL_HOST,
         pass: envVars.EMAIL_PASS,
         resend_api_key: process.env.RESEND_API_KEY,
-    },
-    twilio: {
-        account_sid: process.env.TWILIO_ACCOUNT_SID,
-        auth_token: process.env.TWILIO_AUTH_TOKEN,
-        phone_number: process.env.TWILIO_PHONE_NUMBER,
-    },
-    cloudinary: {
-        cloudinary_name: process.env.CLOUDINARY_NAME,
-        cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
-        cloudinary_secret: process.env.CLOUDINARY_SECRET,
     },
     super_admin: {
         name: envVars.SUPER_ADMIN_NAME,
