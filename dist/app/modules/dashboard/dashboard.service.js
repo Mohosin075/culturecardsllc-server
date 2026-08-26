@@ -724,84 +724,286 @@ class DashboardService {
     }
     // 13. GET /reports
     async getReportsData(query) {
-        var _a;
+        var _a, _b, _c, _d;
         try {
-            const totalRevenueDb = await order_model_1.Order.aggregate([
-                { $match: { paymentStatus: 'paid' } },
-                { $group: { _id: null, total: { $sum: '$amountDetails.totalPaid' } } },
-            ]);
-            const totalRevenue = ((_a = totalRevenueDb[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
-            const activeUsers = await user_model_1.User.countDocuments({
-                status: user_1.USER_STATUS.ACTIVE,
-            });
-            if (totalRevenue === 0) {
-                return this.getDemoReportsData();
+            let dateFilter = {};
+            let priorFilter = {};
+            const range = query.range || '30d';
+            if (range !== 'all') {
+                const now = new Date();
+                let days = 30;
+                if (range === '7d')
+                    days = 7;
+                else if (range === '90d')
+                    days = 90;
+                else if (range === '1y')
+                    days = 365;
+                const currentStart = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+                const priorStart = new Date(now.getTime() - 2 * days * 24 * 60 * 60 * 1000);
+                dateFilter = { createdAt: { $gte: currentStart } };
+                priorFilter = { createdAt: { $gte: priorStart, $lt: currentStart } };
             }
-            const ordersCount = await order_model_1.Order.countDocuments({ paymentStatus: 'paid' });
-            const avgTransaction = ordersCount > 0
-                ? parseFloat((totalRevenue / ordersCount).toFixed(2))
-                : 0;
+            // 1. Revenue & Counts (Current period)
+            const currentRevenueDb = await order_model_1.Order.aggregate([
+                {
+                    $match: {
+                        paymentStatus: 'paid',
+                        ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: '$amountDetails.totalPaid' },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]);
+            const currentRevenue = ((_a = currentRevenueDb[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+            const currentCount = ((_b = currentRevenueDb[0]) === null || _b === void 0 ? void 0 : _b.count) || 0;
+            // Prior period revenue & counts
+            let priorRevenue = 0;
+            let priorCount = 0;
+            if (range !== 'all') {
+                const priorRevenueDb = await order_model_1.Order.aggregate([
+                    {
+                        $match: {
+                            paymentStatus: 'paid',
+                            createdAt: priorFilter.createdAt,
+                        },
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            total: { $sum: '$amountDetails.totalPaid' },
+                            count: { $sum: 1 },
+                        },
+                    },
+                ]);
+                priorRevenue = ((_c = priorRevenueDb[0]) === null || _c === void 0 ? void 0 : _c.total) || 0;
+                priorCount = ((_d = priorRevenueDb[0]) === null || _d === void 0 ? void 0 : _d.count) || 0;
+            }
+            const currentAvg = currentCount > 0 ? parseFloat((currentRevenue / currentCount).toFixed(2)) : 0;
+            const priorAvg = priorCount > 0 ? parseFloat((priorRevenue / priorCount).toFixed(2)) : 0;
+            const calcPercentageChange = (curr, prev) => {
+                if (prev === 0)
+                    return curr > 0 ? '+100%' : '0%';
+                const diff = curr - prev;
+                const pct = (diff / prev) * 100;
+                return (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+            };
+            const salesChange = range !== 'all' ? calcPercentageChange(currentRevenue, priorRevenue) : '+0%';
+            const avgTransactionChange = range !== 'all' ? calcPercentageChange(currentAvg, priorAvg) : '+0%';
+            // 2. Active Users metrics
+            const currentActiveUsers = await user_model_1.User.countDocuments({
+                status: user_1.USER_STATUS.ACTIVE,
+                ...(dateFilter.createdAt ? { lastActive: dateFilter.createdAt } : {}),
+            });
+            let priorActiveUsers = 0;
+            if (range !== 'all') {
+                priorActiveUsers = await user_model_1.User.countDocuments({
+                    status: user_1.USER_STATUS.ACTIVE,
+                    lastActive: priorFilter.createdAt,
+                });
+            }
+            const activeUsersChange = range !== 'all'
+                ? calcPercentageChange(currentActiveUsers, priorActiveUsers)
+                : '+0%';
+            // 3. Category Sales aggregates
+            const salesByCategoryRaw = await order_model_1.Order.aggregate([
+                {
+                    $match: {
+                        paymentStatus: 'paid',
+                        ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'productId',
+                        foreignField: '_id',
+                        as: 'product',
+                    },
+                },
+                { $unwind: '$product' },
+                {
+                    $lookup: {
+                        from: 'categories',
+                        localField: 'product.category',
+                        foreignField: '_id',
+                        as: 'category',
+                    },
+                },
+                { $unwind: '$category' },
+                {
+                    $group: {
+                        _id: '$category.name',
+                        amount: { $sum: '$amountDetails.totalPaid' },
+                    },
+                },
+                { $sort: { amount: -1 } },
+            ]);
+            const salesByCategory = salesByCategoryRaw.map(item => ({
+                category: item._id,
+                amount: parseFloat(item.amount.toFixed(2)),
+            }));
+            // 4. Top Sellers aggregates
+            const topSellersRaw = await order_model_1.Order.aggregate([
+                {
+                    $match: {
+                        paymentStatus: 'paid',
+                        ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'sellerId',
+                        foreignField: '_id',
+                        as: 'seller',
+                    },
+                },
+                { $unwind: '$seller' },
+                {
+                    $group: {
+                        _id: '$seller.fullName',
+                        userName: { $first: '$seller.name' },
+                        salesAmount: { $sum: '$amountDetails.totalPaid' },
+                    },
+                },
+                { $sort: { salesAmount: -1 } },
+                { $limit: 5 },
+            ]);
+            const topSellers = topSellersRaw.map(item => ({
+                name: item._id || item.userName || 'Unknown Seller',
+                salesAmount: parseFloat(item.salesAmount.toFixed(2)),
+            }));
+            // 5. Most Traded Items aggregates
+            const tradedCategoriesRaw = await trade_model_1.TradeOffer.aggregate([
+                {
+                    $match: {
+                        status: 'completed',
+                        ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'senderProductId',
+                        foreignField: '_id',
+                        as: 'product',
+                    },
+                },
+                { $unwind: '$product' },
+                {
+                    $lookup: {
+                        from: 'categories',
+                        localField: 'product.category',
+                        foreignField: '_id',
+                        as: 'category',
+                    },
+                },
+                { $unwind: '$category' },
+                {
+                    $group: {
+                        _id: '$category.name',
+                        count: { $sum: 1 },
+                    },
+                },
+            ]);
+            const totalTrades = tradedCategoriesRaw.reduce((acc, curr) => acc + curr.count, 0);
+            const mostTradedItems = tradedCategoriesRaw.map(item => ({
+                category: item._id,
+                percentage: Math.round((item.count / totalTrades) * 100),
+            }));
+            // 6. Monthly User Engagement trend
+            const engagementMonthsRaw = await user_model_1.User.aggregate([
+                {
+                    $match: {
+                        status: user_1.USER_STATUS.ACTIVE,
+                        createdAt: {
+                            $gte: new Date(new Date().getFullYear(), new Date().getMonth() - 3, 1),
+                        },
+                    },
+                },
+                {
+                    $group: {
+                        _id: { $month: '$createdAt' },
+                        newUsers: { $sum: 1 },
+                        activeUsers: {
+                            $sum: {
+                                $cond: [
+                                    {
+                                        $gte: [
+                                            '$lastActive',
+                                            new Date(new Date().getFullYear(), new Date().getMonth() - 3, 1),
+                                        ],
+                                    },
+                                    1,
+                                    0,
+                                ],
+                            },
+                        },
+                    },
+                },
+                { $sort: { _id: 1 } },
+            ]);
+            const monthsMap = [
+                'Jan',
+                'Feb',
+                'Mar',
+                'Apr',
+                'May',
+                'Jun',
+                'Jul',
+                'Aug',
+                'Sep',
+                'Oct',
+                'Nov',
+                'Dec',
+            ];
+            const userEngagement = Array.from({ length: 4 }).map((_, idx) => {
+                const date = new Date();
+                date.setMonth(date.getMonth() - 3 + idx);
+                const monthNum = date.getMonth() + 1;
+                const found = engagementMonthsRaw.find(u => u._id === monthNum);
+                return {
+                    month: monthsMap[date.getMonth()],
+                    activeUsers: found ? found.activeUsers : 0,
+                    newUsers: found ? found.newUsers : 0,
+                };
+            });
             return {
                 summary: {
-                    totalSales: totalRevenue,
-                    totalSalesChange: '+12.5%',
-                    activeUsers: activeUsers || 12540,
-                    activeUsersChange: '+19.4%',
-                    avgTransaction: avgTransaction || 478,
-                    avgTransactionChange: '+5.2%',
+                    totalSales: currentRevenue,
+                    totalSalesChange: salesChange,
+                    activeUsers: currentActiveUsers,
+                    activeUsersChange: activeUsersChange,
+                    avgTransaction: currentAvg,
+                    avgTransactionChange: avgTransactionChange,
                 },
-                salesByCategory: [
-                    {
-                        category: 'Sneakers',
-                        amount: parseFloat((totalRevenue * 0.25).toFixed(2)),
-                    },
-                    {
-                        category: 'Watches',
-                        amount: parseFloat((totalRevenue * 0.45).toFixed(2)),
-                    },
-                    {
-                        category: 'Cards',
-                        amount: parseFloat((totalRevenue * 0.12).toFixed(2)),
-                    },
-                    {
-                        category: 'Tech',
-                        amount: parseFloat((totalRevenue * 0.18).toFixed(2)),
-                    },
-                ],
-                topSellers: [
-                    {
-                        name: 'SneakerKing',
-                        salesAmount: parseFloat((totalRevenue * 0.07).toFixed(2)),
-                    },
-                    {
-                        name: 'WatchMaster',
-                        salesAmount: parseFloat((totalRevenue * 0.1).toFixed(2)),
-                    },
-                    {
-                        name: 'CardCollector',
-                        salesAmount: parseFloat((totalRevenue * 0.05).toFixed(2)),
-                    },
-                    {
-                        name: 'TechDeals',
-                        salesAmount: parseFloat((totalRevenue * 0.07).toFixed(2)),
-                    },
-                    {
-                        name: 'LuxuryTime',
-                        salesAmount: parseFloat((totalRevenue * 0.14).toFixed(2)),
-                    },
-                ],
-                mostTradedItems: [
-                    { category: 'Sneakers', percentage: 38 },
-                    { category: 'Cards', percentage: 27 },
-                    { category: 'Tech', percentage: 21 },
-                    { category: 'Watches', percentage: 15 },
-                ],
-                userEngagement: this.getDemoReportsData().userEngagement,
+                salesByCategory,
+                topSellers,
+                mostTradedItems,
+                userEngagement,
             };
         }
         catch (error) {
             console.error('Error fetching reports data:', error);
-            return this.getDemoReportsData();
+            return {
+                summary: {
+                    totalSales: 0,
+                    totalSalesChange: '0%',
+                    activeUsers: 0,
+                    activeUsersChange: '0%',
+                    avgTransaction: 0,
+                    avgTransactionChange: '0%',
+                },
+                salesByCategory: [],
+                topSellers: [],
+                mostTradedItems: [],
+                userEngagement: [],
+            };
         }
     }
     // 14. GET /settings
