@@ -125,5 +125,11 @@ router.patch(
   dashboardController.rejectDispute,
 )
 
+router.get(
+  '/disputes/:id/chat',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getOrCreateDisputeChat,
+)
+
 export const DashboardRoutes = router
 export default DashboardRoutes

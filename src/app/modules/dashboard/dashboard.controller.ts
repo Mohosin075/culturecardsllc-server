@@ -210,6 +210,16 @@ const rejectDispute = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const getOrCreateDisputeChat = catchAsync(async (req: Request, res: Response) => {
+  const result = await dashboardService.getOrCreateDisputeChat(req.params.id)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Dispute chat resolved successfully.',
+    data: result,
+  })
+})
+
 export const dashboardController = {
   getOverviewData,
   getUsersData,
@@ -231,4 +241,5 @@ export const dashboardController = {
   rejectSellerVerification,
   resolveDispute,
   rejectDispute,
+  getOrCreateDisputeChat,
 }

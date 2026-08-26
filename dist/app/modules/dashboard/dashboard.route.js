@@ -29,5 +29,6 @@ router.patch('/seller-verifications/:userId/approve', (0, auth_1.default)(user_1
 router.patch('/seller-verifications/:userId/reject', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.rejectSellerVerification);
 router.patch('/disputes/:id/resolve', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.resolveDispute);
 router.patch('/disputes/:id/reject', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.rejectDispute);
+router.get('/disputes/:id/chat', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), dashboard_controller_1.dashboardController.getOrCreateDisputeChat);
 exports.DashboardRoutes = router;
 exports.default = exports.DashboardRoutes;
