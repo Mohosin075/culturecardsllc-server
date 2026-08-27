@@ -378,17 +378,12 @@ const resendOtp = async (authType, email, phone) => {
         $set: { authentication: authenticationPayload },
     }, { new: true });
     if (email) {
-        const otpTemplate = authType === 'createAccount'
-            ? emailTemplate_1.emailTemplate.createAccount({
-                name: isUserExist.name,
-                email: isUserExist.email,
-                otp,
-            })
-            : emailTemplate_1.emailTemplate.resetPassword({
-                name: isUserExist.name,
-                email: isUserExist.email,
-                otp,
-            });
+        const otpTemplate = emailTemplate_1.emailTemplate.resendOtp({
+            name: isUserExist.name,
+            email: isUserExist.email,
+            otp,
+            type: authType,
+        });
         emailHelper_1.emailHelper.sendEmail(otpTemplate);
     }
 };

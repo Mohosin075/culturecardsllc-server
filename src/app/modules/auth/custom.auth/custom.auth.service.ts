@@ -568,18 +568,12 @@ const resendOtp = async (
   )
 
   if (email) {
-    const otpTemplate =
-      authType === 'createAccount'
-        ? emailTemplate.createAccount({
-            name: isUserExist.name!,
-            email: isUserExist.email!,
-            otp,
-          })
-        : emailTemplate.resetPassword({
-            name: isUserExist.name!,
-            email: isUserExist.email!,
-            otp,
-          })
+    const otpTemplate = emailTemplate.resendOtp({
+      name: isUserExist.name!,
+      email: isUserExist.email!,
+      otp,
+      type: authType,
+    })
 
     emailHelper.sendEmail(otpTemplate)
   }

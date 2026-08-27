@@ -95,7 +95,9 @@ const resendOtpZodSchema = zod_1.z.object({
             .refine(value => !value || /^\+?[1-9]\d{1,14}$/.test(value), {
             message: 'Invalid phone number format',
         }),
-        authType: zod_1.z.enum(['resetPassword', 'createAccount']).optional(),
+        authType: zod_1.z.enum(['resetPassword', 'createAccount'], {
+            required_error: 'authType is required',
+        }),
     }),
 });
 const changePasswordZodSchema = zod_1.z.object({
