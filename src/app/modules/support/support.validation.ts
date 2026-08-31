@@ -16,7 +16,9 @@ export const createSupportSchema = z.object({
       ])
       .optional(),
     attachments: z.array(z.string()).optional(),
-    contentType: z.enum(['comment', 'review']),
+    contentType: z.enum(['comment', 'review', 'user', 'stream']),
+    reportedUser: z.string().optional(),
+    reportedStream: z.string().optional(),
     reason: z.enum(['harassment', 'spam', 'fraud', 'other']).optional(),
   }),
 })

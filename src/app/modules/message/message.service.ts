@@ -24,6 +24,18 @@ const sendMessageToDB = async (
 
   const receiverId = (receiver as any)._id
 
+  // Check if either sender or receiver has blocked the other
+  const isBlocked = await User.findOne({
+    _id: { $in: [userId, receiverId] },
+    blockedUsers: { $in: [userId, receiverId] },
+  })
+  if (isBlocked) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Cannot send message. One of the users has blocked the other.',
+    )
+  }
+
   const data = {
     ...payload,
     image: payload?.images ? payload.images[0] : null,

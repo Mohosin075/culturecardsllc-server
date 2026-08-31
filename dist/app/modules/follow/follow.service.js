@@ -18,6 +18,14 @@ const toggleFollow = async (followerId, followingId) => {
     if (!targetUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User to follow not found.');
     }
+    // Check if either user has blocked the other
+    const isBlocked = await user_model_1.User.findOne({
+        _id: { $in: [followerId, followingId] },
+        blockedUsers: { $in: [followerId, followingId] },
+    });
+    if (isBlocked) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot follow this user due to block restrictions.');
+    }
     const existingFollow = await follow_model_1.Follow.findOne({ followerId, followingId });
     if (existingFollow) {
         // Unfollow

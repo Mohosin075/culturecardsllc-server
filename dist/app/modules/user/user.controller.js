@@ -126,6 +126,38 @@ const switchRole = (0, catchAsync_1.default)(async (req, res) => {
         },
     });
 });
+const blockUser = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { userId } = req.params;
+    const result = await user_service_1.UserServices.blockUser(user.userId, userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: result,
+        data: null,
+    });
+});
+const unblockUser = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { userId } = req.params;
+    const result = await user_service_1.UserServices.unblockUser(user.userId, userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: result,
+        data: null,
+    });
+});
+const getBlockedUsers = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const result = await user_service_1.UserServices.getBlockedUsers(user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Blocked users retrieved successfully.',
+        data: result,
+    });
+});
 exports.UserController = {
     updateProfile,
     getAllUsers,
@@ -136,4 +168,7 @@ exports.UserController = {
     deleteProfile,
     deactivateProfile,
     switchRole,
+    blockUser,
+    unblockUser,
+    getBlockedUsers,
 };

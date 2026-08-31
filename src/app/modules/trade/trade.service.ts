@@ -16,6 +16,18 @@ const createTradeOffer = async (
 ): Promise<ITradeOffer> => {
   const { senderProductId, receiverProductId, senderId, receiverId } = payload
 
+  // Check if either user has blocked the other
+  const isBlocked = await User.findOne({
+    _id: { $in: [senderId, receiverId] },
+    blockedUsers: { $in: [senderId, receiverId] },
+  })
+  if (isBlocked) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Cannot trade with this user due to block restrictions.',
+    )
+  }
+
   const senderProduct = await Product.findById(senderProductId)
   const receiverProduct = await Product.findById(receiverProductId)
 

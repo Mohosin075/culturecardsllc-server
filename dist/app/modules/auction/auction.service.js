@@ -22,11 +22,23 @@ const notification_integration_1 = require("../notification/notification.integra
 const notification_service_1 = require("../notification/notification.service");
 const notification_interface_1 = require("../notification/notification.interface");
 const payment_model_1 = require("../payment/payment.model");
-const generateAgoraToken = async (channelName, uid = 0, role = 'subscriber') => {
+const generateAgoraToken = async (channelName, uid = 0, role = 'subscriber', requestingUserId) => {
     const appId = config_1.default.agora.app_id;
     const appCertificate = config_1.default.agora.app_certificate;
     if (!appId || !appCertificate) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'Agora configuration (App ID or App Certificate) is missing from system configuration.');
+    }
+    if (requestingUserId) {
+        const liveStream = await auction_model_1.LiveStream.findOne({ agoraChannelName: channelName });
+        if (liveStream) {
+            const isBlocked = await user_model_1.User.findOne({
+                _id: { $in: [requestingUserId, liveStream.sellerId.toString()] },
+                blockedUsers: { $in: [requestingUserId, liveStream.sellerId.toString()] },
+            });
+            if (isBlocked) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot access this stream due to block restrictions.');
+            }
+        }
     }
     const agoraRole = role === 'publisher' ? agora_access_token_1.RtcRole.PUBLISHER : agora_access_token_1.RtcRole.SUBSCRIBER;
     const expirationTimeInSeconds = 3600 * 2; // 2 hours
@@ -53,10 +65,22 @@ const createLiveStream = async (payload) => {
     }
     return await auction_model_1.LiveStream.create(payload);
 };
-const getLiveStreams = async (status) => {
+const getLiveStreams = async (status, requestingUserId) => {
     const query = {};
     if (status)
         query.status = status;
+    if (requestingUserId) {
+        // 1. Users blocked by current user
+        const user = await user_model_1.User.findById(requestingUserId).select('blockedUsers');
+        const blockedByUser = (user === null || user === void 0 ? void 0 : user.blockedUsers) || [];
+        // 2. Users who blocked current user
+        const usersWhoBlockedMe = await user_model_1.User.find({ blockedUsers: requestingUserId }).select('_id');
+        const blockedByOthers = usersWhoBlockedMe.map(u => u._id);
+        const allExcludedUsers = [...blockedByUser, ...blockedByOthers];
+        if (allExcludedUsers.length > 0) {
+            query.sellerId = { $nin: allExcludedUsers };
+        }
+    }
     return await auction_model_1.LiveStream.find(query)
         .populate('sellerId', 'name fullName email image photo')
         .populate('pinnedProductId');
@@ -78,28 +102,38 @@ const placeBidSecure = async (auctionItemId, bidderId, bidAmount) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID');
     }
     // ── DEBUG: Fetch current state before the atomic update ──────
-    const currentState = await auction_model_1.AuctionItem.findById(auctionItemId).select('status currentBid highestBidderId endsAt');
+    const currentState = await auction_model_1.AuctionItem.findById(auctionItemId).select('status currentBid highestBidderId endsAt streamId');
     console.log(`\n[BID-DEBUG] ──────────────────────────────────────`);
     console.log(`[BID-DEBUG] auctionItemId : ${auctionItemId}`);
     console.log(`[BID-DEBUG] bidderId      : ${bidderId}`);
     console.log(`[BID-DEBUG] bidAmount     : ${bidAmount}`);
     if (!currentState) {
         console.log(`[BID-DEBUG] RESULT: ITEM NOT FOUND IN DB`);
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Auction Item not found.');
     }
-    else {
-        console.log(`[BID-DEBUG] DB status     : ${currentState.status}`);
-        console.log(`[BID-DEBUG] DB currentBid : ${currentState.currentBid}`);
-        console.log(`[BID-DEBUG] DB endsAt     : ${currentState.endsAt}`);
-        const statusOk = currentState.status === 'active';
-        const bidOk = bidAmount > currentState.currentBid || currentState.currentBid === 0;
-        console.log(`[BID-DEBUG] status=active?: ${statusOk}  |  bid>currentBid?: ${bidOk}`);
-        if (!statusOk)
-            console.log(`[BID-DEBUG] ❌ FAIL REASON: status is "${currentState.status}", expected "active"`);
-        if (!bidOk)
-            console.log(`[BID-DEBUG] ❌ FAIL REASON: bidAmount (${bidAmount}) is NOT greater than currentBid (${currentState.currentBid})`);
-        if (statusOk && bidOk)
-            console.log(`[BID-DEBUG] ✅ Should PASS atomic update`);
+    // Check if either user has blocked the other
+    const stream = await auction_model_1.LiveStream.findById(currentState.streamId);
+    if (stream) {
+        const isBlocked = await user_model_1.User.findOne({
+            _id: { $in: [bidderId, stream.sellerId.toString()] },
+            blockedUsers: { $in: [bidderId, stream.sellerId.toString()] },
+        });
+        if (isBlocked) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot place bid due to block restrictions.');
+        }
     }
+    console.log(`[BID-DEBUG] DB status     : ${currentState.status}`);
+    console.log(`[BID-DEBUG] DB currentBid : ${currentState.currentBid}`);
+    console.log(`[BID-DEBUG] DB endsAt     : ${currentState.endsAt}`);
+    const statusOk = currentState.status === 'active';
+    const bidOk = bidAmount > currentState.currentBid || currentState.currentBid === 0;
+    console.log(`[BID-DEBUG] status=active?: ${statusOk}  |  bid>currentBid?: ${bidOk}`);
+    if (!statusOk)
+        console.log(`[BID-DEBUG] ❌ FAIL REASON: status is "${currentState.status}", expected "active"`);
+    if (!bidOk)
+        console.log(`[BID-DEBUG] ❌ FAIL REASON: bidAmount (${bidAmount}) is NOT greater than currentBid (${currentState.currentBid})`);
+    if (statusOk && bidOk)
+        console.log(`[BID-DEBUG] ✅ Should PASS atomic update`);
     console.log(`[BID-DEBUG] ──────────────────────────────────────\n`);
     // ── END DEBUG ────────────────────────────────────────────────
     // 1. Atomically find and update ONLY if the new bid is higher than the current bid

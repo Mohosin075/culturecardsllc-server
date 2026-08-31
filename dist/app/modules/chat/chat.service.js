@@ -11,6 +11,16 @@ const user_1 = require("../../../enum/user");
 const user_model_1 = require("../user/user.model");
 const chat_model_1 = require("./chat.model");
 const createChatToDB = async (payload) => {
+    const [userA, userB] = payload;
+    if (userA && userB) {
+        const isBlocked = await user_model_1.User.findOne({
+            _id: { $in: [userA, userB] },
+            blockedUsers: { $in: [userA, userB] },
+        });
+        if (isBlocked) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot start chat. One of the users has blocked the other.');
+        }
+    }
     const isExistChat = await chat_model_1.Chat.findOne({
         participants: { $all: payload },
     });

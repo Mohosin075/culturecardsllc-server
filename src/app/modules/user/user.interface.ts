@@ -82,6 +82,7 @@ export type IUser = {
   }
 
   authentication: IAuthentication
+  blockedUsers?: Types.ObjectId[]
   createdAt: Date
   updatedAt: Date
 }

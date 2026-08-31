@@ -9,9 +9,10 @@ export type ISupportFilterables = {
 
 export type ISupport = {
   _id: Types.ObjectId
-  contentType: 'comment' | 'review' | 'user'
+  contentType: 'comment' | 'review' | 'user' | 'stream'
   contentId?: Types.ObjectId
   reportedUser?: Types.ObjectId
+  reportedStream?: Types.ObjectId
   reason: 'harassment' | 'spam' | 'fraud' | 'other'
   userId: Types.ObjectId // Reporter
   subject?: string

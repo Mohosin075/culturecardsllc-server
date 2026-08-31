@@ -17,6 +17,9 @@ router.get('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_
 router.patch('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), (0, processReqBody_1.fileAndBodyProcessorUsingDiskStorage)(), (0, validateRequest_1.default)(user_validation_1.updateUserSchema), user_controller_1.UserController.updateProfile);
 router.delete('/profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), user_controller_1.UserController.deleteProfile);
 router.patch('/deactivate-profile', (0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.deactivateProfile);
+router.post('/block/:userId', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.blockUser);
+router.post('/unblock/:userId', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.unblockUser);
+router.get('/blocked-list', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.getBlockedUsers);
 // Removed missing ProfessionalProfileController stripe connect routes
 router
     .route('/')

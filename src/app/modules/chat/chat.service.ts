@@ -7,6 +7,20 @@ import { IChat } from './chat.interface'
 import { Chat } from './chat.model'
 
 const createChatToDB = async (payload: any): Promise<IChat> => {
+  const [userA, userB] = payload
+  if (userA && userB) {
+    const isBlocked = await User.findOne({
+      _id: { $in: [userA, userB] },
+      blockedUsers: { $in: [userA, userB] },
+    })
+    if (isBlocked) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Cannot start chat. One of the users has blocked the other.',
+      )
+    }
+  }
+
   const isExistChat: IChat | null = await Chat.findOne({
     participants: { $all: payload },
   })

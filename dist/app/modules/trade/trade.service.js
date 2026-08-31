@@ -17,6 +17,14 @@ const user_model_1 = require("../user/user.model");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const createTradeOffer = async (payload) => {
     const { senderProductId, receiverProductId, senderId, receiverId } = payload;
+    // Check if either user has blocked the other
+    const isBlocked = await user_model_1.User.findOne({
+        _id: { $in: [senderId, receiverId] },
+        blockedUsers: { $in: [senderId, receiverId] },
+    });
+    if (isBlocked) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot trade with this user due to block restrictions.');
+    }
     const senderProduct = await product_model_1.Product.findById(senderProductId);
     const receiverProduct = await product_model_1.Product.findById(receiverProductId);
     if (!senderProduct || !receiverProduct) {

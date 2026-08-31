@@ -16,22 +16,41 @@ const stripe_1 = __importDefault(require("../../../config/stripe"));
 const webhook_service_1 = require("./webhook.service");
 const emailHelper_1 = require("../../../helpers/emailHelper");
 const invoiceHelper_1 = require("../../../helpers/invoiceHelper");
+const getOrCreateStripeCustomer = async (userData) => {
+    var _a, _b;
+    let customerId = userData.stripeCustomerId;
+    if (customerId) {
+        try {
+            await stripe_1.default.customers.retrieve(customerId);
+        }
+        catch (err) {
+            if (((_a = err.raw) === null || _a === void 0 ? void 0 : _a.type) === 'invalid_request_error' || ((_b = err.message) === null || _b === void 0 ? void 0 : _b.includes('No such customer'))) {
+                customerId = undefined;
+            }
+            else {
+                throw err;
+            }
+        }
+    }
+    if (!customerId) {
+        const customer = await stripe_1.default.customers.create({
+            email: userData.email,
+            name: userData.fullName || userData.name || '',
+            metadata: { userId: userData._id.toString() },
+        });
+        customerId = customer.id;
+        userData.stripeCustomerId = customerId;
+        await userData.save();
+    }
+    return customerId;
+};
 const createCheckoutSession = async (user, payload) => {
     try {
         const userData = await user_model_1.User.findById(user.userId);
         if (!userData) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
         }
-        let customerId = userData.stripeCustomerId;
-        if (!customerId) {
-            const customer = await stripe_1.default.customers.create({
-                email: user.email,
-                name: userData.fullName || userData.name || '',
-            });
-            customerId = customer.id;
-            userData.stripeCustomerId = customerId;
-            await userData.save();
-        }
+        const customerId = await getOrCreateStripeCustomer(userData);
         const ephemeralKey = await stripe_1.default.ephemeralKeys.create({ customer: customerId }, { apiVersion: '2023-10-16' });
         const paymentIntent = await stripe_1.default.paymentIntents.create({
             amount: Math.round(payload.amount * 100),
@@ -176,17 +195,7 @@ const createPaymentIntent = async (user, payload) => {
         if (!userData)
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
         const userEmail = userData.email;
-        let customerId = userData.stripeCustomerId;
-        if (!customerId) {
-            const customer = await stripe_1.default.customers.create({
-                email: userData.email,
-                name: userData.fullName || userData.name,
-                metadata: { userId: userData._id.toString() },
-            });
-            customerId = customer.id;
-            userData.stripeCustomerId = customer.id;
-            await userData.save();
-        }
+        const customerId = await getOrCreateStripeCustomer(userData);
         // Build PaymentIntent params
         const intentParams = {
             amount: Math.round(payableAmount * 100), // Convert to cents
@@ -257,21 +266,7 @@ const createEphemeralKey = async (user, apiVersion = '2025-05-28.basil') => {
         if (!userData) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
         }
-        let customerId = userData.stripeCustomerId;
-        // Create customer if it doesn't exist in DB
-        if (!customerId) {
-            const customer = await stripe_1.default.customers.create({
-                email: userData.email,
-                name: userData.fullName || userData.name,
-                metadata: {
-                    userId: user.userId,
-                },
-            });
-            customerId = customer.id;
-            // Update user record with stripeCustomerId
-            userData.stripeCustomerId = customer.id;
-            await userData.save();
-        }
+        const customerId = await getOrCreateStripeCustomer(userData);
         // Create ephemeral key
         const ephemeralKey = await stripe_1.default.ephemeralKeys.create({ customer: customerId }, { apiVersion: apiVersion });
         return {
@@ -518,17 +513,7 @@ const createSetupIntent = async (user) => {
     const userData = await user_model_1.User.findById(user.userId);
     if (!userData)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
-    let customerId = userData.stripeCustomerId;
-    if (!customerId) {
-        const customer = await stripe_1.default.customers.create({
-            email: userData.email,
-            name: userData.fullName || userData.name,
-            metadata: { userId: userData._id.toString() },
-        });
-        customerId = customer.id;
-        userData.stripeCustomerId = customer.id;
-        await userData.save();
-    }
+    const customerId = await getOrCreateStripeCustomer(userData);
     const setupIntent = await stripe_1.default.setupIntents.create({
         customer: customerId,
         payment_method_types: ['card'],

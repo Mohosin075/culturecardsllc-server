@@ -464,6 +464,67 @@ const switchRole = async (user: JwtPayload, role: USER_ROLES) => {
   }
 }
 
+const blockUser = async (userId: string, targetUserId: string): Promise<string> => {
+  if (userId === targetUserId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot block yourself.')
+  }
+
+  const targetUser = await User.findById(targetUserId)
+  if (!targetUser) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User to block not found.')
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $addToSet: { blockedUsers: targetUser._id } },
+    { new: true },
+  )
+
+  if (!updatedUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to block user.')
+  }
+
+  // Automatically delete follow relationship in both directions
+  await Follow.deleteMany({
+    $or: [
+      { followerId: userId, followingId: targetUserId },
+      { followerId: targetUserId, followingId: userId },
+    ],
+  })
+
+  return 'User blocked successfully.'
+}
+
+const unblockUser = async (userId: string, targetUserId: string): Promise<string> => {
+  if (userId === targetUserId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot unblock yourself.')
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $pull: { blockedUsers: targetUserId } },
+    { new: true },
+  )
+
+  if (!updatedUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to unblock user.')
+  }
+
+  return 'User unblocked successfully.'
+}
+
+const getBlockedUsers = async (userId: string): Promise<any[]> => {
+  const user = await User.findById(userId)
+    .populate('blockedUsers', 'name fullName email image profile')
+    .lean()
+
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  }
+
+  return user.blockedUsers || []
+}
+
 export const UserServices = {
   updateProfile,
   createAdmin,
@@ -475,4 +536,7 @@ export const UserServices = {
   deleteProfile,
   deactivateProfile,
   switchRole,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
 }

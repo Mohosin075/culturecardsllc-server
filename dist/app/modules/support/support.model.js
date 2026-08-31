@@ -6,10 +6,11 @@ const support_1 = require("../../../enum/support");
 const supportSchema = new mongoose_1.Schema({
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }, // Reporter
     reportedUser: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
+    reportedStream: { type: mongoose_1.Schema.Types.ObjectId, ref: 'LiveStream' },
     contentId: { type: mongoose_1.Schema.Types.ObjectId },
     contentType: {
         type: String,
-        enum: ['comment', 'review', 'user'],
+        enum: ['comment', 'review', 'user', 'stream'],
     },
     reason: {
         type: String,

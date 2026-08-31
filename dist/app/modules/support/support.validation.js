@@ -18,7 +18,9 @@ exports.createSupportSchema = zod_1.z.object({
         ])
             .optional(),
         attachments: zod_1.z.array(zod_1.z.string()).optional(),
-        contentType: zod_1.z.enum(['comment', 'review']),
+        contentType: zod_1.z.enum(['comment', 'review', 'user', 'stream']),
+        reportedUser: zod_1.z.string().optional(),
+        reportedStream: zod_1.z.string().optional(),
         reason: zod_1.z.enum(['harassment', 'spam', 'fraud', 'other']).optional(),
     }),
 });

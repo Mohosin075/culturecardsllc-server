@@ -4,8 +4,10 @@ import { AuctionServices } from './auction.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
-import { JwtPayload } from 'jsonwebtoken'
+import { JwtPayload, Secret } from 'jsonwebtoken'
 import { io } from '../../../server'
+import { jwtHelper } from '../../../helpers/jwtHelper'
+import config from '../../../config'
 
 const generateAgoraToken = catchAsync(async (req: Request, res: Response) => {
   const channelName = req.query.channelName as string
@@ -19,10 +21,13 @@ const generateAgoraToken = catchAsync(async (req: Request, res: Response) => {
     )
   }
 
+  const user = req.user as JwtPayload
+
   const result = await AuctionServices.generateAgoraToken(
     channelName,
     uid,
     role,
+    user?.userId as string,
   )
   sendResponse(res, {
     statusCode: StatusCodes.OK,
@@ -47,7 +52,23 @@ const createLiveStream = catchAsync(async (req: Request, res: Response) => {
 
 const getLiveStreams = catchAsync(async (req: Request, res: Response) => {
   const status = req.query.status as string
-  const result = await AuctionServices.getLiveStreams(status)
+  
+  let userId: string | undefined
+  const tokenWithBearer = req.headers.authorization
+  if (tokenWithBearer && tokenWithBearer.startsWith('Bearer')) {
+    const token = tokenWithBearer.split(' ')[1]
+    try {
+      const decoded = jwtHelper.verifyToken(
+        token,
+        config.jwt.jwt_secret as Secret,
+      ) as any
+      userId = decoded.userId || decoded.authId
+    } catch (e) {
+      // Ignore token verification errors since this endpoint is public
+    }
+  }
+
+  const result = await AuctionServices.getLiveStreams(status, userId)
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,

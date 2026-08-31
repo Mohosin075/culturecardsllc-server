@@ -336,6 +336,46 @@ const switchRole = async (user, role) => {
         refreshToken,
     };
 };
+const blockUser = async (userId, targetUserId) => {
+    if (userId === targetUserId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You cannot block yourself.');
+    }
+    const targetUser = await user_model_1.User.findById(targetUserId);
+    if (!targetUser) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User to block not found.');
+    }
+    const updatedUser = await user_model_1.User.findByIdAndUpdate(userId, { $addToSet: { blockedUsers: targetUser._id } }, { new: true });
+    if (!updatedUser) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to block user.');
+    }
+    // Automatically delete follow relationship in both directions
+    await follow_model_1.Follow.deleteMany({
+        $or: [
+            { followerId: userId, followingId: targetUserId },
+            { followerId: targetUserId, followingId: userId },
+        ],
+    });
+    return 'User blocked successfully.';
+};
+const unblockUser = async (userId, targetUserId) => {
+    if (userId === targetUserId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You cannot unblock yourself.');
+    }
+    const updatedUser = await user_model_1.User.findByIdAndUpdate(userId, { $pull: { blockedUsers: targetUserId } }, { new: true });
+    if (!updatedUser) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to unblock user.');
+    }
+    return 'User unblocked successfully.';
+};
+const getBlockedUsers = async (userId) => {
+    const user = await user_model_1.User.findById(userId)
+        .populate('blockedUsers', 'name fullName email image profile')
+        .lean();
+    if (!user) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
+    }
+    return user.blockedUsers || [];
+};
 exports.UserServices = {
     updateProfile,
     createAdmin,
@@ -347,4 +387,7 @@ exports.UserServices = {
     deleteProfile,
     deactivateProfile,
     switchRole,
+    blockUser,
+    unblockUser,
+    getBlockedUsers,
 };

@@ -10,6 +10,8 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const server_1 = require("../../../server");
+const jwtHelper_1 = require("../../../helpers/jwtHelper");
+const config_1 = __importDefault(require("../../../config"));
 const generateAgoraToken = (0, catchAsync_1.default)(async (req, res) => {
     const channelName = req.query.channelName;
     const uid = req.query.uid ? Number(req.query.uid) : 0;
@@ -17,7 +19,8 @@ const generateAgoraToken = (0, catchAsync_1.default)(async (req, res) => {
     if (!channelName) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'channelName is required as query parameter.');
     }
-    const result = await auction_service_1.AuctionServices.generateAgoraToken(channelName, uid, role);
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.generateAgoraToken(channelName, uid, role, user === null || user === void 0 ? void 0 : user.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -39,7 +42,19 @@ const createLiveStream = (0, catchAsync_1.default)(async (req, res) => {
 });
 const getLiveStreams = (0, catchAsync_1.default)(async (req, res) => {
     const status = req.query.status;
-    const result = await auction_service_1.AuctionServices.getLiveStreams(status);
+    let userId;
+    const tokenWithBearer = req.headers.authorization;
+    if (tokenWithBearer && tokenWithBearer.startsWith('Bearer')) {
+        const token = tokenWithBearer.split(' ')[1];
+        try {
+            const decoded = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_secret);
+            userId = decoded.userId || decoded.authId;
+        }
+        catch (e) {
+            // Ignore token verification errors since this endpoint is public
+        }
+    }
+    const result = await auction_service_1.AuctionServices.getLiveStreams(status, userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,

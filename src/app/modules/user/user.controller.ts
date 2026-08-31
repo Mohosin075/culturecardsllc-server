@@ -142,6 +142,44 @@ const switchRole = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const blockUser = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const { userId } = req.params
+
+  const result = await UserServices.blockUser(user.userId, userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result,
+    data: null,
+  })
+})
+
+const unblockUser = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const { userId } = req.params
+
+  const result = await UserServices.unblockUser(user.userId, userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result,
+    data: null,
+  })
+})
+
+const getBlockedUsers = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+
+  const result = await UserServices.getBlockedUsers(user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Blocked users retrieved successfully.',
+    data: result,
+  })
+})
+
 export const UserController = {
   updateProfile,
   getAllUsers,
@@ -152,4 +190,7 @@ export const UserController = {
   deleteProfile,
   deactivateProfile,
   switchRole,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
 }

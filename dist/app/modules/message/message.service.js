@@ -19,6 +19,14 @@ const sendMessageToDB = async (userId, payload) => {
     if (!receiver)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'No receiver found');
     const receiverId = receiver._id;
+    // Check if either sender or receiver has blocked the other
+    const isBlocked = await user_model_1.User.findOne({
+        _id: { $in: [userId, receiverId] },
+        blockedUsers: { $in: [userId, receiverId] },
+    });
+    if (isBlocked) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot send message. One of the users has blocked the other.');
+    }
     const data = {
         ...payload,
         image: (payload === null || payload === void 0 ? void 0 : payload.images) ? payload.images[0] : null,

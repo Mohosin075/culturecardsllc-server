@@ -16,6 +16,18 @@ const toggleFollow = async (followerId: string, followingId: string) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User to follow not found.')
   }
 
+  // Check if either user has blocked the other
+  const isBlocked = await User.findOne({
+    _id: { $in: [followerId, followingId] },
+    blockedUsers: { $in: [followerId, followingId] },
+  })
+  if (isBlocked) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Cannot follow this user due to block restrictions.',
+    )
+  }
+
   const existingFollow = await Follow.findOne({ followerId, followingId })
 
   if (existingFollow) {

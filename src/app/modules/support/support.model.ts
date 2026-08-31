@@ -6,10 +6,11 @@ const supportSchema = new Schema<ISupport, SupportModel>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User' }, // Reporter
     reportedUser: { type: Schema.Types.ObjectId, ref: 'User' },
+    reportedStream: { type: Schema.Types.ObjectId, ref: 'LiveStream' },
     contentId: { type: Schema.Types.ObjectId },
     contentType: {
       type: String,
-      enum: ['comment', 'review', 'user'],
+      enum: ['comment', 'review', 'user', 'stream'],
     },
     reason: {
       type: String,

@@ -86,6 +86,10 @@ const UserSchema = new mongoose_1.Schema({
         requestCount: { type: Number, default: 0 },
         authType: { type: String, enum: ['createAccount', 'resetPassword'] },
     },
+    blockedUsers: {
+        type: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }],
+        default: [],
+    },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

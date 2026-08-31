@@ -61,6 +61,25 @@ router.patch(
   ),
   UserController.deactivateProfile,
 )
+
+router.post(
+  '/block/:userId',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  UserController.blockUser,
+)
+
+router.post(
+  '/unblock/:userId',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  UserController.unblockUser,
+)
+
+router.get(
+  '/blocked-list',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  UserController.getBlockedUsers,
+)
+
 // Removed missing ProfessionalProfileController stripe connect routes
 router
   .route('/')

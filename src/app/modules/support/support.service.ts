@@ -83,7 +83,9 @@ const getAllSupports = async (
       .skip(skip)
       .limit(limit)
       .sort({ [sortBy]: sortOrder })
-      .populate({ path: 'userId', select: 'email name' }),
+      .populate({ path: 'userId', select: 'email name' })
+      .populate({ path: 'reportedUser', select: 'email name profile' })
+      .populate({ path: 'reportedStream', select: 'title agoraChannelName status' }),
     Support.countDocuments({ status: { $nin: [SUPPORT_STATUS.DELETED] } }),
   ])
 
@@ -103,10 +105,13 @@ const getSingleSupport = async (id: string): Promise<ISupport> => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Support ID')
   }
 
-  const result = await Support.findById(id).populate({
-    path: 'userId',
-    select: 'email name',
-  })
+  const result = await Support.findById(id)
+    .populate({
+      path: 'userId',
+      select: 'email name',
+    })
+    .populate({ path: 'reportedUser', select: 'email name profile' })
+    .populate({ path: 'reportedStream', select: 'title agoraChannelName status' })
   if (!result) {
     throw new ApiError(
       StatusCodes.NOT_FOUND,

@@ -63,7 +63,9 @@ const getAllSupports = async (user, filterables, pagination) => {
             .skip(skip)
             .limit(limit)
             .sort({ [sortBy]: sortOrder })
-            .populate({ path: 'userId', select: 'email name' }),
+            .populate({ path: 'userId', select: 'email name' })
+            .populate({ path: 'reportedUser', select: 'email name profile' })
+            .populate({ path: 'reportedStream', select: 'title agoraChannelName status' }),
         support_model_1.Support.countDocuments({ status: { $nin: [support_1.SUPPORT_STATUS.DELETED] } }),
     ]);
     return {
@@ -80,10 +82,13 @@ const getSingleSupport = async (id) => {
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Support ID');
     }
-    const result = await support_model_1.Support.findById(id).populate({
+    const result = await support_model_1.Support.findById(id)
+        .populate({
         path: 'userId',
         select: 'email name',
-    });
+    })
+        .populate({ path: 'reportedUser', select: 'email name profile' })
+        .populate({ path: 'reportedStream', select: 'title agoraChannelName status' });
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Requested support not found, please try again with valid id');
     }

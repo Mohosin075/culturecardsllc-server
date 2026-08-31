@@ -110,8 +110,8 @@ async function main() {
     await seedSubscriptionPlans()
 
     // Socket helper
-    socketHelper.socket(io)
-    global.io = io
+    socketHelper.socket(io);
+    (global as any).io = io
 
     // Start background cron jobs
     startTradeExpiryCron()
