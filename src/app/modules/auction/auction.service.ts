@@ -129,14 +129,33 @@ const createAuctionItem = async (
   const { startingBid, ...rest } = payload
   const duration = rest.timerDuration || 60
   const endsAt = rest.endsAt || new Date(Date.now() + duration * 1000)
-  
+
   const auction = await AuctionItem.create({
     ...rest,
     currentBid: startingBid ?? 0,
     status: 'active',
     endsAt,
   })
-  return auction
+
+  // Update pinnedProductId on the LiveStream so viewers always see the current item
+  if (rest.streamId && rest.productId) {
+    await LiveStream.findByIdAndUpdate(rest.streamId, {
+      pinnedProductId: rest.productId,
+    })
+  }
+
+  // Populate product details for the socket payload
+  const populatedAuction = await AuctionItem.findById(auction._id).populate('productId')
+
+  // Broadcast to all viewers in the live stream room in real-time
+  if (io && rest.streamId) {
+    io.to(`stream:${rest.streamId.toString()}`).emit('new-auction-item', {
+      streamId: rest.streamId.toString(),
+      auctionItem: populatedAuction,
+    })
+  }
+
+  return (populatedAuction || auction) as IAuctionItem
 }
 
 const placeBidSecure = async (
