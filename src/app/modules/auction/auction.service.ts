@@ -121,6 +121,9 @@ const getLiveStreams = async (status?: string, requestingUserId?: string): Promi
   return await LiveStream.find(query)
     .populate('sellerId', 'name fullName email image photo')
     .populate('pinnedProductId')
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean() as unknown as ILiveStream[]
 }
 
 const createAuctionItem = async (

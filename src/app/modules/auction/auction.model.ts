@@ -62,6 +62,9 @@ const LiveStreamSchema = new Schema<ILiveStream>(
   },
 )
 
+LiveStreamSchema.index({ status: 1, createdAt: -1 })
+LiveStreamSchema.index({ sellerId: 1, status: 1 })
+
 const AuctionItemSchema = new Schema<IAuctionItem>(
   {
     streamId: {

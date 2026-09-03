@@ -61,24 +61,54 @@ const getAllCategories = async (
   const whereConditions =
     andConditions.length > 0 ? { $and: andConditions } : {}
 
-  const [result, total] = await Promise.all([
-    Category.find(whereConditions)
-      .populate('parent')
-      .skip(skip)
-      .limit(limit)
-      .sort({ [sortBy]: sortOrder }),
+  const pipeline: any[] = [
+    { $match: whereConditions },
+    { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $lookup: {
+        from: 'products',
+        let: { catId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$category', '$$catId'] } } },
+          { $count: 'count' },
+        ],
+        as: 'productCount',
+      },
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'parent',
+        foreignField: '_id',
+        as: 'parent',
+      },
+    },
+    {
+      $unwind: {
+        path: '$parent',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        listingsCount: {
+          $ifNull: [{ $arrayElemAt: ['$productCount.count', 0] }, 0],
+        },
+      },
+    },
+    {
+      $project: {
+        productCount: 0,
+      },
+    },
+  ]
+
+  const [dataWithCounts, total] = await Promise.all([
+    Category.aggregate(pipeline),
     Category.countDocuments(whereConditions),
   ])
-
-  const dataWithCounts = await Promise.all(
-    result.map(async (cat: any) => {
-      const count = await Product.countDocuments({ category: cat._id })
-      return {
-        ...cat.toObject(),
-        listingsCount: count,
-      }
-    })
-  )
 
   return {
     meta: {
@@ -92,7 +122,7 @@ const getAllCategories = async (
 }
 
 const getSingleCategory = async (id: string) => {
-  const result = await Category.findById(id).populate('parent')
+  const result = await Category.findById(id).populate('parent').lean()
 
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Category not found')

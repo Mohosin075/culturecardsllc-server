@@ -98,5 +98,12 @@ const ProductSchema = new Schema<IProduct>(
   },
 )
 
+
+ProductSchema.index({ status: 1, category: 1, createdAt: -1 })
+ProductSchema.index({ boostedUntil: -1, createdAt: -1 })
+ProductSchema.index({ status: 1, allowTrade: 1, estValue: 1 })
+ProductSchema.index({ title: 'text', description: 'text' })
+
 export const Product = model<IProduct>('Product', ProductSchema)
 export default Product
+

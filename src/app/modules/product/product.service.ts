@@ -8,6 +8,9 @@ import config from '../../../config'
 import { User } from '../user/user.model'
 import { Payment } from '../payment/payment.model'
 
+import { IPaginationOptions } from '../../../interfaces/pagination'
+import { paginationHelper } from '../../../helpers/paginationHelper'
+
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   const seller = await User.findById(payload.sellerId)
   if (!seller) {
@@ -25,16 +28,30 @@ const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   return result
 }
 
-const getAllProducts = async (filters: {
-  searchTerm?: string
-  category?: string
-  condition?: string
-  allowTrade?: boolean
-  status?: string
-  sellerId?: string
-  minPrice?: number
-  maxPrice?: number
-}): Promise<IProduct[]> => {
+const getAllProducts = async (
+  filters: {
+    searchTerm?: string
+    category?: string
+    condition?: string
+    allowTrade?: boolean
+    status?: string
+    sellerId?: string
+    minPrice?: number
+    maxPrice?: number
+  },
+  paginationOptions: IPaginationOptions = {},
+): Promise<{
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  data: IProduct[]
+}> => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(paginationOptions)
+
   const {
     searchTerm,
     category,
@@ -58,7 +75,9 @@ const getAllProducts = async (filters: {
   if (condition) query.condition = condition
   if (allowTrade !== undefined) query.allowTrade = allowTrade
   if (status) query.status = status
-  if (sellerId) query.sellerId = new Types.ObjectId(sellerId)
+  if (sellerId && Types.ObjectId.isValid(sellerId)) {
+    query.sellerId = new Types.ObjectId(sellerId)
+  }
 
   if (minPrice !== undefined || maxPrice !== undefined) {
     query.estValue = {}
@@ -66,9 +85,33 @@ const getAllProducts = async (filters: {
     if (maxPrice !== undefined) query.estValue.$lte = Number(maxPrice)
   }
 
-  return await Product.find(query)
-    .populate('sellerId', 'name fullName email image photo')
-    .populate('category', 'name image icon theme')
+  const sortConditions: any = {}
+  if (sortBy) {
+    sortConditions[sortBy] = sortOrder === 'asc' ? 1 : -1
+  } else {
+    sortConditions.createdAt = -1
+  }
+
+  const [result, total] = await Promise.all([
+    Product.find(query)
+      .populate('sellerId', 'name fullName email image photo')
+      .populate('category', 'name image icon theme')
+      .sort(sortConditions)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Product.countDocuments(query),
+  ])
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: result as unknown as IProduct[],
+  }
 }
 
 const getProductById = async (id: string): Promise<IProduct> => {
@@ -78,10 +121,11 @@ const getProductById = async (id: string): Promise<IProduct> => {
   const result = await Product.findById(id)
     .populate('sellerId', 'name fullName email image photo stripeCustomerId')
     .populate('category', 'name image icon theme')
+    .lean()
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
-  return result
+  return result as unknown as IProduct
 }
 
 const updateProduct = async (

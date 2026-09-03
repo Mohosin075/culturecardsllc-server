@@ -29,12 +29,20 @@ const getAllProducts = catchAsync(async (req: Request, res: Response) => {
     maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
   }
 
-  const result = await ProductServices.getAllProducts(filters)
+  const paginationOptions = {
+    page: req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    sortBy: req.query.sortBy as string,
+    sortOrder: req.query.sortOrder as 'asc' | 'desc',
+  }
+
+  const result = await ProductServices.getAllProducts(filters, paginationOptions)
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
     message: 'Products fetched successfully.',
-    data: result,
+    meta: result.meta,
+    data: result.data,
   })
 })
 
