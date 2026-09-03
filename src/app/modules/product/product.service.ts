@@ -8,6 +8,7 @@ import config from '../../../config'
 import { User } from '../user/user.model'
 import { Payment } from '../payment/payment.model'
 
+import { Category } from '../category/category.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
 
@@ -26,6 +27,55 @@ const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
 
   const result = await Product.create(payload)
   return result
+}
+
+const populateCategoriesSafely = async (products: any[]) => {
+  if (!products || products.length === 0) return []
+
+  const categoryValues = Array.from(
+    new Set(products.map(p => p.category).filter(Boolean)),
+  )
+
+  if (categoryValues.length === 0) return products
+
+  const validObjectIds = categoryValues.filter(c => Types.ObjectId.isValid(c))
+  const stringNames = categoryValues.filter(c => !Types.ObjectId.isValid(c))
+
+  const searchConditions: any[] = []
+  if (validObjectIds.length > 0) {
+    searchConditions.push({ _id: { $in: validObjectIds } })
+  }
+  if (stringNames.length > 0) {
+    searchConditions.push({ name: { $in: stringNames } })
+  }
+
+  const categories =
+    searchConditions.length > 0
+      ? await Category.find({ $or: searchConditions })
+          .select('name image icon theme parent type')
+          .lean()
+      : []
+
+  const categoryMap = new Map<string, any>()
+  categories.forEach(cat => {
+    categoryMap.set(cat._id.toString(), cat)
+    categoryMap.set(cat.name.toLowerCase(), cat)
+  })
+
+  return products.map(p => {
+    if (!p.category) return p
+
+    if (typeof p.category === 'object' && p.category._id) return p
+
+    const catKey = p.category.toString()
+    const foundCategory =
+      categoryMap.get(catKey) || categoryMap.get(catKey.toLowerCase())
+
+    return {
+      ...p,
+      category: foundCategory || { name: catKey },
+    }
+  })
 }
 
 const getAllProducts = async (
@@ -71,7 +121,20 @@ const getAllProducts = async (
     ]
   }
 
-  if (category) query.category = category
+  if (category) {
+    if (Types.ObjectId.isValid(category)) {
+      query.category = category
+    } else {
+      const categoryDoc = await Category.findOne({
+        name: { $regex: `^${category}$`, $options: 'i' },
+      }).select('_id')
+      if (categoryDoc) {
+        query.category = categoryDoc._id
+      } else {
+        query.category = category
+      }
+    }
+  }
   if (condition) query.condition = condition
   if (allowTrade !== undefined) query.allowTrade = allowTrade
   if (status) query.status = status
@@ -92,16 +155,17 @@ const getAllProducts = async (
     sortConditions.createdAt = -1
   }
 
-  const [result, total] = await Promise.all([
+  const [rawProducts, total] = await Promise.all([
     Product.find(query)
       .populate('sellerId', 'name fullName email image photo')
-      .populate('category', 'name image icon theme')
       .sort(sortConditions)
       .skip(skip)
       .limit(limit)
       .lean(),
     Product.countDocuments(query),
   ])
+
+  const result = await populateCategoriesSafely(rawProducts)
 
   return {
     meta: {
@@ -118,13 +182,13 @@ const getProductById = async (id: string): Promise<IProduct> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
   }
-  const result = await Product.findById(id)
+  const rawProduct = await Product.findById(id)
     .populate('sellerId', 'name fullName email image photo stripeCustomerId')
-    .populate('category', 'name image icon theme')
     .lean()
-  if (!result) {
+  if (!rawProduct) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
+  const [result] = await populateCategoriesSafely([rawProduct])
   return result as unknown as IProduct
 }
 

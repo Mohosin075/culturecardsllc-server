@@ -1,3 +1,4 @@
+import { Types } from 'mongoose'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import { ICategory, ICategoryFilterables } from './category.interface'
@@ -122,7 +123,14 @@ const getAllCategories = async (
 }
 
 const getSingleCategory = async (id: string) => {
-  const result = await Category.findById(id).populate('parent').lean()
+  let result = null
+  if (Types.ObjectId.isValid(id)) {
+    result = await Category.findById(id).populate('parent').lean()
+  } else {
+    result = await Category.findOne({ name: { $regex: `^${id}$`, $options: 'i' } })
+      .populate('parent')
+      .lean()
+  }
 
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Category not found')
