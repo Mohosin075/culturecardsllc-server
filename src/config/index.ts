@@ -93,9 +93,17 @@ export default {
   redis_url: envVars.REDIS_URL,
   deepLink: {
     androidPackageName: process.env.ANDROID_PACKAGE_NAME || 'com.culturecards.app',
-    androidSha256Fingerprints: process.env.ANDROID_SHA256_FINGERPRINTS
-      ? JSON.parse(process.env.ANDROID_SHA256_FINGERPRINTS)
-      : ['14:6D:E9:31:8B:2A:42:01:42:85:69:B5:E8:EE:B2:3D:DF:25:A8:DF:BF:37:37:EB:AC:97:DF:22:98:97:8D:18'],
+    androidSha256Fingerprints: (() => {
+      const val = process.env.ANDROID_SHA256_FINGERPRINTS
+      const defaultVal = ['14:6D:E9:31:8B:2A:42:01:42:85:69:B5:E8:EE:B2:3D:DF:25:A8:DF:BF:37:37:EB:AC:97:DF:22:98:97:8D:18']
+      if (!val) return defaultVal
+      try {
+        const parsed = JSON.parse(val)
+        return Array.isArray(parsed) ? parsed : defaultVal
+      } catch (e) {
+        return val.split(',').map(item => item.trim().replace(/^["']|["']$/g, ''))
+      }
+    })(),
     iosAppId: process.env.IOS_APP_ID || '9JA6B9Q855.com.culturecards.app',
   },
 }
