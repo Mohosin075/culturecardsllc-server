@@ -91,4 +91,11 @@ export default {
   cors_origins:
     envVars.CORS_ORIGINS?.split(',').map(origin => origin.trim()) || [],
   redis_url: envVars.REDIS_URL,
+  deepLink: {
+    androidPackageName: process.env.ANDROID_PACKAGE_NAME || 'com.culturecards.app',
+    androidSha256Fingerprints: process.env.ANDROID_SHA256_FINGERPRINTS
+      ? JSON.parse(process.env.ANDROID_SHA256_FINGERPRINTS)
+      : ['14:6D:E9:31:8B:2A:42:01:42:85:69:B5:E8:EE:B2:3D:DF:25:A8:DF:BF:37:37:EB:AC:97:DF:22:98:97:8D:18'],
+    iosAppId: process.env.IOS_APP_ID || '9JA6B9Q855.com.culturecards.app',
+  },
 }

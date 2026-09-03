@@ -37,6 +37,7 @@ export type IProduct = {
   shippingWeight?: number
   allowOffers?: boolean
   minOfferAmount?: number
+  shareCount?: number
   createdAt: Date
   updatedAt: Date
 } & Document

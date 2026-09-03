@@ -31,6 +31,7 @@ router.post(
   auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
   ProductControllers.boostProduct,
 )
+router.patch('/:id/share', ProductControllers.incrementShareCount)
 
 export const ProductRoutes = router
 export default ProductRoutes

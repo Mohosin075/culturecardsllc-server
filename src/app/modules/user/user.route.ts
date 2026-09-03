@@ -88,6 +88,8 @@ router
     UserController.getAllUsers,
   )
 
+router.get('/public/:userId', UserController.getUserById)
+
 router
   .route('/:userId')
   .get(

@@ -295,6 +295,18 @@ const boostProduct = async (
   }
 }
 
+const incrementShareCount = async (id: string): Promise<IProduct | null> => {
+  const result = await Product.findByIdAndUpdate(
+    id,
+    { $inc: { shareCount: 1 } },
+    { new: true },
+  )
+  if (!result) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
+  }
+  return result
+}
+
 export const ProductServices = {
   createProduct,
   getAllProducts,
@@ -302,4 +314,5 @@ export const ProductServices = {
   updateProduct,
   deleteProduct,
   boostProduct,
+  incrementShareCount,
 }

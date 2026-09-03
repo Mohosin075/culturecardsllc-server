@@ -88,6 +88,16 @@ const boostProduct = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const incrementShareCount = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProductServices.incrementShareCount(req.params.id)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Product share count updated successfully.',
+    data: result,
+  })
+})
+
 export const ProductControllers = {
   createProduct,
   getAllProducts,
@@ -95,4 +105,5 @@ export const ProductControllers = {
   updateProduct,
   deleteProduct,
   boostProduct,
+  incrementShareCount,
 }
