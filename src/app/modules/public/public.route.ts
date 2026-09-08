@@ -9,14 +9,23 @@ const router = express.Router()
 
 router.post(
   '/',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validateRequest(PublicValidation.create),
   PublicController.createPublic,
 )
 router.get('/:type', PublicController.getAllPublics)
 
-router.delete('/:id', PublicController.deletePublic)
+router.delete(
+  '/:id',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  PublicController.deletePublic,
+)
 
-router.patch('/update/:id', PublicController.updatePublic)
+router.patch(
+  '/update/:id',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  PublicController.updatePublic,
+)
 router.post(
   '/contact',
   validateRequest(PublicValidation.contactZodSchema),

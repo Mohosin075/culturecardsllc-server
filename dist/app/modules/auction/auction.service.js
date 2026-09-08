@@ -83,7 +83,10 @@ const getLiveStreams = async (status, requestingUserId) => {
     }
     return await auction_model_1.LiveStream.find(query)
         .populate('sellerId', 'name fullName email image photo')
-        .populate('pinnedProductId');
+        .populate('pinnedProductId')
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
 };
 const createAuctionItem = async (payload) => {
     const { startingBid, ...rest } = payload;
@@ -95,7 +98,22 @@ const createAuctionItem = async (payload) => {
         status: 'active',
         endsAt,
     });
-    return auction;
+    // Update pinnedProductId on the LiveStream so viewers always see the current item
+    if (rest.streamId && rest.productId) {
+        await auction_model_1.LiveStream.findByIdAndUpdate(rest.streamId, {
+            pinnedProductId: rest.productId,
+        });
+    }
+    // Populate product details for the socket payload
+    const populatedAuction = await auction_model_1.AuctionItem.findById(auction._id).populate('productId');
+    // Broadcast to all viewers in the live stream room in real-time
+    if (server_1.io && rest.streamId) {
+        server_1.io.to(`stream:${rest.streamId.toString()}`).emit('new-auction-item', {
+            streamId: rest.streamId.toString(),
+            auctionItem: populatedAuction,
+        });
+    }
+    return (populatedAuction || auction);
 };
 const placeBidSecure = async (auctionItemId, bidderId, bidAmount) => {
     if (!mongoose_1.Types.ObjectId.isValid(auctionItemId)) {

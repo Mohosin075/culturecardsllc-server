@@ -30,12 +30,19 @@ const getAllProducts = (0, catchAsync_1.default)(async (req, res) => {
         minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
         maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
     };
-    const result = await product_service_1.ProductServices.getAllProducts(filters);
+    const paginationOptions = {
+        page: req.query.page ? Number(req.query.page) : undefined,
+        limit: req.query.limit ? Number(req.query.limit) : undefined,
+        sortBy: req.query.sortBy,
+        sortOrder: req.query.sortOrder,
+    };
+    const result = await product_service_1.ProductServices.getAllProducts(filters, paginationOptions);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
         message: 'Products fetched successfully.',
-        data: result,
+        meta: result.meta,
+        data: result.data,
     });
 });
 const getProductById = (0, catchAsync_1.default)(async (req, res) => {
@@ -76,6 +83,15 @@ const boostProduct = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const incrementShareCount = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await product_service_1.ProductServices.incrementShareCount(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Product share count updated successfully.',
+        data: result,
+    });
+});
 exports.ProductControllers = {
     createProduct,
     getAllProducts,
@@ -83,4 +99,5 @@ exports.ProductControllers = {
     updateProduct,
     deleteProduct,
     boostProduct,
+    incrementShareCount,
 };

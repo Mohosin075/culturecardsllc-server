@@ -24,6 +24,7 @@ router.get('/blocked-list', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.
 router
     .route('/')
     .get((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), user_controller_1.UserController.getAllUsers);
+router.get('/public/:userId', user_controller_1.UserController.getUserById);
 router
     .route('/:userId')
     .get((0, auth_1.default)(user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), user_controller_1.UserController.getUserById)

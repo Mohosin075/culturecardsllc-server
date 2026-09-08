@@ -90,10 +90,19 @@ const ProductSchema = new mongoose_1.Schema({
         type: Number,
         default: 0,
     },
+    shareCount: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
 });
+ProductSchema.index({ status: 1, category: 1, createdAt: -1 });
+ProductSchema.index({ boostedUntil: -1, createdAt: -1 });
+ProductSchema.index({ status: 1, allowTrade: 1, estValue: 1 });
+ProductSchema.index({ title: 'text', description: 'text' });
 exports.Product = (0, mongoose_1.model)('Product', ProductSchema);
 exports.default = exports.Product;

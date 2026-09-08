@@ -10,24 +10,11 @@ const public_model_1 = require("./public.model");
 const user_model_1 = require("../user/user.model");
 const emailHelper_1 = require("../../../helpers/emailHelper");
 const createPublic = async (payload) => {
-    const isExist = await public_model_1.Public.findOne({
-        type: payload.type,
-    });
-    if (isExist) {
-        await public_model_1.Public.findByIdAndUpdate(isExist._id, {
-            $set: {
-                content: payload.content,
-            },
-        }, {
-            new: true,
-        });
+    const result = await public_model_1.Public.findOneAndUpdate({ type: payload.type }, { $set: { content: payload.content } }, { new: true, upsert: true });
+    if (!result) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to save document');
     }
-    else {
-        const result = await public_model_1.Public.create(payload);
-        if (!result)
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create Public');
-    }
-    return `${payload.type} created successfully}`;
+    return result;
 };
 const getAllPublics = async (type) => {
     const result = await public_model_1.Public.findOne({ type: type }).lean();

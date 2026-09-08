@@ -7,29 +7,17 @@ import { User } from '../user/user.model'
 import { emailHelper } from '../../../helpers/emailHelper'
 
 const createPublic = async (payload: IPublic) => {
-  const isExist = await Public.findOne({
-    type: payload.type,
-  })
-  if (isExist) {
-    await Public.findByIdAndUpdate(
-      isExist._id,
-      {
-        $set: {
-          content: payload.content,
-        },
-      },
-      {
-        new: true,
-      },
-    )
-  } else {
-    const result = await Public.create(payload)
+  const result = await Public.findOneAndUpdate(
+    { type: payload.type },
+    { $set: { content: payload.content } },
+    { new: true, upsert: true },
+  )
 
-    if (!result)
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create Public')
+  if (!result) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to save document')
   }
 
-  return `${payload.type} created successfully}`
+  return result
 }
 
 const getAllPublics = async (

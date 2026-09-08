@@ -4,11 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CategoryServices = void 0;
+const mongoose_1 = require("mongoose");
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const category_model_1 = require("./category.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
-const product_model_1 = require("../product/product.model");
 const createCategory = async (payload) => {
     const existingCategory = await category_model_1.Category.findOne({ name: payload.name });
     if (existingCategory) {
@@ -45,21 +45,53 @@ const getAllCategories = async (filters, paginationOptions) => {
         });
     }
     const whereConditions = andConditions.length > 0 ? { $and: andConditions } : {};
-    const [result, total] = await Promise.all([
-        category_model_1.Category.find(whereConditions)
-            .populate('parent')
-            .skip(skip)
-            .limit(limit)
-            .sort({ [sortBy]: sortOrder }),
+    const pipeline = [
+        { $match: whereConditions },
+        { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+            $lookup: {
+                from: 'products',
+                let: { catId: '$_id' },
+                pipeline: [
+                    { $match: { $expr: { $eq: ['$category', '$$catId'] } } },
+                    { $count: 'count' },
+                ],
+                as: 'productCount',
+            },
+        },
+        {
+            $lookup: {
+                from: 'categories',
+                localField: 'parent',
+                foreignField: '_id',
+                as: 'parent',
+            },
+        },
+        {
+            $unwind: {
+                path: '$parent',
+                preserveNullAndEmptyArrays: true,
+            },
+        },
+        {
+            $addFields: {
+                listingsCount: {
+                    $ifNull: [{ $arrayElemAt: ['$productCount.count', 0] }, 0],
+                },
+            },
+        },
+        {
+            $project: {
+                productCount: 0,
+            },
+        },
+    ];
+    const [dataWithCounts, total] = await Promise.all([
+        category_model_1.Category.aggregate(pipeline),
         category_model_1.Category.countDocuments(whereConditions),
     ]);
-    const dataWithCounts = await Promise.all(result.map(async (cat) => {
-        const count = await product_model_1.Product.countDocuments({ category: cat._id });
-        return {
-            ...cat.toObject(),
-            listingsCount: count,
-        };
-    }));
     return {
         meta: {
             page,
@@ -71,7 +103,15 @@ const getAllCategories = async (filters, paginationOptions) => {
     };
 };
 const getSingleCategory = async (id) => {
-    const result = await category_model_1.Category.findById(id).populate('parent');
+    let result = null;
+    if (mongoose_1.Types.ObjectId.isValid(id)) {
+        result = await category_model_1.Category.findById(id).populate('parent').lean();
+    }
+    else {
+        result = await category_model_1.Category.findOne({ name: { $regex: `^${id}$`, $options: 'i' } })
+            .populate('parent')
+            .lean();
+    }
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Category not found');
     }

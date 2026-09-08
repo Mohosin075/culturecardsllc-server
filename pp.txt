@@ -1,0 +1,313 @@
+PRIVACY POLICY
+
+
+Last Updated: September 6, 2026
+
+
+AREIS LLC (“AREIS,” “we,” “us,” or “our”) respects your privacy.
+
+
+This Privacy Policy explains how AREIS LLC collects, uses, protects, and discloses information when you use our mobile application, website, livestreaming services, marketplace, buying and selling features, and related services.
+
+
+⸻
+
+
+1. Information We Collect
+
+
+Depending on how you use AREIS, we may collect:
+
+
+Account Information
+Name, username, email address, phone number, date of birth, profile information, and authentication information.
+
+
+Buyer & Seller Information
+Listings, purchases, bids, sales, trades, transaction history, shipping information, reviews, communications, and payout information.
+
+
+Payment Information
+Payment information may be processed by third-party payment processors. Where reasonably possible, AREIS LLC does not store complete payment-card information on its own systems.
+
+
+Identity Verification Information
+Where necessary, we or our service providers may collect information required for identity, age, fraud, security, or legal verification.
+
+
+Content
+Livestreams, videos, photographs, listings, comments, reviews, messages, audio, and other content submitted through the Platform.
+
+
+Technical Information
+IP address, device information, operating system, application version, browser information, device identifiers, log information, approximate location, crash information, and Platform usage information.
+
+
+⸻
+
+
+2. How We Use Information
+
+
+AREIS LLC may use information to:
+
+
+Provide and operate the Platform.
+Create and manage accounts.
+Facilitate buying and selling.
+Process bids and transactions.
+Process payments and payouts.
+Provide livestreaming services.
+Verify users and transactions.
+Prevent fraud and abuse.
+Maintain Platform security.
+Provide customer support.
+Communicate with users.
+Improve Platform functionality.
+Analyze Platform performance.
+Enforce our Terms.
+Comply with applicable law.
+Protect AREIS LLC, our users, and our property.
+
+
+⸻
+
+
+3. Buyers & Sellers
+
+
+Buyers
+
+
+We may use buyer information to process purchases, bids, payments, shipping, refunds, disputes, fraud prevention, and customer support.
+
+
+Sellers
+
+
+We may use seller information to create listings, process sales, facilitate payouts, verify identity, prevent fraud, provide tax-related reporting where required, and maintain marketplace integrity.
+
+
+Information necessary to complete a transaction may be shared with appropriate parties, such as payment processors, shipping providers, fraud-prevention providers, or the other transaction participant.
+
+
+⸻
+
+
+4. Information We Share
+
+
+AREIS LLC may share information with service providers that help us operate the Platform, including providers for:
+
+
+Payment processing.
+Cloud hosting.
+Security.
+Identity verification.
+Fraud prevention.
+Analytics.
+Authentication.
+Customer support.
+Communications.
+Shipping.
+Technical infrastructure.
+
+
+We may also disclose information when reasonably necessary to comply with law, respond to lawful legal process, investigate fraud, protect users, protect our rights or property, or address security or safety concerns.
+
+
+We do not sell passwords, authentication credentials, or similar security credentials.
+
+
+⸻
+
+
+5. Data Security
+
+
+AREIS LLC takes the security of personal information seriously.
+
+
+We maintain reasonable administrative, technical, and physical safeguards appropriate to the nature and sensitivity of information we handle.
+
+
+Depending on the system and information involved, these safeguards may include:
+
+
+Encryption during transmission.
+Encryption of sensitive information at rest where appropriate.
+Access controls.
+Authentication and account-security measures.
+Restricted employee and contractor access.
+Security monitoring and logging.
+Secure software and infrastructure practices.
+Backups and recovery procedures.
+Security assessments and vulnerability management.
+Incident-response procedures.
+
+
+These practices are consistent with federal guidance encouraging businesses to limit collected information, control access, use encryption, protect data in transit and at rest, and oversee service providers.
+
+
+No website, application, database, network, or electronic transmission can be guaranteed to be completely secure.
+
+
+⸻
+
+
+6. Data Retention
+
+
+AREIS LLC retains information for as long as reasonably necessary to provide the Platform, complete transactions, prevent fraud, maintain business and financial records, resolve disputes, enforce agreements, and comply with legal obligations.
+
+
+When information is no longer reasonably required, it may be deleted, anonymized, or securely disposed of, subject to applicable legal and operational requirements.
+
+
+⸻
+
+
+7. Cookies & Similar Technologies
+
+
+AREIS LLC may use cookies, SDKs, pixels, device identifiers, analytics technologies, and similar technologies to operate the Platform, maintain sessions, remember preferences, understand usage, improve performance, and maintain security.
+
+
+⸻
+
+
+8. Children’s Privacy
+
+
+AREIS LLC is not intended for children under 13 years of age.
+
+
+Certain Platform features may require users to be 18 or older.
+
+
+We do not knowingly collect children’s personal information in circumstances prohibited by applicable law.
+
+
+⸻
+
+
+9. Your Privacy Rights
+
+
+Depending on where you live and whether applicable privacy laws apply to AREIS LLC, you may have rights to:
+
+
+Request access to personal information.
+Request correction of inaccurate information.
+Request deletion of personal information.
+Request information about how personal information is collected and used.
+Request a portable copy of certain information.
+Opt out of certain targeted advertising, sale, or sharing of personal information where applicable.
+Exercise other rights provided by applicable law.
+
+
+Florida’s 2026 Digital Bill of Rights provides qualifying consumers rights including access, correction, deletion, portability, and certain opt-out rights.
+
+
+California’s CCPA, where applicable, provides additional rights including access, deletion, correction, opt-out of sale/sharing, and limiting certain uses of sensitive personal information.
+
+
+Rights and eligibility vary depending on the law applicable to you.
+
+
+⸻
+
+
+10. Privacy Requests
+
+
+To submit a privacy request or privacy-related question, contact:
+
+
+AREIS LLC
+Email: ceoareisco@gmail.com
+
+
+We may take reasonable steps to verify your identity before completing certain requests.
+
+
+Where applicable law requires a particular response timeframe or process, AREIS LLC will comply with those requirements.
+
+
+⸻
+
+
+11. California Privacy Rights
+
+
+If California privacy law applies to AREIS LLC, California residents may have rights under the California Consumer Privacy Act, as amended.
+
+
+These may include rights to know, delete, correct, opt out of certain sale or sharing, limit certain uses of sensitive personal information, and receive non-discriminatory treatment for exercising applicable privacy rights.
+
+
+[If applicable, add an in-app “Do Not Sell or Share My Personal Information” / “Your Privacy Choices” mechanism before launch.]
+
+
+⸻
+
+
+12. Florida Privacy Rights
+
+
+If Florida privacy law applies to AREIS LLC and you qualify as a covered consumer, you may have rights provided by the Florida Digital Bill of Rights.
+
+
+Florida law includes rights to access, correct, delete, obtain a portable copy of certain personal data, and opt out of certain processing activities.
+
+
+Florida law also requires covered businesses to maintain reasonable administrative, technical, and physical security practices appropriate to the volume and nature of personal data involved.
+
+
+⸻
+
+
+13. Business Transfers
+
+
+If AREIS LLC is involved in a merger, acquisition, financing, restructuring, sale of assets, bankruptcy, or similar business transaction, information may be transferred as part of that transaction, subject to applicable law.
+
+
+⸻
+
+
+14. Legal Compliance
+
+
+AREIS LLC may retain or disclose information when reasonably necessary to comply with applicable law, court orders, subpoenas, legal processes, governmental requests, fraud investigations, security investigations, or protection of our users, rights, and property.
+
+
+⸻
+
+
+15. Changes to This Privacy Policy
+
+
+AREIS LLC may update this Privacy Policy periodically.
+
+
+When material changes are made, we may provide notice through the Platform, website, email, or another reasonable method.
+
+
+The updated Privacy Policy will display a new “Last Updated” date.
+
+
+⸻
+
+
+16. Contact AREIS LLC
+
+
+AREIS LLC
+400 N TAMPA ST STE 1550 #650915
+TAMPA, FL 33602
+USA
+
+
+Privacy & Legal Email:
+ceoareisco@gmail.com

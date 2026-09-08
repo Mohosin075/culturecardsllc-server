@@ -17,5 +17,6 @@ router.get('/:id', product_controller_1.ProductControllers.getProductById);
 router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(product_validation_1.ProductValidations.updateProductSchema), product_controller_1.ProductControllers.updateProduct);
 router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), product_controller_1.ProductControllers.deleteProduct);
 router.post('/:id/boost', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), product_controller_1.ProductControllers.boostProduct);
+router.patch('/:id/share', product_controller_1.ProductControllers.incrementShareCount);
 exports.ProductRoutes = router;
 exports.default = exports.ProductRoutes;

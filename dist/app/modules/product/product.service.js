@@ -12,6 +12,8 @@ const stripe_1 = __importDefault(require("../../../config/stripe"));
 const config_1 = __importDefault(require("../../../config"));
 const user_model_1 = require("../user/user.model");
 const payment_model_1 = require("../payment/payment.model");
+const category_model_1 = require("../category/category.model");
+const paginationHelper_1 = require("../../../helpers/paginationHelper");
 const createProduct = async (payload) => {
     const seller = await user_model_1.User.findById(payload.sellerId);
     if (!seller) {
@@ -23,7 +25,46 @@ const createProduct = async (payload) => {
     const result = await product_model_1.Product.create(payload);
     return result;
 };
-const getAllProducts = async (filters) => {
+const populateCategoriesSafely = async (products) => {
+    if (!products || products.length === 0)
+        return [];
+    const categoryValues = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+    if (categoryValues.length === 0)
+        return products;
+    const validObjectIds = categoryValues.filter(c => mongoose_1.Types.ObjectId.isValid(c));
+    const stringNames = categoryValues.filter(c => !mongoose_1.Types.ObjectId.isValid(c));
+    const searchConditions = [];
+    if (validObjectIds.length > 0) {
+        searchConditions.push({ _id: { $in: validObjectIds } });
+    }
+    if (stringNames.length > 0) {
+        searchConditions.push({ name: { $in: stringNames } });
+    }
+    const categories = searchConditions.length > 0
+        ? await category_model_1.Category.find({ $or: searchConditions })
+            .select('name image icon theme parent type')
+            .lean()
+        : [];
+    const categoryMap = new Map();
+    categories.forEach(cat => {
+        categoryMap.set(cat._id.toString(), cat);
+        categoryMap.set(cat.name.toLowerCase(), cat);
+    });
+    return products.map(p => {
+        if (!p.category)
+            return p;
+        if (typeof p.category === 'object' && p.category._id)
+            return p;
+        const catKey = p.category.toString();
+        const foundCategory = categoryMap.get(catKey) || categoryMap.get(catKey.toLowerCase());
+        return {
+            ...p,
+            category: foundCategory || { name: catKey },
+        };
+    });
+};
+const getAllProducts = async (filters, paginationOptions = {}) => {
+    const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(paginationOptions);
     const { searchTerm, category, condition, allowTrade, status, sellerId, minPrice, maxPrice, } = filters;
     const query = {};
     if (searchTerm) {
@@ -32,16 +73,31 @@ const getAllProducts = async (filters) => {
             { description: { $regex: searchTerm, $options: 'i' } },
         ];
     }
-    if (category)
-        query.category = category;
+    if (category) {
+        if (mongoose_1.Types.ObjectId.isValid(category)) {
+            query.category = category;
+        }
+        else {
+            const categoryDoc = await category_model_1.Category.findOne({
+                name: { $regex: `^${category}$`, $options: 'i' },
+            }).select('_id');
+            if (categoryDoc) {
+                query.category = categoryDoc._id;
+            }
+            else {
+                query.category = category;
+            }
+        }
+    }
     if (condition)
         query.condition = condition;
     if (allowTrade !== undefined)
         query.allowTrade = allowTrade;
     if (status)
         query.status = status;
-    if (sellerId)
+    if (sellerId && mongoose_1.Types.ObjectId.isValid(sellerId)) {
         query.sellerId = new mongoose_1.Types.ObjectId(sellerId);
+    }
     if (minPrice !== undefined || maxPrice !== undefined) {
         query.estValue = {};
         if (minPrice !== undefined)
@@ -49,20 +105,44 @@ const getAllProducts = async (filters) => {
         if (maxPrice !== undefined)
             query.estValue.$lte = Number(maxPrice);
     }
-    return await product_model_1.Product.find(query)
-        .populate('sellerId', 'name fullName email image photo')
-        .populate('category', 'name image icon theme');
+    const sortConditions = {};
+    if (sortBy) {
+        sortConditions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    }
+    else {
+        sortConditions.createdAt = -1;
+    }
+    const [rawProducts, total] = await Promise.all([
+        product_model_1.Product.find(query)
+            .populate('sellerId', 'name fullName email image photo')
+            .sort(sortConditions)
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+        product_model_1.Product.countDocuments(query),
+    ]);
+    const result = await populateCategoriesSafely(rawProducts);
+    return {
+        meta: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        },
+        data: result,
+    };
 };
 const getProductById = async (id) => {
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Product ID');
     }
-    const result = await product_model_1.Product.findById(id)
+    const rawProduct = await product_model_1.Product.findById(id)
         .populate('sellerId', 'name fullName email image photo stripeCustomerId')
-        .populate('category', 'name image icon theme');
-    if (!result) {
+        .lean();
+    if (!rawProduct) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }
+    const [result] = await populateCategoriesSafely([rawProduct]);
     return result;
 };
 const updateProduct = async (id, payload) => {
@@ -151,6 +231,13 @@ const boostProduct = async (productId, userId, boostDurationDays = 7) => {
         url: session.url,
     };
 };
+const incrementShareCount = async (id) => {
+    const result = await product_model_1.Product.findByIdAndUpdate(id, { $inc: { shareCount: 1 } }, { new: true });
+    if (!result) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
+    }
+    return result;
+};
 exports.ProductServices = {
     createProduct,
     getAllProducts,
@@ -158,4 +245,5 @@ exports.ProductServices = {
     updateProduct,
     deleteProduct,
     boostProduct,
+    incrementShareCount,
 };

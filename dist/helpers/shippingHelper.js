@@ -106,8 +106,8 @@ const initializeOrderShipping = async (orderData, product) => {
         const labelBuffer = await (0, exports.generateMockShippingLabel)({
             carrier: orderData.trackingDetails.carrier,
             trackingNumber: orderData.trackingDetails.trackingNumber,
-            fromName: 'CultureCards LLC (Central Warehouse)',
-            fromAddress: '123 Collectors Square, Card Town, CC 10101',
+            fromName: 'CultureCards LLC (Shipping Hub)',
+            fromAddress: '215 W Washington St, Apt A, Mansfield, MO 65704',
             toName: 'Valued Customer',
             toAddress: toAddressStr,
             weight: orderData.shippingWeight

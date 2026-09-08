@@ -59,6 +59,8 @@ const LiveStreamSchema = new mongoose_1.Schema({
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
 });
+LiveStreamSchema.index({ status: 1, createdAt: -1 });
+LiveStreamSchema.index({ sellerId: 1, status: 1 });
 const AuctionItemSchema = new mongoose_1.Schema({
     streamId: {
         type: mongoose_1.Schema.Types.ObjectId,
