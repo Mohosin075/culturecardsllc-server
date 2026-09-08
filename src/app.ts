@@ -135,7 +135,7 @@ app.get('/', (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'Welcome to the Aries API',
+    message: 'Welcome to the Aries API CI/CD',
     data: {
       timestamp: new Date().toISOString(),
       projectName: 'Aries',
