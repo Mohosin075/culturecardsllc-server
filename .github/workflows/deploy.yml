@@ -1,0 +1,91 @@
+name: CI/CD Pipeline - CultureCards API
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  ci-build:
+    name: Continuous Integration (Lint & Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build TypeScript Project
+        run: npm run build
+
+  deploy:
+    name: Continuous Deployment (AWS EC2)
+    needs: ci-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST || '34.225.44.39' }}
+          username: ${{ secrets.SERVER_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            echo "=========================================="
+            echo "🚀 Starting Automated Deployment on EC2"
+            echo "=========================================="
+
+            mkdir -p /var/www/culturecardsllc-server
+            cd /var/www/culturecardsllc-server
+
+            # 1. Update repository
+            if [ ! -d .git ]; then
+              echo "Cloning repository..."
+              git clone https://github.com/Mohosin075/culturecardsllc-server.git .
+            else
+              echo "Pulling latest code from origin/main..."
+              git fetch origin main
+              git reset --hard origin/main
+            fi
+
+            # 2. Write production .env file if provided in secrets
+            if [ -n "${{ secrets.PROD_ENV_FILE }}" ]; then
+              echo "Injecting PROD_ENV_FILE secret into .env..."
+              cat << 'EOF' > .env
+            ${{ secrets.PROD_ENV_FILE }}
+            EOF
+            fi
+
+            # 3. Install packages and compile TypeScript
+            echo "Installing dependencies..."
+            npm ci --production=false
+            echo "Building TypeScript backend..."
+            npm run build
+
+            # 4. Restart or Start application via PM2
+            echo "Reloading PM2 application..."
+            pm2 reload culturecards-api || pm2 start dist/server.js --name "culturecards-api"
+            pm2 save
+
+            # 5. Check and apply Let's Encrypt SSL if DNS has pointed
+            echo "Verifying SSL configuration for api.areisco.com..."
+            if ! sudo certbot certificates 2>/dev/null | grep -q "api.areisco.com"; then
+              echo "Requesting Let's Encrypt SSL certificate for api.areisco.com..."
+              sudo certbot --nginx -d api.areisco.com --non-interactive --agree-tos -m web.mohosin@gmail.com --redirect || echo "⚠️ Notice: DNS not yet resolved to 34.225.44.39. SSL will apply once DNS propagates."
+            else
+              echo "✅ SSL certificate already active for api.areisco.com."
+            fi
+
+            echo "=========================================="
+            echo "🎉 Deployment Completed Successfully!"
+            echo "=========================================="
