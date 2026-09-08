@@ -104,22 +104,7 @@ app.use('/api/v1', router)
 // Swagger Documentation
 swaggerDocs(app, Number(config.port))
 
-import fs from 'fs'
 import { Public } from './app/modules/public/public.model'
-
-// -------------------- Legal Documents Helpers & Routes --------------------
-const getLegalFilePath = (fileName: string) => {
-  const candidatePaths = [
-    path.join(__dirname, fileName),
-    path.join(process.cwd(), 'src', fileName),
-    path.join(process.cwd(), 'dist', fileName),
-    path.join(process.cwd(), fileName),
-  ]
-  for (const p of candidatePaths) {
-    if (fs.existsSync(p)) return p
-  }
-  return path.join(__dirname, fileName)
-}
 
 const renderLegalHtml = (
   title: string,
@@ -135,9 +120,19 @@ const renderLegalHtml = (
   const tocItems: { id: string; num: string; title: string }[] = []
 
   let bodyHtml = content
-  const hasH2 = /<h2[^>]*>/i.test(content)
+  const hasSections = /<section\s+[^>]*id=["']([^"']+)["']/i.test(content)
 
-  if (hasH2) {
+  if (hasSections) {
+    const sectionRegex = /<section\s+[^>]*id=["']([^"']+)["'][^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/gi
+    let match: RegExpExecArray | null
+    while ((match = sectionRegex.exec(content)) !== null) {
+      const id = match[1]
+      const rawTitle = match[2].replace(/<[^>]+>/g, '').trim()
+      const num = String(sectionIndex).padStart(2, '0')
+      tocItems.push({ id, num, title: rawTitle })
+      sectionIndex++
+    }
+  } else if (/<h2[^>]*>/i.test(content)) {
     bodyHtml = content.replace(
       /<h2([^>]*)>([\s\S]*?)<\/h2>/gi,
       (_match, attrs, innerText) => {
@@ -307,10 +302,38 @@ const renderLegalHtml = (
       strong { color: var(--slate-900); font-weight: 600; }
       a { color: var(--primary); text-decoration: none; font-weight: 500; }
       a:hover { text-decoration: underline; }
-      .callout-box { background: #f8fafc; border: 1px solid var(--slate-200); border-left: 4px solid var(--primary); border-radius: var(--radius-md); padding: 24px; margin-bottom: 40px; }
-      .caps-disclaimer { background: #f8fafc; border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 20px; margin: 18px 0; font-size: 0.88rem; color: var(--slate-700); line-height: 1.65; font-weight: 500; }
-      .alert-card { background: #fef2f2; border: 1px solid #fee2e2; border-radius: var(--radius-md); padding: 18px 22px; margin: 20px 0; font-size: 0.92rem; color: #991b1b; line-height: 1.6; }
-      .contact-card { background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 24px; margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+      .callout-box, .legal-callout-box { background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid var(--primary); border-radius: var(--radius-md); padding: 20px 24px; margin-bottom: 28px; }
+      .legal-hero-card { display: none; } /* Hero is already in page header */
+      .legal-section { padding-top: 36px; margin-top: 36px; border-top: 1px solid var(--slate-200); }
+      .legal-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+      .subsection-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 18px 0; }
+      .subsection-card { background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 18px 20px; }
+      .subsection-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+      .sub-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--primary); flex-shrink: 0; }
+      .subsection-card h3 { font-size: 0.98rem; font-weight: 700; color: var(--slate-900); margin: 0; }
+      .subsection-card p { font-size: 0.92rem; color: var(--slate-600); margin: 0; }
+      .legal-checklist { list-style: none; padding: 0; margin: 14px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+      .legal-checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.92rem; color: var(--slate-700); background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 8px; padding: 10px 14px; margin: 0; }
+      .legal-checklist li::before { content: '✓'; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 9999px; background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+      .legal-prohibited-list { list-style: none; padding: 0; margin: 14px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+      .legal-prohibited-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.92rem; color: var(--slate-700); background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 10px 14px; margin: 0; }
+      .legal-prohibited-list li::before { content: '✕'; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 9999px; background: #fee2e2; color: #dc2626; font-size: 11px; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+      .legal-notice-box { background: #f8fafc; border: 1px solid var(--slate-200); border-left: 4px solid #64748b; border-radius: var(--radius-md); padding: 16px 20px; margin: 16px 0; font-size: 0.92rem; color: var(--slate-700); }
+      .legal-warning-box { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: var(--radius-md); padding: 16px 20px; margin: 16px 0; font-size: 0.92rem; color: #92400e; }
+      .legal-alert-box { background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid var(--primary); border-radius: var(--radius-md); padding: 16px 20px; margin: 16px 0; font-size: 0.92rem; color: #1e40af; }
+      .legal-statement-box { background: var(--slate-900); color: var(--white); border-radius: var(--radius-md); padding: 22px 26px; margin: 18px 0; }
+      .legal-statement-box p { color: var(--slate-300); }
+      .legal-statement-box p:first-child { color: var(--white); }
+      .legal-highlight-badge { display: inline-block; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; color: #065f46; font-size: 0.92rem; margin-top: 12px; }
+      .providers-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+      .tag-item { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 6px; background: var(--slate-100); border: 1px solid var(--slate-200); color: var(--slate-700); font-size: 0.84rem; font-weight: 600; }
+      .legal-contact-card { background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: var(--radius-md); padding: 24px; margin-top: 16px; }
+      .contact-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px; }
+      .contact-header h3 { font-size: 1.15rem; font-weight: 700; color: var(--slate-900); margin: 0; }
+      .contact-badge { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 9999px; }
+      .address-line { font-size: 0.92rem; color: var(--slate-700); line-height: 1.6; margin-bottom: 12px; }
+      .email-link { color: var(--primary); font-weight: 600; text-decoration: underline; }
+      .contact-pill { display: inline-block; background: var(--slate-100); border: 1px solid var(--slate-200); border-radius: 8px; padding: 12px 18px; margin: 12px 0; font-size: 0.92rem; }
       .next-doc-card {
         margin-top: 48px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
         border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 28px;
@@ -414,24 +437,39 @@ app.get('/privacy-policy', async (req: Request, res: Response): Promise<void> =>
       return
     }
   } catch (error) {
-    // Fall back to static file
+    // Database query error
   }
-  const filePath = getLegalFilePath('privacy-policy.html')
-  res.sendFile(filePath)
+  res.send(
+    renderLegalHtml(
+      'Privacy Policy',
+      '<p>The Privacy Policy is currently being updated. Please check back shortly.</p>',
+      'privacy-policy',
+    ),
+  )
 })
 
-const handleTermsAndConditions = async (req: Request, res: Response): Promise<void> => {
+const handleTermsAndConditions = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const doc = await Public.findOne({ type: 'terms-and-condition' }).lean()
     if (doc && doc.content && doc.content.trim().length > 0) {
-      res.send(renderLegalHtml('Terms & Conditions', doc.content, 'terms-and-condition'))
+      res.send(
+        renderLegalHtml('Terms & Conditions', doc.content, 'terms-and-condition'),
+      )
       return
     }
   } catch (error) {
-    // Fall back to static file
+    // Database query error
   }
-  const filePath = getLegalFilePath('terms-and-conditions.html')
-  res.sendFile(filePath)
+  res.send(
+    renderLegalHtml(
+      'Terms & Conditions',
+      '<p>The Terms & Conditions are currently being updated. Please check back shortly.</p>',
+      'terms-and-condition',
+    ),
+  )
 }
 
 app.get('/terms-and-conditions', handleTermsAndConditions)
