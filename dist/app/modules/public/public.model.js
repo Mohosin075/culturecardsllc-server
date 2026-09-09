@@ -6,7 +6,7 @@ const publicSchema = new mongoose_1.Schema({
     content: { type: String },
     type: {
         type: String,
-        enum: ['privacy-policy', 'terms-and-condition', 'contact', 'about'],
+        enum: ['privacy-policy', 'terms-and-condition', 'contact', 'about', 'safety-disclaimer'],
     },
 }, {
     timestamps: true,

@@ -8,6 +8,7 @@ export enum USER_ROLES {
   ADMIN = 'admin',
   BUYER = 'buyer',
   SELLER = 'seller',
+  GUEST = 'guest',
 }
 
 export enum USER_STATUS {

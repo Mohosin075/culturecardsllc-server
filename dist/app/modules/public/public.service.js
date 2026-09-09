@@ -18,6 +18,12 @@ const createPublic = async (payload) => {
 };
 const getAllPublics = async (type) => {
     const result = await public_model_1.Public.findOne({ type: type }).lean();
+    if (!result && type === 'safety-disclaimer') {
+        return {
+            type: 'safety-disclaimer',
+            content: 'Welcome to CultureCards LLC! Enjoy browsing sports cards, trading cards, and live stream auctions safely. Registration and payment methods are only required when you decide to place a bid or complete a purchase. Please trade responsibly.',
+        };
+    }
     return result || null;
 };
 const deletePublic = async (id) => {

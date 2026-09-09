@@ -12,6 +12,7 @@ var USER_ROLES;
     USER_ROLES["ADMIN"] = "admin";
     USER_ROLES["BUYER"] = "buyer";
     USER_ROLES["SELLER"] = "seller";
+    USER_ROLES["GUEST"] = "guest";
 })(USER_ROLES || (exports.USER_ROLES = USER_ROLES = {}));
 var USER_STATUS;
 (function (USER_STATUS) {
