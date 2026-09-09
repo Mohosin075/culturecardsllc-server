@@ -358,21 +358,19 @@ const createAuctionItem = async (
 const placeBidSecure = async (
   auctionItemId: string,
   bidderId: string,
-  bidAmount: number,
+  bidAmount?: number,
 ): Promise<IAuctionItem> => {
   if (!Types.ObjectId.isValid(auctionItemId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID')
   }
 
-  // ── DEBUG: Fetch current state before the atomic update ──────
-  const currentState = await AuctionItem.findById(auctionItemId).select('status currentBid highestBidderId endsAt streamId')
-  console.log(`\n[BID-DEBUG] ──────────────────────────────────────`)
-  console.log(`[BID-DEBUG] auctionItemId : ${auctionItemId}`)
-  console.log(`[BID-DEBUG] bidderId      : ${bidderId}`)
-  console.log(`[BID-DEBUG] bidAmount     : ${bidAmount}`)
+  const currentState = await AuctionItem.findById(auctionItemId).select('status currentBid highestBidderId endsAt streamId bidIncrement')
   if (!currentState) {
-    console.log(`[BID-DEBUG] RESULT: ITEM NOT FOUND IN DB`)
     throw new ApiError(StatusCodes.NOT_FOUND, 'Auction Item not found.')
+  }
+
+  if (currentState.status !== 'active') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, `Auction is not active. Current status: ${currentState.status}`)
   }
 
   // Check if either user has blocked the other
@@ -390,29 +388,43 @@ const placeBidSecure = async (
     }
   }
 
-  console.log(`[BID-DEBUG] DB status     : ${currentState.status}`)
-  console.log(`[BID-DEBUG] DB currentBid : ${currentState.currentBid}`)
-  console.log(`[BID-DEBUG] DB endsAt     : ${currentState.endsAt}`)
-  const statusOk = currentState.status === 'active'
-  const bidOk = bidAmount > currentState.currentBid || currentState.currentBid === 0
-  console.log(`[BID-DEBUG] status=active?: ${statusOk}  |  bid>currentBid?: ${bidOk}`)
-  if (!statusOk) console.log(`[BID-DEBUG] ❌ FAIL REASON: status is "${currentState.status}", expected "active"`)
-  if (!bidOk) console.log(`[BID-DEBUG] ❌ FAIL REASON: bidAmount (${bidAmount}) is NOT greater than currentBid (${currentState.currentBid})`)
-  if (statusOk && bidOk) console.log(`[BID-DEBUG] ✅ Should PASS atomic update`)
-  console.log(`[BID-DEBUG] ──────────────────────────────────────\n`)
-  // ── END DEBUG ────────────────────────────────────────────────
+  // Fixed $1 Bid Increment Enforcement:
+  // If no bids placed yet (!currentState.highestBidderId):
+  //   First bid equals startingBid (if currentBid > 0) or passed bidAmount or 1.
+  // Once a highest bidder exists (currentState.highestBidderId):
+  //   Target bid MUST be exactly currentBid + 1.
+  let targetBidAmount: number
+  if (!currentState.highestBidderId) {
+    targetBidAmount = bidAmount || currentState.currentBid || 1
+    if (bidAmount && currentState.currentBid > 0 && bidAmount < currentState.currentBid) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `Bid amount cannot be lower than starting bid of $${currentState.currentBid}.`,
+      )
+    }
+  } else {
+    targetBidAmount = currentState.currentBid + 1
+    if (bidAmount && bidAmount !== targetBidAmount) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        `Fixed $1 bid increment required. Expected bid is $${targetBidAmount}.`,
+      )
+    }
+  }
 
-  // 1. Atomically find and update ONLY if the new bid is higher than the current bid
-  // This uses a concurrency-safe atomic query lock to protect against over-bidding race conditions.
+  // 1. Atomically find and update ONLY if the target bid is higher than or equal to required initial bid / higher than current bid
   const updatedAuction = await AuctionItem.findOneAndUpdate(
     {
       _id: new Types.ObjectId(auctionItemId),
       status: 'active',
-      $or: [{ currentBid: { $lt: bidAmount } }, { currentBid: 0 }],
+      $or: [
+        { currentBid: { $lt: targetBidAmount } },
+        { highestBidderId: null },
+      ],
     },
     {
       $set: {
-        currentBid: bidAmount,
+        currentBid: targetBidAmount,
         highestBidderId: new Types.ObjectId(bidderId),
       },
     },

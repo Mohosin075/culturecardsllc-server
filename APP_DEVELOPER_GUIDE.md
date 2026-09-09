@@ -390,4 +390,60 @@ Seller picks a product from inventory and instantly starts the auction on-stream
 
 **Real-Time Socket Event:** Emits `auction-item-started` to room `stream:${streamId}` so all viewers' UI updates instantly with the new active card auction.
 
+---
+
+## 6. Fixed $1 Bid Increment & Fast 1-Tap Bidding
+
+### 📌 Overview
+- **Fast 1-Tap Bidding:** Live auctions run on fast 5, 10, or 15-second timers. To eliminate delay from typing custom bid amounts, bidding is strictly enforced with a **Fixed $1 Bid Increment**.
+- **Simplified Payload:** Buyers can place a bid by sending only `{ "auctionItemId": "..." }`. The server automatically calculates `currentBid + $1` (or starting price for first bid).
+
+---
+
+### 📡 Endpoint 6.1: Place Fast $1 Increment Bid (1-Tap Bid)
+- **Method:** `POST`
+- **URL:** `/api/v1/auctions/bid`
+- **Headers:** `Authorization: Bearer <BUYER_JWT>`
+- **Body Example (1-Tap Bid - No bidAmount required):**
+```json
+{
+  "auctionItemId": "65ee99887766554433229999"
+}
+```
+
+- **Body Example (Optional explicit bidAmount - MUST equal currentBid + 1):**
+```json
+{
+  "auctionItemId": "65ee99887766554433229999",
+  "bidAmount": 51
+}
+```
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Bid placed successfully.",
+  "data": {
+    "_id": "65ee99887766554433229999",
+    "currentBid": 51,
+    "highestBidderId": "65ab1234c567890011223344",
+    "endsAt": "2026-09-09T10:45:15.000Z"
+  }
+}
+```
+
+#### 🔴 Error Example (If invalid bid amount sent):
+```json
+{
+  "statusCode": 400,
+  "success": false,
+  "message": "Fixed $1 bid increment required. Expected bid is $51."
+}
+```
+
+**Real-Time Socket Event:** Emits `new-bid` to room `stream:${streamId}` with updated `currentBid`, `highestBidder`, and `endsAt`.
+
+
 

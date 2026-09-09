@@ -55,8 +55,9 @@ const placeBidSchema = z.object({
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Auction Item ID format'),
     // bidderId is injected from req.user in the controller — not accepted from body
     bidAmount: z
-      .number({ required_error: 'Bid amount is required' })
-      .positive('Bid amount must be greater than zero'),
+      .number()
+      .positive('Bid amount must be greater than zero')
+      .optional(),
   }),
 })
 

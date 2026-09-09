@@ -129,7 +129,7 @@ const AuctionItemSchema = new Schema<IAuctionItem>(
     },
     bidIncrement: {
       type: Number,
-      default: 5,
+      default: 1,
       min: 1,
     },
     timerDuration: {

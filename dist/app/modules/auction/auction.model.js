@@ -124,7 +124,7 @@ const AuctionItemSchema = new mongoose_1.Schema({
     },
     bidIncrement: {
         type: Number,
-        default: 5,
+        default: 1,
         min: 1,
     },
     timerDuration: {
