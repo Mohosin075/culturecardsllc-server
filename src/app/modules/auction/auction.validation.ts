@@ -68,9 +68,45 @@ const updateLiveStreamStatusSchema = z.object({
   }),
 })
 
+const updateStreamInventorySchema = z.object({
+  params: z.object({
+    streamId: z
+      .string({ required_error: 'Stream ID is required' })
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Stream ID format'),
+  }),
+  body: z.object({
+    inventoryIds: z.array(
+      z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),
+      { required_error: 'inventoryIds array is required' },
+    ),
+  }),
+})
+
+const quickStartAuctionSchema = z.object({
+  body: z.object({
+    streamId: z
+      .string({ required_error: 'Stream ID is required' })
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Stream ID format'),
+    productId: z
+      .string({ required_error: 'Product ID is required' })
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),
+    startingBid: z.number().nonnegative().optional(),
+    bidIncrement: z
+      .number()
+      .positive('Bid increment must be greater than zero')
+      .optional(),
+    timerDuration: z
+      .number()
+      .min(5, 'Timer must be at least 5 seconds')
+      .optional(),
+  }),
+})
+
 export const AuctionValidations = {
   createLiveStreamSchema,
   toggleBookmarkSchema,
+  updateStreamInventorySchema,
+  quickStartAuctionSchema,
   createAuctionItemSchema,
   placeBidSchema,
   updateLiveStreamStatusSchema,

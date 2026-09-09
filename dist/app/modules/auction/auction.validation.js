@@ -65,9 +65,40 @@ const updateLiveStreamStatusSchema = zod_1.z.object({
         }),
     }),
 });
+const updateStreamInventorySchema = zod_1.z.object({
+    params: zod_1.z.object({
+        streamId: zod_1.z
+            .string({ required_error: 'Stream ID is required' })
+            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Stream ID format'),
+    }),
+    body: zod_1.z.object({
+        inventoryIds: zod_1.z.array(zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'), { required_error: 'inventoryIds array is required' }),
+    }),
+});
+const quickStartAuctionSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        streamId: zod_1.z
+            .string({ required_error: 'Stream ID is required' })
+            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Stream ID format'),
+        productId: zod_1.z
+            .string({ required_error: 'Product ID is required' })
+            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),
+        startingBid: zod_1.z.number().nonnegative().optional(),
+        bidIncrement: zod_1.z
+            .number()
+            .positive('Bid increment must be greater than zero')
+            .optional(),
+        timerDuration: zod_1.z
+            .number()
+            .min(5, 'Timer must be at least 5 seconds')
+            .optional(),
+    }),
+});
 exports.AuctionValidations = {
     createLiveStreamSchema,
     toggleBookmarkSchema,
+    updateStreamInventorySchema,
+    quickStartAuctionSchema,
     createAuctionItemSchema,
     placeBidSchema,
     updateLiveStreamStatusSchema,

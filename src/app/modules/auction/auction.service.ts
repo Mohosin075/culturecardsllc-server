@@ -197,6 +197,101 @@ const getSavedShows = async (userId: string) => {
   return result
 }
 
+const updateStreamInventory = async (
+  streamId: string,
+  sellerId: string,
+  inventoryIds: string[],
+): Promise<ILiveStream> => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+
+  if (stream.sellerId.toString() !== sellerId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Unauthorized: Only the stream host can update the inventory.',
+    )
+  }
+
+  // Validate product IDs exist
+  const products = await Product.find({ _id: { $in: inventoryIds } })
+  if (products.length !== inventoryIds.length) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'One or more invalid Product IDs provided.')
+  }
+
+  stream.inventoryIds = inventoryIds.map(id => new Types.ObjectId(id)) as any
+  await stream.save()
+
+  return (await LiveStream.findById(streamId).populate('inventoryIds')) as ILiveStream
+}
+
+const getStreamInventory = async (streamId: string) => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+
+  const stream = await LiveStream.findById(streamId).populate('inventoryIds')
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+
+  return stream.inventoryIds || []
+}
+
+const quickStartAuctionItem = async (
+  payload: {
+    streamId: string
+    productId: string
+    startingBid?: number
+    timerDuration?: number
+    bidIncrement?: number
+  },
+  sellerId: string,
+): Promise<IAuctionItem> => {
+  const { streamId, productId, startingBid, timerDuration, bidIncrement } = payload
+
+  if (!Types.ObjectId.isValid(streamId) || !Types.ObjectId.isValid(productId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID or Product ID')
+  }
+
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+
+  if (stream.sellerId.toString() !== sellerId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Unauthorized: Only the stream host can launch active auctions.',
+    )
+  }
+
+  const product = await Product.findById(productId)
+  if (!product) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
+  }
+
+  if (product.status === 'sold') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'This product has already been sold.')
+  }
+
+  // Create auction item via createAuctionItem helper
+  const auctionItem = await createAuctionItem({
+    streamId: new Types.ObjectId(streamId) as any,
+    productId: new Types.ObjectId(productId) as any,
+    startingBid: startingBid ?? (product.startingBid || product.buyNowPrice || product.estValue || 0),
+    timerDuration: timerDuration || 60,
+    bidIncrement: bidIncrement || 1,
+  })
+
+  return auctionItem
+}
+
 const getLiveStreams = async (status?: string, requestingUserId?: string): Promise<ILiveStream[]> => {
   const query: any = {}
   if (status) query.status = status
@@ -719,6 +814,9 @@ export const AuctionServices = {
   startScheduledStream,
   toggleBookmarkShow,
   getSavedShows,
+  updateStreamInventory,
+  getStreamInventory,
+  quickStartAuctionItem,
   getLiveStreams,
   createAuctionItem,
   getAuctionItemsByStream,

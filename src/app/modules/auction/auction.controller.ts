@@ -185,6 +185,49 @@ const getSavedShows = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const updateStreamInventory = catchAsync(async (req: Request, res: Response) => {
+  const { streamId } = req.params
+  const { inventoryIds } = req.body
+  const user = req.user as JwtPayload
+
+  const result = await AuctionServices.updateStreamInventory(
+    streamId,
+    user.userId,
+    inventoryIds,
+  )
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Stream inventory updated successfully.',
+    data: result,
+  })
+})
+
+const getStreamInventory = catchAsync(async (req: Request, res: Response) => {
+  const { streamId } = req.params
+  const result = await AuctionServices.getStreamInventory(streamId)
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Stream inventory products retrieved successfully.',
+    data: result,
+  })
+})
+
+const quickStartAuctionItem = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const result = await AuctionServices.quickStartAuctionItem(req.body, user.userId)
+
+  sendResponse(res, {
+    statusCode: StatusCodes.CREATED,
+    success: true,
+    message: 'Active auction launched successfully.',
+    data: result,
+  })
+})
+
 const completeAuction = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
   const { id } = req.params
@@ -203,6 +246,9 @@ export const AuctionControllers = {
   startScheduledStream,
   toggleBookmarkShow,
   getSavedShows,
+  updateStreamInventory,
+  getStreamInventory,
+  quickStartAuctionItem,
   getLiveStreams,
   createAuctionItem,
   getAuctionItemsByStream,

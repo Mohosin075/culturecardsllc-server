@@ -278,3 +278,116 @@ Seller starts a previously scheduled stream when showtime arrives.
 }
 ```
 
+---
+
+## 5. Live Show Inventory Integration & Quick-Start Auction
+
+### 📌 Overview
+- **Include Inventory:** Sellers select products from their marketplace listings before or during a live stream.
+- **On-Screen Inventory List:** Viewers and hosts can view the pre-linked card inventory of the stream.
+- **1-Click Quick-Start Auction:** Host picks any card from the show inventory and launches an active auction in 1 click without re-entering product information.
+
+---
+
+### 📡 Endpoint 5.1: Attach / Update Live Stream Inventory
+- **Method:** `PATCH`
+- **URL:** `/api/v1/auctions/stream/:streamId/inventory`
+- **Headers:** `Authorization: Bearer <SELLER_JWT>`
+- **Body:**
+```json
+{
+  "inventoryIds": [
+    "65ab1234c567890011223344",
+    "65ab1234c567890011223345"
+  ]
+}
+```
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Stream inventory updated successfully.",
+  "data": {
+    "_id": "65dd99887766554433221122",
+    "title": "Sunday Pokemon & Sports Break",
+    "inventoryIds": [
+      {
+        "_id": "65ab1234c567890011223344",
+        "title": "1999 Charizard Holo PSA 10",
+        "startingBid": 100,
+        "images": ["https://s3.amazonaws.com/culturecards/card1.jpg"]
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 📡 Endpoint 5.2: Get Stream Inventory Products
+- **Method:** `GET`
+- **URL:** `/api/v1/auctions/stream/:streamId/inventory`
+- **Headers:** None (Public)
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Stream inventory products retrieved successfully.",
+  "data": [
+    {
+      "_id": "65ab1234c567890011223344",
+      "title": "1999 Charizard Holo PSA 10",
+      "condition": "Mint",
+      "estValue": 500,
+      "startingBid": 100,
+      "images": ["https://s3.amazonaws.com/culturecards/card1.jpg"]
+    }
+  ]
+}
+```
+
+---
+
+### 📡 Endpoint 5.3: 1-Click Quick-Start Active Auction
+Seller picks a product from inventory and instantly starts the auction on-stream.
+
+- **Method:** `POST`
+- **URL:** `/api/v1/auctions/item/quick-start`
+- **Headers:** `Authorization: Bearer <SELLER_JWT>`
+- **Body:**
+```json
+{
+  "streamId": "65dd99887766554433221122",
+  "productId": "65ab1234c567890011223344",
+  "startingBid": 50,
+  "timerDuration": 60,
+  "bidIncrement": 1
+}
+```
+
+#### 🟢 Response Example (201 Created):
+```json
+{
+  "statusCode": 201,
+  "success": true,
+  "message": "Active auction launched successfully.",
+  "data": {
+    "_id": "65ee99887766554433229999",
+    "streamId": "65dd99887766554433221122",
+    "productId": "65ab1234c567890011223344",
+    "currentBid": 50,
+    "bidIncrement": 1,
+    "timerDuration": 60,
+    "status": "active",
+    "endsAt": "2026-09-09T10:45:00.000Z"
+  }
+}
+```
+
+**Real-Time Socket Event:** Emits `auction-item-started` to room `stream:${streamId}` so all viewers' UI updates instantly with the new active card auction.
+
+

@@ -47,12 +47,34 @@ router.get(
 // GET /streams — List all live streams (public)
 router.get('/streams', AuctionControllers.getLiveStreams)
 
+// PATCH /stream/:streamId/inventory — Update inventory products attached to a live stream (seller only)
+router.patch(
+  '/stream/:streamId/inventory',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  validateRequest(AuctionValidations.updateStreamInventorySchema),
+  AuctionControllers.updateStreamInventory,
+)
+
+// GET /stream/:streamId/inventory — Get inventory products attached to a live stream (public/auth)
+router.get(
+  '/stream/:streamId/inventory',
+  AuctionControllers.getStreamInventory,
+)
+
 // POST /item — Register a product as an auction item (seller only)
 router.post(
   '/item',
   auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validateRequest(AuctionValidations.createAuctionItemSchema),
   AuctionControllers.createAuctionItem,
+)
+
+// POST /item/quick-start — 1-Click quick launch active auction from stream inventory (seller only)
+router.post(
+  '/item/quick-start',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  validateRequest(AuctionValidations.quickStartAuctionSchema),
+  AuctionControllers.quickStartAuctionItem,
 )
 
 // POST /bid — Place a bid on an auction item (authenticated users)

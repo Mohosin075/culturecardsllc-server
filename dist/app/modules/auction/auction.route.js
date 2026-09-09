@@ -23,8 +23,14 @@ router.post('/stream/:streamId/bookmark', (0, auth_1.default)(user_1.USER_ROLES.
 router.get('/saved-shows', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.getSavedShows);
 // GET /streams — List all live streams (public)
 router.get('/streams', auction_controller_1.AuctionControllers.getLiveStreams);
+// PATCH /stream/:streamId/inventory — Update inventory products attached to a live stream (seller only)
+router.patch('/stream/:streamId/inventory', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.updateStreamInventorySchema), auction_controller_1.AuctionControllers.updateStreamInventory);
+// GET /stream/:streamId/inventory — Get inventory products attached to a live stream (public/auth)
+router.get('/stream/:streamId/inventory', auction_controller_1.AuctionControllers.getStreamInventory);
 // POST /item — Register a product as an auction item (seller only)
 router.post('/item', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.createAuctionItemSchema), auction_controller_1.AuctionControllers.createAuctionItem);
+// POST /item/quick-start — 1-Click quick launch active auction from stream inventory (seller only)
+router.post('/item/quick-start', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.quickStartAuctionSchema), auction_controller_1.AuctionControllers.quickStartAuctionItem);
 // POST /bid — Place a bid on an auction item (authenticated users)
 router.post('/bid', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.placeBidSchema), auction_controller_1.AuctionControllers.placeBidSecure);
 // GET /stream/:streamId/items — Get auction items for a stream (authenticated users)

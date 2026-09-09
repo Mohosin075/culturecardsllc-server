@@ -130,6 +130,65 @@ const getSavedShows = async (userId) => {
         .map(doc => doc.streamId);
     return result;
 };
+const updateStreamInventory = async (streamId, sellerId, inventoryIds) => {
+    if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID');
+    }
+    const stream = await auction_model_1.LiveStream.findById(streamId);
+    if (!stream) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Live stream session not found');
+    }
+    if (stream.sellerId.toString() !== sellerId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host can update the inventory.');
+    }
+    // Validate product IDs exist
+    const products = await product_model_1.Product.find({ _id: { $in: inventoryIds } });
+    if (products.length !== inventoryIds.length) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'One or more invalid Product IDs provided.');
+    }
+    stream.inventoryIds = inventoryIds.map(id => new mongoose_1.Types.ObjectId(id));
+    await stream.save();
+    return (await auction_model_1.LiveStream.findById(streamId).populate('inventoryIds'));
+};
+const getStreamInventory = async (streamId) => {
+    if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID');
+    }
+    const stream = await auction_model_1.LiveStream.findById(streamId).populate('inventoryIds');
+    if (!stream) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Live stream session not found');
+    }
+    return stream.inventoryIds || [];
+};
+const quickStartAuctionItem = async (payload, sellerId) => {
+    const { streamId, productId, startingBid, timerDuration, bidIncrement } = payload;
+    if (!mongoose_1.Types.ObjectId.isValid(streamId) || !mongoose_1.Types.ObjectId.isValid(productId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID or Product ID');
+    }
+    const stream = await auction_model_1.LiveStream.findById(streamId);
+    if (!stream) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Live stream session not found');
+    }
+    if (stream.sellerId.toString() !== sellerId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host can launch active auctions.');
+    }
+    const product = await product_model_1.Product.findById(productId);
+    if (!product) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
+    }
+    if (product.status === 'sold') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This product has already been sold.');
+    }
+    // Create auction item via createAuctionItem helper
+    const auctionItem = await createAuctionItem({
+        streamId: new mongoose_1.Types.ObjectId(streamId),
+        productId: new mongoose_1.Types.ObjectId(productId),
+        startingBid: startingBid !== null && startingBid !== void 0 ? startingBid : (product.startingBid || product.buyNowPrice || product.estValue || 0),
+        timerDuration: timerDuration || 60,
+        bidIncrement: bidIncrement || 1,
+    });
+    return auctionItem;
+};
 const getLiveStreams = async (status, requestingUserId) => {
     const query = {};
     if (status)
@@ -546,6 +605,9 @@ exports.AuctionServices = {
     startScheduledStream,
     toggleBookmarkShow,
     getSavedShows,
+    updateStreamInventory,
+    getStreamInventory,
+    quickStartAuctionItem,
     getLiveStreams,
     createAuctionItem,
     getAuctionItemsByStream,

@@ -150,6 +150,38 @@ const getSavedShows = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const updateStreamInventory = (0, catchAsync_1.default)(async (req, res) => {
+    const { streamId } = req.params;
+    const { inventoryIds } = req.body;
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.updateStreamInventory(streamId, user.userId, inventoryIds);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Stream inventory updated successfully.',
+        data: result,
+    });
+});
+const getStreamInventory = (0, catchAsync_1.default)(async (req, res) => {
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.getStreamInventory(streamId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Stream inventory products retrieved successfully.',
+        data: result,
+    });
+});
+const quickStartAuctionItem = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.quickStartAuctionItem(req.body, user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.CREATED,
+        success: true,
+        message: 'Active auction launched successfully.',
+        data: result,
+    });
+});
 const completeAuction = (0, catchAsync_1.default)(async (req, res) => {
     const user = req.user;
     const { id } = req.params;
@@ -167,6 +199,9 @@ exports.AuctionControllers = {
     startScheduledStream,
     toggleBookmarkShow,
     getSavedShows,
+    updateStreamInventory,
+    getStreamInventory,
+    quickStartAuctionItem,
     getLiveStreams,
     createAuctionItem,
     getAuctionItemsByStream,
