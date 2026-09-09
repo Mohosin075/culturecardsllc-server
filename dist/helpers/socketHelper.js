@@ -8,6 +8,7 @@ const colors_1 = __importDefault(require("colors"));
 const user_model_1 = require("../app/modules/user/user.model");
 const auction_model_1 = require("../app/modules/auction/auction.model");
 const auction_service_1 = require("../app/modules/auction/auction.service");
+const giveaway_service_1 = require("../app/modules/giveaway/giveaway.service");
 // Weighted drop rates for the Seller's Spin Wheel:
 // Common: 65%, Rare: 25%, Epic: 9%, Legendary: 1%
 const SPIN_WHEEL_PRIZES = [
@@ -193,17 +194,30 @@ const socket = (io) => {
                     });
                     return;
                 }
-                // Calculate weighted prize selection on secure backend
+                // Calculate weighted prize selection & draw real participant winner
                 const outcome = pickWeightedPrize();
-                // Broadcast animation degree and outcome to room
+                let winner = null;
+                try {
+                    winner = await giveaway_service_1.GiveawayService.drawLiveWinner(streamId);
+                }
+                catch (e) {
+                    // Pool empty fallback
+                }
+                // Broadcast animation degree, outcome, and winner to room
                 io.to(`stream:${streamId}`).emit('spin-result', {
                     streamId,
                     prizeName: outcome.name,
                     rarity: outcome.rarity,
                     degreeIndex: outcome.degreeIndex,
+                    winner: winner
+                        ? {
+                            id: winner.userId,
+                            name: winner.name,
+                        }
+                        : null,
                     timestamp: new Date(),
                 });
-                console.log(colors_1.default.magenta(`Spin Wheel triggered. Prize: ${outcome.name} (${outcome.rarity})`));
+                console.log(colors_1.default.magenta(`Spin Wheel triggered. Prize: ${outcome.name}. Winner: ${winner ? winner.name : 'No active participant'}`));
             }
             catch (err) {
                 socket.emit('spin-error', {

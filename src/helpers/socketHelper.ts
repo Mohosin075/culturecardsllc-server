@@ -3,6 +3,7 @@ import { Server, Socket } from 'socket.io'
 import { User } from '../app/modules/user/user.model'
 import { LiveStream } from '../app/modules/auction/auction.model'
 import { AuctionServices } from '../app/modules/auction/auction.service'
+import { GiveawayService } from '../app/modules/giveaway/giveaway.service'
 
 // Weighted drop rates for the Seller's Spin Wheel:
 // Common: 65%, Rare: 25%, Epic: 9%, Legendary: 1%
@@ -270,21 +271,35 @@ const socket = (io: Server) => {
             return
           }
 
-          // Calculate weighted prize selection on secure backend
+          // Calculate weighted prize selection & draw real participant winner
           const outcome = pickWeightedPrize()
+          let winner: any = null
+          try {
+            winner = await GiveawayService.drawLiveWinner(streamId)
+          } catch (e) {
+            // Pool empty fallback
+          }
 
-          // Broadcast animation degree and outcome to room
+          // Broadcast animation degree, outcome, and winner to room
           io.to(`stream:${streamId}`).emit('spin-result', {
             streamId,
             prizeName: outcome.name,
             rarity: outcome.rarity,
             degreeIndex: outcome.degreeIndex,
+            winner: winner
+              ? {
+                  id: winner.userId,
+                  name: winner.name,
+                }
+              : null,
             timestamp: new Date(),
           })
 
           console.log(
             colors.magenta(
-              `Spin Wheel triggered. Prize: ${outcome.name} (${outcome.rarity})`,
+              `Spin Wheel triggered. Prize: ${outcome.name}. Winner: ${
+                winner ? winner.name : 'No active participant'
+              }`,
             ),
           )
         } catch (err: any) {

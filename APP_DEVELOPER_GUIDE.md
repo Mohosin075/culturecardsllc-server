@@ -55,3 +55,67 @@ When a user without a valid JWT token calls protected endpoints (e.g., `POST /au
 ```
 
 **Flutter App Action:** Catch HTTP 401 status and trigger the **"Sign Up / Log In to continue"** modal.
+
+---
+
+## 2. Giveaway / Spin-Wheel Winner System (Anti-Gambling Compliance)
+
+### 📌 Overview
+- **Automatic Enrollment:** Every newly registered user is automatically enrolled in the active Giveaway pool (14 days duration) upon signup.
+- **No Purchase Necessary:** Ensures compliance with US anti-gambling laws.
+- **Real Winner Selection:** When a live stream host triggers the Spin Wheel via Socket, the backend selects a real active participant from the pool and broadcasts the winner to all viewers in the stream room.
+
+---
+
+### 📡 Endpoint 2.1: Draw Live Giveaway Winner
+Call this API or trigger via Socket (`trigger-spin`) during a live stream session.
+
+- **Method:** `POST`
+- **URL:** `/api/v1/giveaway/draw-winner`
+- **Headers:** `Authorization: Bearer <SELLER_OR_ADMIN_JWT>`
+- **Body:**
+```json
+{
+  "streamId": "65ab1234c567890011223344"
+}
+```
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Giveaway winner drawn successfully: John Doe",
+  "data": {
+    "_id": "65cb99887766554433221100",
+    "userId": "65ab1234c567890011223344",
+    "name": "John Doe",
+    "status": "won",
+    "wonAt": "2026-09-09T10:15:00.000Z"
+  }
+}
+```
+
+---
+
+### 🔌 Socket Event: `trigger-spin` & `spin-result`
+- **Emit Event:** `trigger-spin`
+  - Payload: `{ "streamId": "<STREAM_ID>", "sellerId": "<SELLER_USER_ID>" }`
+- **Listen Event:** `spin-result`
+  - Broadcast Payload:
+```json
+{
+  "streamId": "65ab1234c567890011223344",
+  "prizeName": "Rare Card Sleeves",
+  "rarity": "Epic",
+  "degreeIndex": 215,
+  "winner": {
+    "id": "65ab1234c567890011223344",
+    "name": "John Doe"
+  },
+  "timestamp": "2026-09-09T10:15:00.000Z"
+}
+```
+
+**Flutter App Action:** Play wheel spin animation mapping `degreeIndex`, then present the Overlay: **"🎉 Winner: John Doe won the Giveaway!"**.
+

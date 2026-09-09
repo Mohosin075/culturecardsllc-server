@@ -50,6 +50,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const common_1 = require("../common");
 const jwtHelper_1 = require("../../../../helpers/jwtHelper");
 const emailHelper_1 = require("../../../../helpers/emailHelper");
+const giveaway_service_1 = require("../../giveaway/giveaway.service");
 // ProfessionalProfile removed
 // import { emailQueue } from '../../../../helpers/bull-mq-producer'
 const createUser = async (payload) => {
@@ -101,6 +102,8 @@ const createUser = async (payload) => {
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create user.');
     }
+    // Auto-enroll newly registered user into active Giveaway pool (non-blocking)
+    giveaway_service_1.GiveawayService.autoEnrollUser(user._id.toString(), user.name || 'User', user.email || payload.email || '').catch(err => console.error('Giveaway auto-enrollment error:', err));
     return {
         success: true,
         message: 'Registration successful and OTP sent to your email',
@@ -312,6 +315,8 @@ const socialLogin = async (appId, deviceToken) => {
         });
         if (!createdUser)
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create user.');
+        // Auto-enroll new social login users into giveaway pool (non-blocking)
+        giveaway_service_1.GiveawayService.autoEnrollUser(createdUser._id.toString(), createdUser.name || 'User', createdUser.email || '').catch(() => { });
         const tokens = auth_helper_1.AuthHelper.createToken(createdUser._id, createdUser.roles[0], createdUser.activeRole, createdUser.name, createdUser.email);
         return (0, common_1.authResponse)(http_status_codes_1.StatusCodes.OK, `Welcome ${createdUser.name || ''} to our platform.`, createdUser.activeRole, tokens.accessToken, tokens.refreshToken);
     }

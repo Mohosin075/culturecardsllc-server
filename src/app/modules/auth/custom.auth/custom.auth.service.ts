@@ -15,6 +15,7 @@ import { jwtHelper } from '../../../../helpers/jwtHelper'
 import { JwtPayload } from 'jsonwebtoken'
 import { IUser } from '../../user/user.interface'
 import { emailHelper } from '../../../../helpers/emailHelper'
+import { GiveawayService } from '../../giveaway/giveaway.service'
 // ProfessionalProfile removed
 // import { emailQueue } from '../../../../helpers/bull-mq-producer'
 
@@ -80,6 +81,13 @@ const createUser = async (payload: IUser) => {
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user.')
   }
+
+  // Auto-enroll newly registered user into active Giveaway pool (non-blocking)
+  GiveawayService.autoEnrollUser(
+    user._id.toString(),
+    user.name || 'User',
+    user.email || payload.email || '',
+  ).catch(err => console.error('Giveaway auto-enrollment error:', err))
 
   return {
     success: true,
@@ -445,6 +453,14 @@ const socialLogin = async (
     })
     if (!createdUser)
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user.')
+
+    // Auto-enroll new social login users into giveaway pool (non-blocking)
+    GiveawayService.autoEnrollUser(
+      createdUser._id.toString(),
+      createdUser.name || 'User',
+      createdUser.email || '',
+    ).catch(() => {})
+
     const tokens = AuthHelper.createToken(
       createdUser._id,
       createdUser.roles[0],
