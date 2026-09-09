@@ -14,6 +14,7 @@ import { logger, errorLogger } from './shared/logger'
 import { startTradeExpiryCron } from './task/tradeExpiryCron'
 import { startOrderAutoDeliverCron } from './task/orderAutoDeliverCron'
 import { initShowReminderScheduler } from './helpers/showReminderScheduler'
+import { startDataRetentionCron } from './task/dataRetentionCron'
 
 // Uncaught exceptions
 process.on('uncaughtException', error => {
@@ -119,6 +120,7 @@ async function main() {
     startTradeExpiryCron()
     startOrderAutoDeliverCron()
     initShowReminderScheduler()
+    startDataRetentionCron()
 
     logger.info(colors.green('🍁 Socket.IO initialized successfully'))
   } catch (error) {

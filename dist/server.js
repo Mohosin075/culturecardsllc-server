@@ -19,6 +19,7 @@ const logger_1 = require("./shared/logger");
 const tradeExpiryCron_1 = require("./task/tradeExpiryCron");
 const orderAutoDeliverCron_1 = require("./task/orderAutoDeliverCron");
 const showReminderScheduler_1 = require("./helpers/showReminderScheduler");
+const dataRetentionCron_1 = require("./task/dataRetentionCron");
 // Uncaught exceptions
 process.on('uncaughtException', error => {
     logger_1.errorLogger.error('🔥 UncaughtException Detected:', error);
@@ -85,6 +86,7 @@ async function main() {
         (0, tradeExpiryCron_1.startTradeExpiryCron)();
         (0, orderAutoDeliverCron_1.startOrderAutoDeliverCron)();
         (0, showReminderScheduler_1.initShowReminderScheduler)();
+        (0, dataRetentionCron_1.startDataRetentionCron)();
         logger_1.logger.info(colors_1.default.green('🍁 Socket.IO initialized successfully'));
     }
     catch (error) {

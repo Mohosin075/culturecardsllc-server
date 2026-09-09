@@ -84,7 +84,7 @@ export const renderLegalHtml = (
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${title} - AREIS</title>
+    <title>${title} - CultureCards LLC</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -284,9 +284,9 @@ export const renderLegalHtml = (
     <header class="top-navbar">
       <div class="navbar-inner">
         <a href="/" class="brand-group">
-          <div class="brand-badge">A</div>
+          <div class="brand-badge">C</div>
           <div class="brand-text">
-            <span class="brand-title">AREIS</span>
+            <span class="brand-title">CultureCards LLC</span>
             <span class="brand-subtitle">Legal Center</span>
           </div>
         </a>
@@ -310,11 +310,11 @@ export const renderLegalHtml = (
         <div class="hero-meta">
           <div class="meta-item">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            <span>Last Updated: September 6, 2026</span>
+            <span>Last Updated: September 9, 2026</span>
           </div>
           <div class="meta-item">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            <span>AREIS LLC • Florida, USA</span>
+            <span>CultureCards LLC • Florida, USA</span>
           </div>
         </div>
       </div>
@@ -335,7 +335,7 @@ export const renderLegalHtml = (
     </div>
 
     <footer class="footer-bar">
-      <p>&copy; 2026 AREIS LLC. All rights reserved. | <a href="/terms-and-conditions">Terms & Conditions</a> | <a href="/privacy-policy">Privacy Policy</a></p>
+      <p>&copy; 2026 CultureCards LLC. All rights reserved. | <a href="/terms-and-conditions">Terms & Conditions</a> | <a href="/privacy-policy">Privacy Policy</a></p>
     </footer>
 
     <script>

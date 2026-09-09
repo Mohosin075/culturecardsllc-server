@@ -445,5 +445,46 @@ Seller picks a product from inventory and instantly starts the auction on-stream
 
 **Real-Time Socket Event:** Emits `new-bid` to room `stream:${streamId}` with updated `currentBid`, `highestBidder`, and `endsAt`.
 
+---
+
+## 7. Admin, Compliance & Data Retention Policy
+
+### 📌 Overview
+- **Legal Webview Endpoints:** App developers can render live webviews or fetch legal content for Privacy Policy and Terms & Conditions.
+- **Data Retention & Auto-Delete Policy:** Enforces US CCPA/CPRA compliance.
+  - Notifications older than **90 days** are purged automatically.
+  - Expired OTP and session tokens are deleted automatically.
+  - Deleted user accounts PII (`status === "deleted"`) is anonymized / purged after **30 days** of deletion.
+
+---
+
+### 📡 Endpoint 7.1: Public Legal Document Webviews (HTML)
+Mobile apps can load these URLs inside a Webview widget:
+
+- **Privacy Policy URL:** `GET /privacy-policy`
+- **Terms & Conditions URL:** `GET /terms-and-conditions`
+
+---
+
+### 📡 Endpoint 7.2: Public Legal Document API (JSON Data)
+If building native UI screens instead of Webviews:
+
+- **Privacy Policy:** `GET /api/v1/public/privacy-policy`
+- **Terms & Conditions:** `GET /api/v1/public/terms-and-condition`
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "privacy-policy retrieved successfully",
+  "data": {
+    "type": "privacy-policy",
+    "content": "<div class=\"legal-document\">...</div>"
+  }
+}
+```
+
+
 
 

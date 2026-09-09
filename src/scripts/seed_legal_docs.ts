@@ -5,16 +5,16 @@ import { Public } from '../app/modules/public/public.model'
 export const privacyPolicyHtml = `<div class="legal-document">
   <div class="doc-header">
     <h1>Privacy Policy</h1>
-    <p class="last-updated">Last Updated: September 6, 2026</p>
-    <p class="lead">AREIS LLC (“AREIS,” “we,” “us,” or “our”) respects your privacy.</p>
+    <p class="last-updated">Last Updated: September 9, 2026</p>
+    <p class="lead">CultureCards LLC (“CultureCards,” “we,” “us,” or “our”) respects your privacy.</p>
     <div class="summary-box">
-      <p>This Privacy Policy explains how AREIS LLC collects, uses, protects, and discloses information when you use our mobile application, website, livestreaming services, marketplace, buying and selling features, and related services.</p>
+      <p>This Privacy Policy explains how CultureCards LLC collects, uses, protects, and discloses information when you use our mobile application, website, livestreaming services, marketplace, buying and selling features, and related services.</p>
     </div>
   </div>
 
   <section id="section-1" class="legal-section">
     <h2>1. Information We Collect</h2>
-    <p>Depending on how you use AREIS, we may collect:</p>
+    <p>Depending on how you use CultureCards, we may collect:</p>
     
     <h3>Account Information</h3>
     <p>Name, username, email address, phone number, date of birth, profile information, and authentication information.</p>
