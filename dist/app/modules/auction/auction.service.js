@@ -141,10 +141,16 @@ const updateStreamInventory = async (streamId, sellerId, inventoryIds) => {
     if (stream.sellerId.toString() !== sellerId) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host can update the inventory.');
     }
-    // Validate product IDs exist
+    // Validate product IDs exist and are available (not sold/pending)
     const products = await product_model_1.Product.find({ _id: { $in: inventoryIds } });
     if (products.length !== inventoryIds.length) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'One or more invalid Product IDs provided.');
+    }
+    // Block sold or pending products from being listed in inventory
+    const unavailableProducts = products.filter(p => p.status === 'sold' || p.status === 'pending');
+    if (unavailableProducts.length > 0) {
+        const titles = unavailableProducts.map(p => p.title).join(', ');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `The following products are unavailable (sold or pending): ${titles}`);
     }
     stream.inventoryIds = inventoryIds.map(id => new mongoose_1.Types.ObjectId(id));
     await stream.save();
@@ -180,12 +186,13 @@ const quickStartAuctionItem = async (payload, sellerId) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This product has already been sold.');
     }
     // Create auction item via createAuctionItem helper
+    // bidIncrement is always forced to 1 (Fixed $1 Bid Increment Policy — never allow client override)
     const auctionItem = await createAuctionItem({
         streamId: new mongoose_1.Types.ObjectId(streamId),
         productId: new mongoose_1.Types.ObjectId(productId),
         startingBid: startingBid !== null && startingBid !== void 0 ? startingBid : (product.startingBid || product.buyNowPrice || product.estValue || 0),
         timerDuration: timerDuration || 60,
-        bidIncrement: bidIncrement || 1,
+        bidIncrement: 1,
     });
     return auctionItem;
 };

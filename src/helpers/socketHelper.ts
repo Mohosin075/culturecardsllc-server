@@ -150,13 +150,23 @@ const socket = (io: Server) => {
         streamId: string
         auctionItemId: string
         bidAmount: number
-        bidderId: string
       }) => {
-        const { streamId, auctionItemId, bidAmount, bidderId } = data
+        const { streamId, auctionItemId, bidAmount } = data
+
+        // Security: ALWAYS use the authenticated socket userId — never trust client-provided bidderId
+        const authenticatedBidderId = (socket as any).userId
+
         try {
-          if (!auctionItemId || !bidAmount || !bidderId) {
+          if (!auctionItemId || !bidAmount) {
             socket.emit('bid-error', {
               message: 'Missing required bid parameters.',
+            })
+            return
+          }
+
+          if (!authenticatedBidderId) {
+            socket.emit('bid-error', {
+              message: 'Unauthorized: Please join the notification room first (join-notification).',
             })
             return
           }
@@ -164,12 +174,12 @@ const socket = (io: Server) => {
           // Call the secure service that uses Mongoose lock validators and anti-sniping timers
           const updatedAuction = await AuctionServices.placeBidSecure(
             auctionItemId,
-            bidderId,
+            authenticatedBidderId,
             bidAmount,
           )
 
           // Fetch bidder profile for display name in feed
-          const bidderInfo = await User.findById(bidderId).select(
+          const bidderInfo = await User.findById(authenticatedBidderId).select(
             'name fullName email image photo',
           )
 
@@ -184,7 +194,7 @@ const socket = (io: Server) => {
 
           console.log(
             colors.green(
-              `Bid placed successfully: $${bidAmount} by User:${bidderId}`,
+              `Bid placed successfully: $${bidAmount} by User:${authenticatedBidderId}`,
             ),
           )
         } catch (err: any) {
@@ -201,10 +211,13 @@ const socket = (io: Server) => {
     // 4. Live Chat Overlay
     socket.on(
       'stream-chat',
-      async (data: { streamId: string; userId: string; message: string }) => {
-        const { streamId, userId, message } = data
-        if (streamId && userId && message) {
-          const userInfo = await User.findById(userId).select(
+      async (data: { streamId: string; message: string }) => {
+        const { streamId, message } = data
+        // Security: use authenticated socket userId — never trust client-provided userId
+        const authenticatedUserId = (socket as any).userId
+
+        if (streamId && authenticatedUserId && message) {
+          const userInfo = await User.findById(authenticatedUserId).select(
             'name fullName email image photo',
           )
           const displayName = userInfo?.fullName || userInfo?.name || 'User'
@@ -253,9 +266,16 @@ const socket = (io: Server) => {
     // 6. Seller-controlled Spin Wheel Drop Calculation
     socket.on(
       'trigger-spin',
-      async (data: { streamId: string; sellerId: string }) => {
-        const { streamId, sellerId } = data
+      async (data: { streamId: string }) => {
+        const { streamId } = data
+        // Security: use authenticated socket userId — never trust client-provided sellerId
+        const authenticatedSellerId = (socket as any).userId
         try {
+          if (!authenticatedSellerId) {
+            socket.emit('spin-error', { message: 'Unauthorized: Not authenticated.' })
+            return
+          }
+
           const stream = await LiveStream.findById(streamId)
           if (!stream) {
             socket.emit('spin-error', { message: 'Stream session not found.' })
@@ -263,7 +283,7 @@ const socket = (io: Server) => {
           }
 
           // Authorize: Only the stream seller can spin
-          if (stream.sellerId.toString() !== sellerId) {
+          if (stream.sellerId.toString() !== authenticatedSellerId) {
             socket.emit('spin-error', {
               message:
                 'Unauthorized: Only the stream host can trigger the Spin Wheel.',
@@ -313,13 +333,20 @@ const socket = (io: Server) => {
     // 7. Seller-controlled Live Stream termination
     socket.on(
       'end-stream',
-      async (data: { streamId: string; sellerId: string }) => {
-        const { streamId, sellerId } = data
+      async (data: { streamId: string }) => {
+        const { streamId } = data
+        // Security: use authenticated socket userId — never trust client-provided sellerId
+        const authenticatedSellerId = (socket as any).userId
         try {
-          if (!streamId || !sellerId) {
+          if (!streamId) {
             socket.emit('stream-error', {
-              message: 'Missing required parameters: streamId or sellerId.',
+              message: 'Missing required parameter: streamId.',
             })
+            return
+          }
+
+          if (!authenticatedSellerId) {
+            socket.emit('stream-error', { message: 'Unauthorized: Not authenticated.' })
             return
           }
 
@@ -330,7 +357,7 @@ const socket = (io: Server) => {
           }
 
           // Authorize: Only the stream host can end the stream
-          if (stream.sellerId.toString() !== sellerId) {
+          if (stream.sellerId.toString() !== authenticatedSellerId) {
             socket.emit('stream-error', {
               message: 'Unauthorized: Only the stream host can end the stream.',
             })
@@ -348,7 +375,7 @@ const socket = (io: Server) => {
 
           console.log(
             colors.red(
-              `Live Stream ${streamId} terminated by host seller ${sellerId}`,
+              `Live Stream ${streamId} terminated by host seller ${authenticatedSellerId}`,
             ),
           )
         } catch (err: any) {

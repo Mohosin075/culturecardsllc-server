@@ -218,10 +218,20 @@ const updateStreamInventory = async (
     )
   }
 
-  // Validate product IDs exist
+  // Validate product IDs exist and are available (not sold/pending)
   const products = await Product.find({ _id: { $in: inventoryIds } })
   if (products.length !== inventoryIds.length) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'One or more invalid Product IDs provided.')
+  }
+
+  // Block sold or pending products from being listed in inventory
+  const unavailableProducts = products.filter(p => p.status === 'sold' || p.status === 'pending')
+  if (unavailableProducts.length > 0) {
+    const titles = unavailableProducts.map(p => p.title).join(', ')
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `The following products are unavailable (sold or pending): ${titles}`,
+    )
   }
 
   stream.inventoryIds = inventoryIds.map(id => new Types.ObjectId(id)) as any
@@ -281,12 +291,13 @@ const quickStartAuctionItem = async (
   }
 
   // Create auction item via createAuctionItem helper
+  // bidIncrement is always forced to 1 (Fixed $1 Bid Increment Policy — never allow client override)
   const auctionItem = await createAuctionItem({
     streamId: new Types.ObjectId(streamId) as any,
     productId: new Types.ObjectId(productId) as any,
     startingBid: startingBid ?? (product.startingBid || product.buyNowPrice || product.estValue || 0),
     timerDuration: timerDuration || 60,
-    bidIncrement: bidIncrement || 1,
+    bidIncrement: 1,
   })
 
   return auctionItem

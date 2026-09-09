@@ -113,18 +113,26 @@ const socket = (io) => {
         });
         // 3. High-Concurrency Bidding Logic with Race-Condition Protection
         socket.on('place-bid', async (data) => {
-            const { streamId, auctionItemId, bidAmount, bidderId } = data;
+            const { streamId, auctionItemId, bidAmount } = data;
+            // Security: ALWAYS use the authenticated socket userId — never trust client-provided bidderId
+            const authenticatedBidderId = socket.userId;
             try {
-                if (!auctionItemId || !bidAmount || !bidderId) {
+                if (!auctionItemId || !bidAmount) {
                     socket.emit('bid-error', {
                         message: 'Missing required bid parameters.',
                     });
                     return;
                 }
+                if (!authenticatedBidderId) {
+                    socket.emit('bid-error', {
+                        message: 'Unauthorized: Please join the notification room first (join-notification).',
+                    });
+                    return;
+                }
                 // Call the secure service that uses Mongoose lock validators and anti-sniping timers
-                const updatedAuction = await auction_service_1.AuctionServices.placeBidSecure(auctionItemId, bidderId, bidAmount);
+                const updatedAuction = await auction_service_1.AuctionServices.placeBidSecure(auctionItemId, authenticatedBidderId, bidAmount);
                 // Fetch bidder profile for display name in feed
-                const bidderInfo = await user_model_1.User.findById(bidderId).select('name fullName email image photo');
+                const bidderInfo = await user_model_1.User.findById(authenticatedBidderId).select('name fullName email image photo');
                 // Broadcast updated auction item to stream room
                 io.to(`stream:${streamId}`).emit('new-bid', {
                     streamId,
@@ -133,7 +141,7 @@ const socket = (io) => {
                     highestBidder: bidderInfo,
                     endsAt: updatedAuction.endsAt,
                 });
-                console.log(colors_1.default.green(`Bid placed successfully: $${bidAmount} by User:${bidderId}`));
+                console.log(colors_1.default.green(`Bid placed successfully: $${bidAmount} by User:${authenticatedBidderId}`));
             }
             catch (err) {
                 console.error(colors_1.default.red('Bidding error:'), err.message);
@@ -145,9 +153,11 @@ const socket = (io) => {
         });
         // 4. Live Chat Overlay
         socket.on('stream-chat', async (data) => {
-            const { streamId, userId, message } = data;
-            if (streamId && userId && message) {
-                const userInfo = await user_model_1.User.findById(userId).select('name fullName email image photo');
+            const { streamId, message } = data;
+            // Security: use authenticated socket userId — never trust client-provided userId
+            const authenticatedUserId = socket.userId;
+            if (streamId && authenticatedUserId && message) {
+                const userInfo = await user_model_1.User.findById(authenticatedUserId).select('name fullName email image photo');
                 const displayName = (userInfo === null || userInfo === void 0 ? void 0 : userInfo.fullName) || (userInfo === null || userInfo === void 0 ? void 0 : userInfo.name) || 'User';
                 await auction_model_1.LiveStream.findByIdAndUpdate(streamId, {
                     $push: {
@@ -180,15 +190,21 @@ const socket = (io) => {
         });
         // 6. Seller-controlled Spin Wheel Drop Calculation
         socket.on('trigger-spin', async (data) => {
-            const { streamId, sellerId } = data;
+            const { streamId } = data;
+            // Security: use authenticated socket userId — never trust client-provided sellerId
+            const authenticatedSellerId = socket.userId;
             try {
+                if (!authenticatedSellerId) {
+                    socket.emit('spin-error', { message: 'Unauthorized: Not authenticated.' });
+                    return;
+                }
                 const stream = await auction_model_1.LiveStream.findById(streamId);
                 if (!stream) {
                     socket.emit('spin-error', { message: 'Stream session not found.' });
                     return;
                 }
                 // Authorize: Only the stream seller can spin
-                if (stream.sellerId.toString() !== sellerId) {
+                if (stream.sellerId.toString() !== authenticatedSellerId) {
                     socket.emit('spin-error', {
                         message: 'Unauthorized: Only the stream host can trigger the Spin Wheel.',
                     });
@@ -227,12 +243,18 @@ const socket = (io) => {
         });
         // 7. Seller-controlled Live Stream termination
         socket.on('end-stream', async (data) => {
-            const { streamId, sellerId } = data;
+            const { streamId } = data;
+            // Security: use authenticated socket userId — never trust client-provided sellerId
+            const authenticatedSellerId = socket.userId;
             try {
-                if (!streamId || !sellerId) {
+                if (!streamId) {
                     socket.emit('stream-error', {
-                        message: 'Missing required parameters: streamId or sellerId.',
+                        message: 'Missing required parameter: streamId.',
                     });
+                    return;
+                }
+                if (!authenticatedSellerId) {
+                    socket.emit('stream-error', { message: 'Unauthorized: Not authenticated.' });
                     return;
                 }
                 const stream = await auction_model_1.LiveStream.findById(streamId);
@@ -241,7 +263,7 @@ const socket = (io) => {
                     return;
                 }
                 // Authorize: Only the stream host can end the stream
-                if (stream.sellerId.toString() !== sellerId) {
+                if (stream.sellerId.toString() !== authenticatedSellerId) {
                     socket.emit('stream-error', {
                         message: 'Unauthorized: Only the stream host can end the stream.',
                     });
@@ -254,7 +276,7 @@ const socket = (io) => {
                     streamId,
                     status: 'ended',
                 });
-                console.log(colors_1.default.red(`Live Stream ${streamId} terminated by host seller ${sellerId}`));
+                console.log(colors_1.default.red(`Live Stream ${streamId} terminated by host seller ${authenticatedSellerId}`));
             }
             catch (err) {
                 socket.emit('stream-error', {

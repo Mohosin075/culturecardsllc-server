@@ -63,7 +63,15 @@ const getLiveStreams = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const createAuctionItem = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await auction_service_1.AuctionServices.createAuctionItem(req.body);
+    const user = req.user;
+    // sellerId always comes from authenticated user — use quickStartAuctionItem for ownership validation
+    const result = await auction_service_1.AuctionServices.quickStartAuctionItem({
+        streamId: req.body.streamId,
+        productId: req.body.productId,
+        startingBid: req.body.startingBid,
+        timerDuration: req.body.timerDuration,
+        bidIncrement: req.body.bidIncrement,
+    }, user.userId);
     // Broadcast to all viewers in the stream room so they get the auctionItemId instantly
     if (server_1.io && result.streamId) {
         server_1.io.to(`stream:${result.streamId.toString()}`).emit('auction-item-started', {

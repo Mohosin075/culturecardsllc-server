@@ -78,7 +78,19 @@ const getLiveStreams = catchAsync(async (req: Request, res: Response) => {
 })
 
 const createAuctionItem = catchAsync(async (req: Request, res: Response) => {
-  const result = await AuctionServices.createAuctionItem(req.body)
+  const user = req.user as JwtPayload
+
+  // sellerId always comes from authenticated user — use quickStartAuctionItem for ownership validation
+  const result = await AuctionServices.quickStartAuctionItem(
+    {
+      streamId: req.body.streamId,
+      productId: req.body.productId,
+      startingBid: req.body.startingBid,
+      timerDuration: req.body.timerDuration,
+      bidIncrement: req.body.bidIncrement,
+    },
+    user.userId,
+  )
 
   // Broadcast to all viewers in the stream room so they get the auctionItemId instantly
   if (io && result.streamId) {
