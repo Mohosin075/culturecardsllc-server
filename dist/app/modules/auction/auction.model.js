@@ -18,7 +18,26 @@ const LiveStreamSchema = new mongoose_1.Schema({
         type: String,
         trim: true,
     },
+    coverImage: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    promoVideo: {
+        type: String,
+        trim: true,
+    },
     scheduledAt: {
+        type: Date,
+    },
+    scheduledStartTime: {
+        type: Date,
+        index: true,
+    },
+    startedAt: {
+        type: Date,
+    },
+    endedAt: {
         type: Date,
     },
     status: {
@@ -36,6 +55,17 @@ const LiveStreamSchema = new mongoose_1.Schema({
     pinnedProductId: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Product',
+    },
+    inventoryIds: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'Product',
+        },
+    ],
+    reminderSent: {
+        type: Boolean,
+        default: false,
+        index: true,
     },
     viewersCount: {
         type: Number,
@@ -61,6 +91,7 @@ const LiveStreamSchema = new mongoose_1.Schema({
 });
 LiveStreamSchema.index({ status: 1, createdAt: -1 });
 LiveStreamSchema.index({ sellerId: 1, status: 1 });
+LiveStreamSchema.index({ status: 1, scheduledStartTime: 1, reminderSent: 1 });
 const AuctionItemSchema = new mongoose_1.Schema({
     streamId: {
         type: mongoose_1.Schema.Types.ObjectId,

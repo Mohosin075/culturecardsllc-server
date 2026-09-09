@@ -22,6 +22,28 @@ router.post(
   AuctionControllers.createLiveStream,
 )
 
+// POST /stream/start-scheduled/:streamId — Start a scheduled stream (seller only)
+router.post(
+  '/stream/start-scheduled/:streamId',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.startScheduledStream,
+)
+
+// POST /stream/:streamId/bookmark — Toggle bookmark for upcoming stream (buyer/seller)
+router.post(
+  '/stream/:streamId/bookmark',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  validateRequest(AuctionValidations.toggleBookmarkSchema),
+  AuctionControllers.toggleBookmarkShow,
+)
+
+// GET /saved-shows — Get user's saved/bookmarked upcoming shows
+router.get(
+  '/saved-shows',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.getSavedShows,
+)
+
 // GET /streams — List all live streams (public)
 router.get('/streams', AuctionControllers.getLiveStreams)
 

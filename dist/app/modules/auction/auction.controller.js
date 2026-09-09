@@ -116,6 +116,40 @@ const updateLiveStreamStatus = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const startScheduledStream = (0, catchAsync_1.default)(async (req, res) => {
+    const { streamId } = req.params;
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.startScheduledStream(streamId, user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Scheduled show started successfully.',
+        data: result,
+    });
+});
+const toggleBookmarkShow = (0, catchAsync_1.default)(async (req, res) => {
+    const { streamId } = req.params;
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.toggleBookmarkShow(user.userId, streamId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: result.isBookmarked
+            ? 'Show bookmarked successfully.'
+            : 'Show bookmark removed.',
+        data: result,
+    });
+});
+const getSavedShows = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const result = await auction_service_1.AuctionServices.getSavedShows(user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Saved shows retrieved successfully.',
+        data: result,
+    });
+});
 const completeAuction = (0, catchAsync_1.default)(async (req, res) => {
     const user = req.user;
     const { id } = req.params;
@@ -130,6 +164,9 @@ const completeAuction = (0, catchAsync_1.default)(async (req, res) => {
 exports.AuctionControllers = {
     generateAgoraToken,
     createLiveStream,
+    startScheduledStream,
+    toggleBookmarkShow,
+    getSavedShows,
     getLiveStreams,
     createAuctionItem,
     getAuctionItemsByStream,

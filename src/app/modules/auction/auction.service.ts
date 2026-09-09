@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import { LiveStream, AuctionItem } from './auction.model'
+import { SavedShow } from './savedShow.model'
 import { ILiveStream, IAuctionItem } from './auction.interface'
 import { RtcTokenBuilder, RtcRole } from 'agora-access-token'
 import config from '../../../config'
@@ -96,7 +97,104 @@ const createLiveStream = async (
   if (!payload.agoraChannelName) {
     payload.agoraChannelName = `channel_${Date.now()}_${Math.floor(Math.random() * 1000)}`
   }
-  return await LiveStream.create(payload)
+
+  // Determine status & timestamps
+  if (!payload.status) {
+    payload.status = payload.scheduledStartTime ? 'scheduled' : 'live'
+  }
+
+  if (payload.status === 'live') {
+    payload.startedAt = new Date()
+  }
+
+  const stream = await LiveStream.create(payload)
+
+  // Send go live notification if immediate live
+  if (stream.status === 'live') {
+    NotificationIntegration.onLiveStreamGoLive(
+      stream.sellerId.toString(),
+      (stream as any)._id.toString(),
+      stream.title,
+    ).catch(err => console.error('Failed to send go-live notification:', err))
+  }
+
+  return stream
+}
+
+const startScheduledStream = async (
+  streamId: string,
+  sellerId: string,
+): Promise<ILiveStream> => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+
+  if (stream.sellerId.toString() !== sellerId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Unauthorized: Only the stream host can start this scheduled show.',
+    )
+  }
+
+  stream.status = 'live'
+  stream.startedAt = new Date()
+  await stream.save()
+
+  // Trigger push notification to seller's followers
+  NotificationIntegration.onLiveStreamGoLive(
+    stream.sellerId.toString(),
+    (stream as any)._id.toString(),
+    stream.title,
+  ).catch(err => console.error('Failed to send go-live notification for scheduled stream:', err))
+
+  return stream
+}
+
+const toggleBookmarkShow = async (
+  userId: string,
+  streamId: string,
+): Promise<{ isBookmarked: boolean }> => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+
+  const existing = await SavedShow.findOne({ userId, streamId })
+  if (existing) {
+    await SavedShow.findByIdAndDelete(existing._id)
+    return { isBookmarked: false }
+  } else {
+    await SavedShow.create({ userId, streamId })
+    return { isBookmarked: true }
+  }
+}
+
+const getSavedShows = async (userId: string) => {
+  const savedDocs = await SavedShow.find({ userId })
+    .populate({
+      path: 'streamId',
+      populate: [
+        { path: 'sellerId', select: 'name fullName email image photo' },
+        { path: 'inventoryIds' },
+      ],
+    })
+    .sort({ createdAt: -1 })
+
+  // Filter out any deleted or non-scheduled streams
+  const result = savedDocs
+    .filter(doc => doc.streamId && (doc.streamId as any).status !== 'ended')
+    .map(doc => doc.streamId)
+
+  return result
 }
 
 const getLiveStreams = async (status?: string, requestingUserId?: string): Promise<ILiveStream[]> => {
@@ -121,6 +219,7 @@ const getLiveStreams = async (status?: string, requestingUserId?: string): Promi
   return await LiveStream.find(query)
     .populate('sellerId', 'name fullName email image photo')
     .populate('pinnedProductId')
+    .populate('inventoryIds')
     .sort({ createdAt: -1 })
     .limit(50)
     .lean() as unknown as ILiveStream[]
@@ -617,6 +716,9 @@ const completeAuction = async (
 export const AuctionServices = {
   generateAgoraToken,
   createLiveStream,
+  startScheduledStream,
+  toggleBookmarkShow,
+  getSavedShows,
   getLiveStreams,
   createAuctionItem,
   getAuctionItemsByStream,

@@ -15,6 +15,12 @@ const router = express_1.default.Router();
 router.get('/token', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.generateAgoraToken);
 // POST /stream — Create live stream session (seller only)
 router.post('/stream', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.createLiveStreamSchema), auction_controller_1.AuctionControllers.createLiveStream);
+// POST /stream/start-scheduled/:streamId — Start a scheduled stream (seller only)
+router.post('/stream/start-scheduled/:streamId', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.startScheduledStream);
+// POST /stream/:streamId/bookmark — Toggle bookmark for upcoming stream (buyer/seller)
+router.post('/stream/:streamId/bookmark', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.toggleBookmarkSchema), auction_controller_1.AuctionControllers.toggleBookmarkShow);
+// GET /saved-shows — Get user's saved/bookmarked upcoming shows
+router.get('/saved-shows', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.getSavedShows);
 // GET /streams — List all live streams (public)
 router.get('/streams', auction_controller_1.AuctionControllers.getLiveStreams);
 // POST /item — Register a product as an auction item (seller only)

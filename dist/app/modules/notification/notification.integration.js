@@ -6,6 +6,7 @@ const notification_interface_1 = require("./notification.interface");
 const payment_model_1 = require("../payment/payment.model");
 const user_model_1 = require("../user/user.model");
 const follow_model_1 = require("../follow/follow.model");
+const savedShow_model_1 = require("../auction/savedShow.model");
 class NotificationIntegration {
     static async onPaymentSuccess(paymentId) {
         try {
@@ -217,6 +218,36 @@ class NotificationIntegration {
         }
         catch (error) {
             console.error('Error creating review notification:', error);
+        }
+    }
+    static async onScheduledShowReminder(streamId, streamTitle, sellerName) {
+        try {
+            const savedShows = await savedShow_model_1.SavedShow.find({ streamId });
+            if (savedShows.length === 0)
+                return;
+            const promises = savedShows.map(async (saved) => {
+                try {
+                    await notification_service_1.NotificationServices.createNotification({
+                        userId: saved.userId,
+                        title: 'Show Starting Soon! ⏰',
+                        content: `"${streamTitle}" by ${sellerName} starts in 15 minutes! Get ready to join!`,
+                        type: notification_interface_1.NotificationType.STREAM_LIVE,
+                        channel: notification_interface_1.NotificationChannel.PUSH,
+                        priority: notification_interface_1.NotificationPriority.HIGH,
+                        metadata: {
+                            streamId: streamId.toString(),
+                        },
+                        actionUrl: `/streams/${streamId}`,
+                    });
+                }
+                catch (err) {
+                    console.error(`Failed to send show reminder push notification to user ${saved.userId}:`, err);
+                }
+            });
+            await Promise.allSettled(promises);
+        }
+        catch (error) {
+            console.error('Error sending scheduled show reminders:', error);
         }
     }
 }

@@ -5,13 +5,26 @@ const createLiveStreamSchema = z.object({
     title: z
       .string({ required_error: 'Title is required' })
       .min(3, 'Title must be at least 3 characters long'),
+    coverImage: z.string({ required_error: 'Cover image is required' }),
+    promoVideo: z.string().optional(),
     description: z.string().optional(),
     scheduledAt: z
       .string()
       .datetime({ message: 'Invalid ISO date-time string' })
       .optional(),
+    scheduledStartTime: z.string().optional(),
+    status: z.enum(['scheduled', 'live']).optional(),
+    inventoryIds: z.array(z.string()).optional(),
     // sellerId is injected from req.user in the controller — not accepted from body
     agoraChannelName: z.string().optional(),
+  }),
+})
+
+const toggleBookmarkSchema = z.object({
+  params: z.object({
+    streamId: z
+      .string({ required_error: 'Stream ID is required' })
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Stream ID format'),
   }),
 })
 
@@ -57,6 +70,7 @@ const updateLiveStreamStatusSchema = z.object({
 
 export const AuctionValidations = {
   createLiveStreamSchema,
+  toggleBookmarkSchema,
   createAuctionItemSchema,
   placeBidSchema,
   updateLiveStreamStatusSchema,

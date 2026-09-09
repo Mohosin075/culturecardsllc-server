@@ -13,6 +13,7 @@ import { seedSubscriptionPlans } from './app/modules/subscription/subscription.s
 import { logger, errorLogger } from './shared/logger'
 import { startTradeExpiryCron } from './task/tradeExpiryCron'
 import { startOrderAutoDeliverCron } from './task/orderAutoDeliverCron'
+import { initShowReminderScheduler } from './helpers/showReminderScheduler'
 
 // Uncaught exceptions
 process.on('uncaughtException', error => {
@@ -114,9 +115,10 @@ async function main() {
     socketHelper.socket(io);
     (global as any).io = io
 
-    // Start background cron jobs
+    // Start background cron jobs & schedulers
     startTradeExpiryCron()
     startOrderAutoDeliverCron()
+    initShowReminderScheduler()
 
     logger.info(colors.green('🍁 Socket.IO initialized successfully'))
   } catch (error) {

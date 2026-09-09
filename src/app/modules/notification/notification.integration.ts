@@ -8,6 +8,7 @@ import {
 import { Payment } from '../payment/payment.model'
 import { User } from '../user/user.model'
 import { Follow } from '../follow/follow.model'
+import { SavedShow } from '../auction/savedShow.model'
 
 export class NotificationIntegration {
   static async onPaymentSuccess(
@@ -275,6 +276,40 @@ export class NotificationIntegration {
       })
     } catch (error) {
       console.error('Error creating review notification:', error)
+    }
+  }
+
+  static async onScheduledShowReminder(
+    streamId: Types.ObjectId | string,
+    streamTitle: string,
+    sellerName: string,
+  ): Promise<void> {
+    try {
+      const savedShows = await SavedShow.find({ streamId })
+      if (savedShows.length === 0) return
+
+      const promises = savedShows.map(async saved => {
+        try {
+          await NotificationServices.createNotification({
+            userId: saved.userId as any,
+            title: 'Show Starting Soon! ⏰',
+            content: `"${streamTitle}" by ${sellerName} starts in 15 minutes! Get ready to join!`,
+            type: NotificationType.STREAM_LIVE,
+            channel: NotificationChannel.PUSH,
+            priority: NotificationPriority.HIGH,
+            metadata: {
+              streamId: streamId.toString(),
+            },
+            actionUrl: `/streams/${streamId}`,
+          })
+        } catch (err) {
+          console.error(`Failed to send show reminder push notification to user ${saved.userId}:`, err)
+        }
+      })
+
+      await Promise.allSettled(promises)
+    } catch (error) {
+      console.error('Error sending scheduled show reminders:', error)
     }
   }
 }

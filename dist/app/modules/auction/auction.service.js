@@ -7,6 +7,7 @@ exports.AuctionServices = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const auction_model_1 = require("./auction.model");
+const savedShow_model_1 = require("./savedShow.model");
 const agora_access_token_1 = require("agora-access-token");
 const config_1 = __importDefault(require("../../../config"));
 const mongoose_1 = require("mongoose");
@@ -63,7 +64,71 @@ const createLiveStream = async (payload) => {
     if (!payload.agoraChannelName) {
         payload.agoraChannelName = `channel_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     }
-    return await auction_model_1.LiveStream.create(payload);
+    // Determine status & timestamps
+    if (!payload.status) {
+        payload.status = payload.scheduledStartTime ? 'scheduled' : 'live';
+    }
+    if (payload.status === 'live') {
+        payload.startedAt = new Date();
+    }
+    const stream = await auction_model_1.LiveStream.create(payload);
+    // Send go live notification if immediate live
+    if (stream.status === 'live') {
+        notification_integration_1.NotificationIntegration.onLiveStreamGoLive(stream.sellerId.toString(), stream._id.toString(), stream.title).catch(err => console.error('Failed to send go-live notification:', err));
+    }
+    return stream;
+};
+const startScheduledStream = async (streamId, sellerId) => {
+    if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID');
+    }
+    const stream = await auction_model_1.LiveStream.findById(streamId);
+    if (!stream) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Live stream session not found');
+    }
+    if (stream.sellerId.toString() !== sellerId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host can start this scheduled show.');
+    }
+    stream.status = 'live';
+    stream.startedAt = new Date();
+    await stream.save();
+    // Trigger push notification to seller's followers
+    notification_integration_1.NotificationIntegration.onLiveStreamGoLive(stream.sellerId.toString(), stream._id.toString(), stream.title).catch(err => console.error('Failed to send go-live notification for scheduled stream:', err));
+    return stream;
+};
+const toggleBookmarkShow = async (userId, streamId) => {
+    if (!mongoose_1.Types.ObjectId.isValid(streamId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID');
+    }
+    const stream = await auction_model_1.LiveStream.findById(streamId);
+    if (!stream) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Live stream session not found');
+    }
+    const existing = await savedShow_model_1.SavedShow.findOne({ userId, streamId });
+    if (existing) {
+        await savedShow_model_1.SavedShow.findByIdAndDelete(existing._id);
+        return { isBookmarked: false };
+    }
+    else {
+        await savedShow_model_1.SavedShow.create({ userId, streamId });
+        return { isBookmarked: true };
+    }
+};
+const getSavedShows = async (userId) => {
+    const savedDocs = await savedShow_model_1.SavedShow.find({ userId })
+        .populate({
+        path: 'streamId',
+        populate: [
+            { path: 'sellerId', select: 'name fullName email image photo' },
+            { path: 'inventoryIds' },
+        ],
+    })
+        .sort({ createdAt: -1 });
+    // Filter out any deleted or non-scheduled streams
+    const result = savedDocs
+        .filter(doc => doc.streamId && doc.streamId.status !== 'ended')
+        .map(doc => doc.streamId);
+    return result;
 };
 const getLiveStreams = async (status, requestingUserId) => {
     const query = {};
@@ -84,6 +149,7 @@ const getLiveStreams = async (status, requestingUserId) => {
     return await auction_model_1.LiveStream.find(query)
         .populate('sellerId', 'name fullName email image photo')
         .populate('pinnedProductId')
+        .populate('inventoryIds')
         .sort({ createdAt: -1 })
         .limit(50)
         .lean();
@@ -477,6 +543,9 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
 exports.AuctionServices = {
     generateAgoraToken,
     createLiveStream,
+    startScheduledStream,
+    toggleBookmarkShow,
+    getSavedShows,
     getLiveStreams,
     createAuctionItem,
     getAuctionItemsByStream,

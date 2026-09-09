@@ -148,6 +148,43 @@ const updateLiveStreamStatus = catchAsync(async (req: Request, res: Response) =>
   })
 })
 
+const startScheduledStream = catchAsync(async (req: Request, res: Response) => {
+  const { streamId } = req.params
+  const user = req.user as JwtPayload
+  const result = await AuctionServices.startScheduledStream(streamId, user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Scheduled show started successfully.',
+    data: result,
+  })
+})
+
+const toggleBookmarkShow = catchAsync(async (req: Request, res: Response) => {
+  const { streamId } = req.params
+  const user = req.user as JwtPayload
+  const result = await AuctionServices.toggleBookmarkShow(user.userId, streamId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result.isBookmarked
+      ? 'Show bookmarked successfully.'
+      : 'Show bookmark removed.',
+    data: result,
+  })
+})
+
+const getSavedShows = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const result = await AuctionServices.getSavedShows(user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Saved shows retrieved successfully.',
+    data: result,
+  })
+})
+
 const completeAuction = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
   const { id } = req.params
@@ -163,6 +200,9 @@ const completeAuction = catchAsync(async (req: Request, res: Response) => {
 export const AuctionControllers = {
   generateAgoraToken,
   createLiveStream,
+  startScheduledStream,
+  toggleBookmarkShow,
+  getSavedShows,
   getLiveStreams,
   createAuctionItem,
   getAuctionItemsByStream,

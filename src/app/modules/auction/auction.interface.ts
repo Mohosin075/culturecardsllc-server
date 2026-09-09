@@ -4,10 +4,17 @@ export type ILiveStream = {
   sellerId: Schema.Types.ObjectId
   title: string
   description?: string
+  coverImage: string
+  promoVideo?: string
   scheduledAt?: Date
+  scheduledStartTime?: Date
+  startedAt?: Date
+  endedAt?: Date
   status: 'scheduled' | 'live' | 'ended'
   agoraChannelName: string
   pinnedProductId?: Schema.Types.ObjectId
+  inventoryIds?: Schema.Types.ObjectId[]
+  reminderSent?: boolean
   viewersCount: number
   likesCount: number
   chatMessages?: Array<{
@@ -15,6 +22,13 @@ export type ILiveStream = {
     message: string
     timestamp: Date
   }>
+  createdAt: Date
+  updatedAt: Date
+} & Document
+
+export type ISavedShow = {
+  userId: Schema.Types.ObjectId
+  streamId: Schema.Types.ObjectId
   createdAt: Date
   updatedAt: Date
 } & Document

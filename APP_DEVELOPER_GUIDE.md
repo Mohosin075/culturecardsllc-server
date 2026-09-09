@@ -119,3 +119,162 @@ Call this API or trigger via Socket (`trigger-spin`) during a live stream sessio
 
 **Flutter App Action:** Play wheel spin animation mapping `degreeIndex`, then present the Overlay: **"🎉 Winner: John Doe won the Giveaway!"**.
 
+---
+
+## 3. Live Show Media & Go Live vs Schedule Show
+
+### 📌 Overview
+- **Go Live Immediately:** Seller inputs `title` and `coverImage` to start live streaming right away (`status: "live"`).
+- **Schedule Show:** Seller inputs `title`, `coverImage`, optional `promoVideo` (3–10s preview), `scheduledStartTime`, and optional `inventoryIds` (product list linked to the show) to schedule for a future date/time (`status: "scheduled"`).
+- **1-Tap Start Scheduled Show:** Seller can start a previously scheduled show with a single tap, switching its status to `"live"`.
+
+---
+
+### 📡 Endpoint 3.1: Create Live Stream (Go Live or Schedule Show)
+- **Method:** `POST`
+- **URL:** `/api/v1/auctions/stream`
+- **Headers:** `Authorization: Bearer <SELLER_JWT>`
+- **Body Example (Go Live Immediately):**
+```json
+{
+  "title": "Friday Night Grail Card Breaks!",
+  "coverImage": "https://s3.amazonaws.com/culturecards/cover1.jpg",
+  "status": "live"
+}
+```
+
+- **Body Example (Schedule Show for Future):**
+```json
+{
+  "title": "Sunday Pokemon & Sports Break",
+  "coverImage": "https://s3.amazonaws.com/culturecards/cover2.jpg",
+  "promoVideo": "https://s3.amazonaws.com/culturecards/promo.mp4",
+  "scheduledStartTime": "2026-09-12T18:00:00.000Z",
+  "status": "scheduled",
+  "inventoryIds": [
+    "65ab1234c567890011223344",
+    "65ab1234c567890011223345"
+  ]
+}
+```
+
+#### 🟢 Response Example (201 Created):
+```json
+{
+  "statusCode": 201,
+  "success": true,
+  "message": "Live stream session initialized successfully.",
+  "data": {
+    "_id": "65dd99887766554433221122",
+    "sellerId": "65ab1234c567890011223344",
+    "title": "Sunday Pokemon & Sports Break",
+    "coverImage": "https://s3.amazonaws.com/culturecards/cover2.jpg",
+    "promoVideo": "https://s3.amazonaws.com/culturecards/promo.mp4",
+    "scheduledStartTime": "2026-09-12T18:00:00.000Z",
+    "status": "scheduled",
+    "agoraChannelName": "channel_1773229200000_452",
+    "inventoryIds": ["65ab1234c567890011223344", "65ab1234c567890011223345"]
+  }
+}
+```
+
+---
+
+### 📡 Endpoint 3.2: Start Scheduled Show (1-Tap Go Live)
+Seller starts a previously scheduled stream when showtime arrives.
+
+- **Method:** `POST`
+- **URL:** `/api/v1/auctions/stream/start-scheduled/:streamId`
+- **Headers:** `Authorization: Bearer <SELLER_JWT>`
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Scheduled show started successfully.",
+  "data": {
+    "_id": "65dd99887766554433221122",
+    "status": "live",
+    "startedAt": "2026-09-12T18:00:01.000Z"
+  }
+}
+```
+
+---
+
+## 4. Saved Shows / Bookmarks & Push Reminders
+
+### 📌 Overview
+- **Save / Bookmark Show:** Buyers can toggle bookmarking on scheduled shows.
+- **Push Reminders:** The server background scheduler automatically sends push notifications to all bookmarked users **15 minutes before showtime**.
+
+---
+
+### 📡 Endpoint 4.1: Toggle Bookmark / Save Show
+- **Method:** `POST`
+- **URL:** `/api/v1/auctions/stream/:streamId/bookmark`
+- **Headers:** `Authorization: Bearer <USER_JWT>`
+
+#### 🟢 Response Example (200 OK - Bookmarked):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Show bookmarked successfully.",
+  "data": {
+    "isBookmarked": true
+  }
+}
+```
+
+#### 🟢 Response Example (200 OK - Unbookmarked):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Show bookmark removed.",
+  "data": {
+    "isBookmarked": false
+  }
+}
+```
+
+---
+
+### 📡 Endpoint 4.2: Get User's Saved Upcoming Shows
+- **Method:** `GET`
+- **URL:** `/api/v1/auctions/saved-shows`
+- **Headers:** `Authorization: Bearer <USER_JWT>`
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Saved shows retrieved successfully.",
+  "data": [
+    {
+      "_id": "65dd99887766554433221122",
+      "title": "Sunday Pokemon & Sports Break",
+      "coverImage": "https://s3.amazonaws.com/culturecards/cover2.jpg",
+      "promoVideo": "https://s3.amazonaws.com/culturecards/promo.mp4",
+      "scheduledStartTime": "2026-09-12T18:00:00.000Z",
+      "status": "scheduled",
+      "sellerId": {
+        "_id": "65ab1234c567890011223344",
+        "name": "Collector Pro",
+        "photo": "https://s3.amazonaws.com/culturecards/profile.jpg"
+      },
+      "inventoryIds": [
+        {
+          "_id": "65ab1234c567890011223344",
+          "title": "1999 Charizard Holo PSA 10",
+          "price": 500
+        }
+      ]
+    }
+  ]
+}
+```
+
