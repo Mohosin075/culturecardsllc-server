@@ -182,8 +182,8 @@ const quickStartAuctionItem = async (payload, sellerId) => {
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }
-    if (product.status === 'sold') {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This product has already been sold.');
+    if (product.status === 'sold' || product.status === 'pending') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}).`);
     }
     // Create auction item via createAuctionItem helper
     // bidIncrement is always forced to 1 (Fixed $1 Bid Increment Policy — never allow client override)

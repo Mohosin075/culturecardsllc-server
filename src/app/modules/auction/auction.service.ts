@@ -286,8 +286,8 @@ const quickStartAuctionItem = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
 
-  if (product.status === 'sold') {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'This product has already been sold.')
+  if (product.status === 'sold' || product.status === 'pending') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}).`)
   }
 
   // Create auction item via createAuctionItem helper
