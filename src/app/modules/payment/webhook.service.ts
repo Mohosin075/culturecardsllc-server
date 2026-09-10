@@ -11,6 +11,7 @@ import { Message } from '../message/message.model'
 import { io } from '../../../server'
 import { User } from '../user/user.model'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
+import { TradeVoteServices } from '../trade/tradeVote.service'
 
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
@@ -224,6 +225,11 @@ const handleCheckoutSessionCompleted = async (
               })
             })
           }
+
+          // Create Community Trade Vote entry (non-blocking)
+          TradeVoteServices.createTradeVoteFromCompletedTrade(tradeOffer).catch(
+            err => console.error('Failed to auto-create trade vote on supplement:', err),
+          )
         }
       }
       // ─── PRODUCT BOOST: update product isFeatured + boostedUntil ───────────────

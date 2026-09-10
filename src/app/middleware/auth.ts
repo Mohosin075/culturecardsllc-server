@@ -110,8 +110,6 @@ const auth =
           )
         }
 
-        console.log({ userRole })
-
         if (!roles.includes(userRole)) {
           return next(
             new ApiError(
@@ -184,3 +182,51 @@ export const tempAuth =
       next(error)
     }
   }
+
+/**
+ * Optional Auth Middleware:
+ * If a valid Bearer token is provided, decodes and attaches req.user.
+ * If no token or invalid token, simply continues as guest (req.user = undefined).
+ */
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const tokenWithBearer = req.headers.authorization
+    if (!tokenWithBearer || !tokenWithBearer.startsWith('Bearer ')) {
+      return next()
+    }
+
+    const token = tokenWithBearer.split(' ')[1]
+    if (!token) {
+      return next()
+    }
+
+    try {
+      const verifyUser = jwtHelper.verifyToken(
+        token,
+        config.jwt.jwt_secret as Secret,
+      ) as IVerifyUser
+
+      if (!verifyUser.userId && verifyUser.authId) {
+        verifyUser.userId = verifyUser.authId
+      }
+      if (verifyUser.activeRole && !verifyUser.role) {
+        verifyUser.role = verifyUser.activeRole
+      }
+      if (verifyUser.role && !verifyUser.activeRole) {
+        verifyUser.activeRole = verifyUser.role
+      }
+
+      req.user = verifyUser
+    } catch {
+      // Ignore token verification errors for guest access
+    }
+
+    return next()
+  } catch {
+    return next()
+  }
+}

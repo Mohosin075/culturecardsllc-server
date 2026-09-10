@@ -10,6 +10,7 @@ import { io } from '../../../server'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 import { User } from '../user/user.model'
 import stripe from '../../../config/stripe'
+import { TradeVoteServices } from './tradeVote.service'
 
 const createTradeOffer = async (
   payload: Partial<ITradeOffer>,
@@ -401,6 +402,11 @@ const completeTradeOffer = async (
     }
 
     await session.commitTransaction()
+
+    // Create Community Trade Vote entry (non-blocking)
+    TradeVoteServices.createTradeVoteFromCompletedTrade(offer).catch(err =>
+      console.error('Failed to auto-create trade vote:', err),
+    )
 
     // Notify both parties
     const notifyIds = [offer.senderId.toString(), offer.receiverId.toString()]

@@ -575,3 +575,109 @@ Call this when a user wants to pay directly using one of their saved cards.
 }
 ```
 *(When `paymentMethodId` is provided, the backend auto-confirms the charge off-session and returns `status: "succeeded"` immediately).*
+
+---
+
+## 9. Community Trade Voting System ("Who Won The Trade?")
+
+### 📌 Overview
+- **Community Engagement:** When two users complete a card/item trade, it automatically generates a voting card on the home screen.
+- **Fair Review:** Community members vote on whether Trader A or Trader B got the better deal.
+- **Safety & Rules:**
+  - Guests can view the voting feed without logging in.
+  - Authenticated users can cast 1 vote per trade.
+  - Traders cannot vote on their own trade (403 Forbidden).
+  - Attempting to vote twice returns 409 Conflict.
+
+---
+
+### 📡 Endpoint 9.1: Fetch Trade Voting Feed
+Call this on the Home Screen / Community Feed tab.
+
+- **Method:** `GET`
+- **URL:** `/api/v1/trades/votes/feed`
+- **Query Parameters:** `?page=1&limit=10`
+- **Headers:** `Authorization: Bearer <TOKEN>` *(Optional — guest browsing supported)*
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Trade voting feed retrieved successfully",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 24,
+    "totalPage": 3
+  },
+  "data": [
+    {
+      "_id": "65f123abc456789012345678",
+      "tradeId": "65ee99887766554433221100",
+      "category": "Trading Cards",
+      "timeAgo": "Completed 2h ago",
+      "itemA": {
+        "name": "1986 Michael Jordan Fleer #57 PSA 8",
+        "value": "$1,800",
+        "image": "https://...",
+        "traderName": "Trader A"
+      },
+      "itemB": {
+        "name": "2003 LeBron James Topps Chrome PSA 9",
+        "value": "$2,100",
+        "image": "https://...",
+        "traderName": "Trader B"
+      },
+      "votesA": 14,
+      "votesB": 36,
+      "totalVotes": 50,
+      "percentageA": 28,
+      "percentageB": 72,
+      "hasVoted": false,
+      "votedOption": null,
+      "completedAt": "2026-09-10T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 📡 Endpoint 9.2: Cast a Vote on a Trade
+Call this when the user taps "Vote Trader A" or "Vote Trader B".
+
+- **Method:** `POST`
+- **URL:** `/api/v1/trades/votes/:id/cast`
+- **Headers:** `Authorization: Bearer <JWT_TOKEN>` *(Required)*
+- **Body:**
+```json
+{
+  "option": "A"
+}
+```
+*(Use `"option": "A"` for Trader A, or `"option": "B"` for Trader B).*
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Vote cast successfully",
+  "data": {
+    "tradeVoteId": "65f123abc456789012345678",
+    "votesA": 15,
+    "votesB": 36,
+    "totalVotes": 51,
+    "percentageA": 29,
+    "percentageB": 71,
+    "hasVoted": true,
+    "votedOption": "A"
+  }
+}
+```
+
+#### 🔴 Error Cases:
+- **Already Voted:** `409 Conflict` → `"You have already voted on this trade!"`
+- **Self-Voting:** `403 Forbidden` → `"Traders cannot vote on their own trade."`
+- **Guest Attempting to Vote:** `401 Unauthorized` → Prompt login dialog.
