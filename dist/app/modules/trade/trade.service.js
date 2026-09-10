@@ -15,6 +15,7 @@ const server_1 = require("../../../server");
 const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const user_model_1 = require("../user/user.model");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
+const tradeVote_service_1 = require("./tradeVote.service");
 const createTradeOffer = async (payload) => {
     const { senderProductId, receiverProductId, senderId, receiverId } = payload;
     // Check if either user has blocked the other
@@ -281,6 +282,8 @@ const completeTradeOffer = async (offerId, userId) => {
             ], { session });
         }
         await session.commitTransaction();
+        // Create Community Trade Vote entry (non-blocking)
+        tradeVote_service_1.TradeVoteServices.createTradeVoteFromCompletedTrade(offer).catch(err => console.error('Failed to auto-create trade vote:', err));
         // Notify both parties
         const notifyIds = [offer.senderId.toString(), offer.receiverId.toString()];
         notifyIds.forEach(uid => {

@@ -17,6 +17,7 @@ const message_model_1 = require("../message/message.model");
 const server_1 = require("../../../server");
 const user_model_1 = require("../user/user.model");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
+const tradeVote_service_1 = require("../trade/tradeVote.service");
 const handleCheckoutSessionCompleted = async (sessionData) => {
     var _a, _b, _c, _d, _e;
     try {
@@ -182,6 +183,8 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                             });
                         });
                     }
+                    // Create Community Trade Vote entry (non-blocking)
+                    tradeVote_service_1.TradeVoteServices.createTradeVoteFromCompletedTrade(tradeOffer).catch(err => console.error('Failed to auto-create trade vote on supplement:', err));
                 }
             }
             // ─── PRODUCT BOOST: update product isFeatured + boostedUntil ───────────────

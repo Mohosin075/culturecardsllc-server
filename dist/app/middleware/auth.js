@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.tempAuth = void 0;
+exports.optionalAuth = exports.tempAuth = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const config_1 = __importDefault(require("../../config"));
 const jwtHelper_1 = require("../../helpers/jwtHelper");
@@ -71,7 +71,6 @@ const auth = (...roles) => async (req, res, next) => {
             if (!userRole) {
                 return next(new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'User role missing in token'));
             }
-            console.log({ userRole });
             if (!roles.includes(userRole)) {
                 return next(new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, "You don't have permission to access this API"));
             }
@@ -120,3 +119,41 @@ const tempAuth = (...roles) => async (req, res, next) => {
     }
 };
 exports.tempAuth = tempAuth;
+/**
+ * Optional Auth Middleware:
+ * If a valid Bearer token is provided, decodes and attaches req.user.
+ * If no token or invalid token, simply continues as guest (req.user = undefined).
+ */
+const optionalAuth = async (req, res, next) => {
+    try {
+        const tokenWithBearer = req.headers.authorization;
+        if (!tokenWithBearer || !tokenWithBearer.startsWith('Bearer ')) {
+            return next();
+        }
+        const token = tokenWithBearer.split(' ')[1];
+        if (!token) {
+            return next();
+        }
+        try {
+            const verifyUser = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_secret);
+            if (!verifyUser.userId && verifyUser.authId) {
+                verifyUser.userId = verifyUser.authId;
+            }
+            if (verifyUser.activeRole && !verifyUser.role) {
+                verifyUser.role = verifyUser.activeRole;
+            }
+            if (verifyUser.role && !verifyUser.activeRole) {
+                verifyUser.activeRole = verifyUser.role;
+            }
+            req.user = verifyUser;
+        }
+        catch (_a) {
+            // Ignore token verification errors for guest access
+        }
+        return next();
+    }
+    catch (_b) {
+        return next();
+    }
+};
+exports.optionalAuth = optionalAuth;
