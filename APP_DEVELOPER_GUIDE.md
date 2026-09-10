@@ -485,6 +485,93 @@ If building native UI screens instead of Webviews:
 }
 ```
 
+---
 
+## 8. Card Management & Pay with Saved Card
 
+### 📡 Endpoint 8.1: Add New Card (Create Setup Intent)
+Call this when the user taps "Add Card" in the app.
 
+- **Method:** `POST`
+- **URL:** `/api/v1/payment/create-setup-intent`
+- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+- **Body:** `{}` (empty)
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Setup intent created successfully",
+  "data": {
+    "clientSecret": "seti_1PXXXX_secret_YYYYY"
+  }
+}
+```
+
+#### 📱 Mobile App Flow (Flutter / React Native):
+1. Call `POST /api/v1/payment/create-setup-intent` to get `clientSecret`.
+2. Pass `clientSecret` to Stripe SDK (e.g. `initPaymentSheet` or `confirmSetup`).
+3. User enters card details into the Stripe sheet.
+4. On success, Stripe securely saves the card under the user's customer profile.
+
+---
+
+### 📡 Endpoint 8.2: Show Saved Cards (Get Cards List)
+Call this to display the list of cards saved by the user.
+
+- **Method:** `GET`
+- **URL:** `/api/v1/payment/methods`
+- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Payment methods retrieved successfully",
+  "data": [
+    {
+      "id": "pm_1PXXXX",
+      "brand": "visa",
+      "last4": "4242",
+      "expMonth": 12,
+      "expYear": 2028,
+      "isDefault": true
+    }
+  ]
+}
+```
+
+---
+
+### 📡 Endpoint 8.3: Pay Using Existing Saved Card (1-Tap Charge)
+Call this when a user wants to pay directly using one of their saved cards.
+
+- **Method:** `POST`
+- **URL:** `/api/v1/payment/create-payment-intent`
+- **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+- **Body:**
+```json
+{
+  "amount": 25.00,
+  "paymentMethodId": "pm_1PXXXX",
+  "orderId": "65ab1234c567890011223344"
+}
+```
+
+#### 🟢 Response Example (200 OK):
+```json
+{
+  "statusCode": 200,
+  "success": true,
+  "message": "Payment intent created successfully",
+  "data": {
+    "clientSecret": "pi_1PXXXX_secret_YYYYY",
+    "paymentIntentId": "pi_1PXXXX",
+    "amount": 25.00,
+    "status": "succeeded"
+  }
+}
+```
+*(When `paymentMethodId` is provided, the backend auto-confirms the charge off-session and returns `status: "succeeded"` immediately).*
