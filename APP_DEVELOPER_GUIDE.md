@@ -580,19 +580,34 @@ Call this when a user wants to pay directly using one of their saved cards.
 
 ## 9. Community Trade Voting System ("Who Won The Trade?")
 
-### 📌 Overview
-- **Community Engagement:** When two users complete a card/item trade, it automatically generates a voting card on the home screen.
-- **Fair Review:** Community members vote on whether Trader A or Trader B got the better deal.
-- **Safety & Rules:**
-  - Guests can view the voting feed without logging in.
-  - Authenticated users can cast 1 vote per trade.
-  - Traders cannot vote on their own trade (403 Forbidden).
-  - Attempting to vote twice returns 409 Conflict.
+### 📌 Overview & How It Works (Backend Behavior)
+
+When two users **complete a card trade**, the backend **automatically** creates a `TradeVote` record — the app developer does **not** need to trigger this manually. It is fully event-driven.
+
+**Automatic trigger points:**
+1. `POST /api/v1/trades/complete/:id` → Trade with **no cash supplement** completes → vote entry created instantly.
+2. **Stripe Webhook** (`payment_intent.succeeded` with `purchaseType: trade_supplement`) → Trade with cash supplement completes after payment → vote entry created instantly.
+
+The app only needs to **display the feed** and **allow casting votes**.
+
+---
+
+### 🧠 UI State Logic
+
+Each feed item has these fields the UI must react to:
+
+| Field | Value | UI Action |
+|---|---|---|
+| `hasVoted` | `false` | Show "Vote Trader A" / "Vote Trader B" buttons |
+| `hasVoted` | `true` | Hide buttons, show result bar + "You voted for Trader X" |
+| `votedOption` | `"A"` or `"B"` | Highlight the user's chosen side |
+| `votedOption` | `null` | User has not voted (or guest) |
+
+**Guest user (no token):** Feed loads normally with `hasVoted: false`. Tapping vote triggers a login prompt (server returns `401`).
 
 ---
 
 ### 📡 Endpoint 9.1: Fetch Trade Voting Feed
-Call this on the Home Screen / Community Feed tab.
 
 - **Method:** `GET`
 - **URL:** `/api/v1/trades/votes/feed`
@@ -620,14 +635,14 @@ Call this on the Home Screen / Community Feed tab.
       "itemA": {
         "name": "1986 Michael Jordan Fleer #57 PSA 8",
         "value": "$1,800",
-        "image": "https://...",
-        "traderName": "Trader A"
+        "image": "https://cdn.example.com/card-mj.jpg",
+        "traderName": "CollectorKing"
       },
       "itemB": {
         "name": "2003 LeBron James Topps Chrome PSA 9",
         "value": "$2,100",
-        "image": "https://...",
-        "traderName": "Trader B"
+        "image": "https://cdn.example.com/card-lbj.jpg",
+        "traderName": "HoopsLegacy"
       },
       "votesA": 14,
       "votesB": 36,
@@ -642,21 +657,32 @@ Call this on the Home Screen / Community Feed tab.
 }
 ```
 
+**Key fields for UI rendering:**
+
+| Field | Type | Usage |
+|---|---|---|
+| `_id` | String | Pass as `:id` when casting a vote |
+| `timeAgo` | String | Display as-is (e.g. "Completed 2h ago") |
+| `percentageA` / `percentageB` | Number | Drive progress bar widths (always sum to 100) |
+| `hasVoted` | Boolean | Toggle between vote buttons vs result view |
+| `votedOption` | `"A"` / `"B"` / `null` | Highlight user's chosen side |
+| `totalVotes` | Number | Display total vote count |
+
 ---
 
 ### 📡 Endpoint 9.2: Cast a Vote on a Trade
-Call this when the user taps "Vote Trader A" or "Vote Trader B".
 
 - **Method:** `POST`
 - **URL:** `/api/v1/trades/votes/:id/cast`
-- **Headers:** `Authorization: Bearer <JWT_TOKEN>` *(Required)*
+  - `:id` = the `_id` from the feed item (**NOT** the `tradeId`)
+- **Headers:** `Authorization: Bearer <JWT_TOKEN>` *(Required — guests get 401)*
 - **Body:**
 ```json
 {
   "option": "A"
 }
 ```
-*(Use `"option": "A"` for Trader A, or `"option": "B"` for Trader B).*
+*(Use `"option": "A"` for Trader A, `"option": "B"` for Trader B)*
 
 #### 🟢 Response Example (200 OK):
 ```json
@@ -677,7 +703,30 @@ Call this when the user taps "Vote Trader A" or "Vote Trader B".
 }
 ```
 
-#### 🔴 Error Cases:
-- **Already Voted:** `409 Conflict` → `"You have already voted on this trade!"`
-- **Self-Voting:** `403 Forbidden` → `"Traders cannot vote on their own trade."`
-- **Guest Attempting to Vote:** `401 Unauthorized` → Prompt login dialog.
+> **After a successful vote:** Update the feed item **locally** using the returned `data` object. Do **not** re-fetch the entire feed.
+
+---
+
+### 🔴 Error Reference
+
+| HTTP Status | Scenario | App Action |
+|---|---|---|
+| `200 OK` | Vote cast successfully | Update card UI with returned `data` |
+| `400 Bad Request` | Voting closed / invalid ID | Show toast: *"This vote is no longer active."* |
+| `401 Unauthorized` | Guest — no token | Show **Login / Sign Up** dialog |
+| `403 Forbidden` | Trader voting on own trade | Show toast: *"You can't vote on your own trade."* |
+| `409 Conflict` | Already voted | Show toast: *"You've already voted on this trade!"* |
+| `404 Not Found` | Vote record not found | Remove card from feed silently |
+
+---
+
+### ✅ Implementation Checklist
+
+- [ ] Feed screen calls `GET /api/v1/trades/votes/feed` with optional auth header
+- [ ] Infinite scroll pagination via `?page=&limit=` using `meta.totalPage`
+- [ ] Guest mode — feed loads without token; vote tap triggers login dialog
+- [ ] `hasVoted: true` → hide vote buttons, show result bar + "You voted for Trader X"
+- [ ] Vote tap → `POST /api/v1/trades/votes/:id/cast` with `{ "option": "A" }` or `{ "option": "B" }`
+- [ ] Update card locally with response `data` — no full-feed reload
+- [ ] Handle error codes: `400`, `401`, `403`, `409` with distinct messages
+- [ ] Traders see `403` when attempting to vote on their own trade
