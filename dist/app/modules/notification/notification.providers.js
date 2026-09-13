@@ -4,32 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailProvider = exports.EmailProvider = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
+const resend_1 = require("resend");
 const http_status_codes_1 = require("http-status-codes");
 const config_1 = __importDefault(require("../../../config"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const notification_templates_1 = require("./notification.templates");
 class EmailProvider {
     constructor() {
-        this.transporter = nodemailer_1.default.createTransport({
-            host: config_1.default.email.host,
-            port: config_1.default.email.port,
-            secure: false, // false for TLS, true for SSL
-            auth: {
-                user: config_1.default.email.user,
-                pass: config_1.default.email.pass,
-            },
-            // For development, bypass SSL verification
-            tls: {
-                rejectUnauthorized: false,
-            },
-            // Connection settings
-            pool: true,
-            maxConnections: 5,
-            maxMessages: 100,
-        });
-        // Initialize asynchronously
-        // this.initialize()
+        this.resend = null;
+        if (config_1.default.email.resend_api_key) {
+            this.resend = new resend_1.Resend(config_1.default.email.resend_api_key);
+        }
     }
     static getInstance() {
         if (!EmailProvider.instance) {
@@ -37,30 +22,44 @@ class EmailProvider {
         }
         return EmailProvider.instance;
     }
-    async verifyConnection() {
-        try {
-            await this.transporter.verify();
-            console.log('✅ Email server connection verified');
-        }
-        catch (error) {
-            console.error('❌ Email server connection failed:', error.message);
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.SERVICE_UNAVAILABLE, 'Email service is currently unavailable');
-        }
-    }
     async sendEmail(data) {
+        var _a;
         try {
             const { subject, html } = notification_templates_1.EmailTemplates.getTemplate(data.template, data.data);
-            const mailOptions = {
-                from: `Aries <${config_1.default.email.from}>`,
-                to: Array.isArray(data.to) ? data.to.join(',') : data.to,
+            const fromName = 'Aries';
+            const fromEmail = config_1.default.email.from || 'no-reply@areisco.com';
+            if (!this.resend) {
+                console.error('❌ RESEND_API_KEY is missing.');
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.SERVICE_UNAVAILABLE, 'Email service is not configured');
+            }
+            const resendFromEmail = fromEmail.includes('@gmail.com') ||
+                fromEmail.includes('@yahoo.com') ||
+                fromEmail.includes('@hotmail.com')
+                ? 'onboarding@resend.dev'
+                : fromEmail;
+            let resendFormattedFrom = `"${fromName}" <${resendFromEmail}>`;
+            const toAddresses = Array.isArray(data.to) ? data.to : [data.to];
+            let response = await this.resend.emails.send({
+                from: resendFormattedFrom,
+                to: toAddresses,
                 subject,
                 html,
-                attachments: data.attachments,
-            };
-            const info = await this.transporter.sendMail(mailOptions);
-            console.log(`📧 Email sent: ${info.messageId}`);
-            console.log(`   To: ${mailOptions.to}`);
-            console.log(`   Subject: ${subject}`);
+            });
+            if (response.error && response.error.message.includes('domain is not verified')) {
+                console.warn(`⚠️ Domain for ${fromEmail} is not verified on Resend yet. Retrying with onboarding@resend.dev for testing...`);
+                resendFormattedFrom = `"${fromName}" <onboarding@resend.dev>`;
+                response = await this.resend.emails.send({
+                    from: resendFormattedFrom,
+                    to: toAddresses,
+                    subject,
+                    html,
+                });
+            }
+            if (response.error) {
+                console.error('❌ Resend email failed:', response.error.message);
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, `Failed to send email via Resend: ${response.error.message}`);
+            }
+            console.log(`📧 Email sent via Resend: ${(_a = response.data) === null || _a === void 0 ? void 0 : _a.id}`);
             return true;
         }
         catch (error) {

@@ -4,35 +4,51 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailHelper = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
+const resend_1 = require("resend");
 const config_1 = __importDefault(require("../config"));
-const transporter = nodemailer_1.default.createTransport({
-    host: config_1.default.email.host,
-    port: Number(config_1.default.email.port),
-    secure: false,
-    auth: {
-        user: config_1.default.email.user,
-        pass: config_1.default.email.pass,
-    },
-    // 👇 ignore self-signed cert
-    // 👇 TODO : remove after complete
-    tls: {
-        rejectUnauthorized: false,
-    },
-});
+const resend = config_1.default.email.resend_api_key
+    ? new resend_1.Resend(config_1.default.email.resend_api_key)
+    : null;
 const sendEmail = async (values) => {
+    var _a;
+    const fromName = 'Aries';
+    const fromEmail = config_1.default.email.from || 'no-reply@areisco.com';
+    if (!resend) {
+        console.error('❌ RESEND_API_KEY is not configured in environment variables.');
+        return;
+    }
     try {
-        const info = await transporter.sendMail({
-            from: `"Aries" ${config_1.default.email.from}`,
+        const resendFromEmail = fromEmail.includes('@gmail.com') ||
+            fromEmail.includes('@yahoo.com') ||
+            fromEmail.includes('@hotmail.com')
+            ? 'onboarding@resend.dev'
+            : fromEmail;
+        let formattedFrom = `"${fromName}" <${resendFromEmail}>`;
+        let response = await resend.emails.send({
+            from: formattedFrom,
             to: values.to,
             subject: values.subject,
             html: values.html,
         });
-        console.log('Mail send successfully', info.accepted);
+        if (response.error && response.error.message.includes('domain is not verified')) {
+            console.warn(`⚠️ Domain for ${fromEmail} is not verified on Resend yet. Retrying with onboarding@resend.dev for testing...`);
+            formattedFrom = `"${fromName}" <onboarding@resend.dev>`;
+            response = await resend.emails.send({
+                from: formattedFrom,
+                to: values.to,
+                subject: values.subject,
+                html: values.html,
+            });
+        }
+        if (response.error) {
+            console.error('❌ Resend email failed:', response.error.message);
+        }
+        else {
+            console.log('✅ Mail sent successfully via Resend:', (_a = response.data) === null || _a === void 0 ? void 0 : _a.id);
+        }
     }
     catch (error) {
-        console.log({ error });
-        console.error('Email', error);
+        console.error('❌ Error sending email with Resend:', error);
     }
 };
 exports.emailHelper = {

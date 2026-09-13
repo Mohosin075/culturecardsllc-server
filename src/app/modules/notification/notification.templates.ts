@@ -32,7 +32,7 @@ export class EmailTemplates {
   private static footer = `
     <div class="footer">
       <p>© ${new Date().getFullYear()} Aries. All rights reserved.</p>
-      <p>This email was sent by Aries. If you have any questions, contact us at support@aries.com</p>
+      <p>This email was sent by Aries. If you have any questions, contact us at support@areisco.com</p>
       <p>
         <a href="{{unsubscribeLink}}" style="color: #667eea; text-decoration: none;">Unsubscribe</a> | 
         <a href="{{privacyLink}}" style="color: #667eea; text-decoration: none;">Privacy Policy</a> | 

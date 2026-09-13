@@ -1,36 +1,18 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 import { StatusCodes } from 'http-status-codes'
 import config from '../../../config'
 import ApiError from '../../../errors/ApiError'
 import { EmailNotificationData } from './notification.interface'
 import { EmailTemplates } from './notification.templates'
-import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 export class EmailProvider {
-  private transporter: nodemailer.Transporter
+  private resend: Resend | null = null
   private static instance: EmailProvider
 
   private constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: config.email.host,
-      port: config.email.port,
-      secure: false, // false for TLS, true for SSL
-      auth: {
-        user: config.email.user,
-        pass: config.email.pass,
-      },
-      // For development, bypass SSL verification
-      tls: {
-        rejectUnauthorized: false,
-      },
-      // Connection settings
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
-    } as SMTPTransport.Options)
-
-    // Initialize asynchronously
-    // this.initialize()
+    if (config.email.resend_api_key) {
+      this.resend = new Resend(config.email.resend_api_key)
+    }
   }
 
   static getInstance(): EmailProvider {
@@ -40,19 +22,6 @@ export class EmailProvider {
     return EmailProvider.instance
   }
 
-  private async verifyConnection(): Promise<void> {
-    try {
-      await this.transporter.verify()
-      console.log('✅ Email server connection verified')
-    } catch (error: any) {
-      console.error('❌ Email server connection failed:', error.message)
-      throw new ApiError(
-        StatusCodes.SERVICE_UNAVAILABLE,
-        'Email service is currently unavailable',
-      )
-    }
-  }
-
   async sendEmail(data: EmailNotificationData): Promise<boolean> {
     try {
       const { subject, html } = EmailTemplates.getTemplate(
@@ -60,20 +29,56 @@ export class EmailProvider {
         data.data,
       )
 
-      const mailOptions: nodemailer.SendMailOptions = {
-        from: `Aries <${config.email.from}>`,
-        to: Array.isArray(data.to) ? data.to.join(',') : data.to,
-        subject,
-        html,
-        attachments: data.attachments,
+      const fromName = 'Aries'
+      const fromEmail = config.email.from || 'no-reply@areisco.com'
+
+      if (!this.resend) {
+        console.error('❌ RESEND_API_KEY is missing.')
+        throw new ApiError(
+          StatusCodes.SERVICE_UNAVAILABLE,
+          'Email service is not configured',
+        )
       }
 
-      const info = await this.transporter.sendMail(mailOptions)
+      const resendFromEmail =
+        fromEmail.includes('@gmail.com') ||
+        fromEmail.includes('@yahoo.com') ||
+        fromEmail.includes('@hotmail.com')
+          ? 'onboarding@resend.dev'
+          : fromEmail
+      let resendFormattedFrom = `"${fromName}" <${resendFromEmail}>`
 
-      console.log(`📧 Email sent: ${info.messageId}`)
-      console.log(`   To: ${mailOptions.to}`)
-      console.log(`   Subject: ${subject}`)
+      const toAddresses = Array.isArray(data.to) ? data.to : [data.to]
 
+      let response = await this.resend.emails.send({
+        from: resendFormattedFrom,
+        to: toAddresses,
+        subject,
+        html,
+      })
+
+      if (response.error && response.error.message.includes('domain is not verified')) {
+        console.warn(
+          `⚠️ Domain for ${fromEmail} is not verified on Resend yet. Retrying with onboarding@resend.dev for testing...`,
+        )
+        resendFormattedFrom = `"${fromName}" <onboarding@resend.dev>`
+        response = await this.resend.emails.send({
+          from: resendFormattedFrom,
+          to: toAddresses,
+          subject,
+          html,
+        })
+      }
+
+      if (response.error) {
+        console.error('❌ Resend email failed:', response.error.message)
+        throw new ApiError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          `Failed to send email via Resend: ${response.error.message}`,
+        )
+      }
+
+      console.log(`📧 Email sent via Resend: ${response.data?.id}`)
       return true
     } catch (error: any) {
       console.error('❌ Email sending failed:', error.message)

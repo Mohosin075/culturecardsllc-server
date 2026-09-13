@@ -27,8 +27,6 @@ const envVarsSchema = zod_1.z.object({
     GOOGLE_CALLBACK_URL: zod_1.z.string().optional(),
     STRIPE_API_SECRET: zod_1.z.string().optional(),
     WEBHOOK_SECRET: zod_1.z.string().optional(),
-    EMAIL_USER: zod_1.z.string().optional(),
-    EMAIL_PASS: zod_1.z.string().optional(),
     SUPER_ADMIN_NAME: zod_1.z.string().optional(),
     SUPER_ADMIN_EMAIL: zod_1.z.string().optional(),
     SUPER_ADMIN_PASSWORD: zod_1.z.string().optional(),
@@ -79,10 +77,6 @@ exports.default = {
     instant_transfer_fee: process.env.INSTANT_TRANSFER_FEE,
     email: {
         from: process.env.EMAIL_FROM,
-        user: envVars.EMAIL_USER,
-        port: process.env.EMAIL_PORT,
-        host: process.env.EMAIL_HOST,
-        pass: envVars.EMAIL_PASS,
         resend_api_key: process.env.RESEND_API_KEY,
     },
     super_admin: {

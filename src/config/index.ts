@@ -23,8 +23,6 @@ const envVarsSchema = z.object({
   GOOGLE_CALLBACK_URL: z.string().optional(),
   STRIPE_API_SECRET: z.string().optional(),
   WEBHOOK_SECRET: z.string().optional(),
-  EMAIL_USER: z.string().optional(),
-  EMAIL_PASS: z.string().optional(),
   SUPER_ADMIN_NAME: z.string().optional(),
   SUPER_ADMIN_EMAIL: z.string().optional(),
   SUPER_ADMIN_PASSWORD: z.string().optional(),
@@ -77,10 +75,6 @@ export default {
   instant_transfer_fee: process.env.INSTANT_TRANSFER_FEE,
   email: {
     from: process.env.EMAIL_FROM,
-    user: envVars.EMAIL_USER,
-    port: process.env.EMAIL_PORT,
-    host: process.env.EMAIL_HOST,
-    pass: envVars.EMAIL_PASS,
     resend_api_key: process.env.RESEND_API_KEY,
   },
   super_admin: {
