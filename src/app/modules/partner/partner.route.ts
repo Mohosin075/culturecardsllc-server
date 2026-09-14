@@ -32,4 +32,11 @@ router.patch(
   PartnerController.updatePartnerBankDetails,
 )
 
+// POST /:partnerId/send-email — Resend magic link email to partner
+router.post(
+  '/:partnerId/send-email',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  PartnerController.sendMagicLinkEmailToPartner,
+)
+
 export const PartnerRoutes = router

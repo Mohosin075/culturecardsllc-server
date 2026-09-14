@@ -46,9 +46,22 @@ const updatePartnerBankDetails = catchAsync(async (req: Request, res: Response) 
   })
 })
 
+const sendMagicLinkEmailToPartner = catchAsync(async (req: Request, res: Response) => {
+  const { partnerId } = req.params
+  const origin = req.get('origin') || req.get('referer')
+  const result = await PartnerService.sendMagicLinkEmailToPartner(partnerId, origin)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  })
+})
+
 export const PartnerController = {
   createPartnerByAdmin,
   getAllPartners,
   getPartnerDashboardByToken,
   updatePartnerBankDetails,
+  sendMagicLinkEmailToPartner,
 }
