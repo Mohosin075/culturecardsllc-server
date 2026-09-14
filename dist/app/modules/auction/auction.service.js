@@ -167,6 +167,7 @@ const getStreamInventory = async (streamId) => {
     return stream.inventoryIds || [];
 };
 const quickStartAuctionItem = async (payload, sellerId) => {
+    var _a;
     const { streamId, productId, startingBid, timerDuration, bidIncrement } = payload;
     if (!mongoose_1.Types.ObjectId.isValid(streamId) || !mongoose_1.Types.ObjectId.isValid(productId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Stream ID or Product ID');
@@ -182,8 +183,8 @@ const quickStartAuctionItem = async (payload, sellerId) => {
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }
-    if (product.status === 'sold' || product.status === 'pending') {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}).`);
+    if (product.status === 'sold' || (product.stock !== undefined && product.stock <= 0)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}, stock: ${(_a = product.stock) !== null && _a !== void 0 ? _a : 0}).`);
     }
     // Create auction item via createAuctionItem helper
     // bidIncrement is always forced to 1 (Fixed $1 Bid Increment Policy — never allow client override)
@@ -483,8 +484,11 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
             await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
         }
         const [order] = await order_model_1.Order.create([orderPayload]);
-        // Mark product sold
-        await product_model_1.Product.findByIdAndUpdate(product._id, { status: 'sold', stock: 0 });
+        // Decrement product stock by 1; mark status as sold only when stock reaches 0
+        const currentStock = typeof product.stock === 'number' ? product.stock : 1;
+        const newStock = Math.max(0, currentStock - 1);
+        const newStatus = newStock > 0 ? 'active' : 'sold';
+        await product_model_1.Product.findByIdAndUpdate(product._id, { status: newStatus, stock: newStock });
         // Mark auction completed
         auctionItem.status = 'completed';
         await auctionItem.save();
@@ -529,8 +533,11 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
         notification_integration_1.NotificationIntegration.onAuctionWon(auctionItem.highestBidderId, (stream === null || stream === void 0 ? void 0 : stream.sellerId) || '', product.title, auctionItem.currentBid, auctionItemId).catch(err => console.error('Failed to send auction won push notification:', err));
         return { checkoutUrl: '', auctionItem };
     }
-    // 3. Fallback: Create Stripe checkout session for manual payment
-    await product_model_1.Product.findByIdAndUpdate(product._id, { status: 'pending' });
+    // Decrement stock by 1 for manual checkout session; if remaining stock > 0 keep active, else set pending
+    const currentStock = typeof product.stock === 'number' ? product.stock : 1;
+    const newStock = Math.max(0, currentStock - 1);
+    const newStatus = newStock > 0 ? 'active' : 'pending';
+    await product_model_1.Product.findByIdAndUpdate(product._id, { status: newStatus, stock: newStock });
     auctionItem.status = 'completed';
     await auctionItem.save();
     if (!winner.email) {

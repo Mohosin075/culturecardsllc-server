@@ -120,8 +120,11 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                     }
                     // Create order
                     const [order] = await order_model_1.Order.create([orderPayload], { session: mongoSession });
-                    // Mark product sold
-                    await product_model_1.Product.findByIdAndUpdate(meta.productId, { status: 'sold', stock: 0 }, { session: mongoSession });
+                    // Decrement product stock by 1; mark status as sold only when remaining stock reaches 0
+                    const currentStock = typeof product.stock === 'number' ? product.stock : 1;
+                    const newStock = Math.max(0, currentStock - 1);
+                    const newStatus = newStock > 0 ? 'active' : 'sold';
+                    await product_model_1.Product.findByIdAndUpdate(meta.productId, { status: newStatus, stock: newStock }, { session: mongoSession });
                     // Chat message to seller
                     const chat = await chat_model_1.Chat.findOne({
                         participants: { $all: [meta.winnerId, meta.sellerId] },

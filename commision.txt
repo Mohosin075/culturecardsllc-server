@@ -1,0 +1,19 @@
+Let's say our seller fees are 7%. Trading fees are 3% of both users items.
+Both have items that are 1000. One will pay 3% of there items value to us
+As well as the other user.
+Boobie will be getting his commission from my end, 50% of whatever I make for anyone that signed
+up with code OG.
+Just calculate it down the middle for now. Show total real time users, he brought in. Then total
+profits, maybe another real time graph/or something professional looking that shows his 50% revenue
+total and then my 50% beside it.
+Not necessarily sure how his payouts would work. If we are setting out payouts through stripe
+he/others may need to make a stripe account still.
+Unless I can bypass that for very select few people. Say I personally make there account in the
+partners section. Where I can maybe just enter there name. Email and a password. And then there
+code so they can instantly start streaming, again. Not sure how that would work with stripe, but don't
+want bigger celebrities have to feel nervous giving social or whatever. I can ask them for a bank
+account or routing number for there payouts to go.
+Or if there is a way for me to share my partner page, for instance. I can share boobies page with
+Boobie. Via text and he can see all his real time data. Sales, etc. while on that page. We can have a
+spot that shows where payout will be going. And can have him enter his own banking stuff on screen.
+But can't have him being able to view my other partners dashes.

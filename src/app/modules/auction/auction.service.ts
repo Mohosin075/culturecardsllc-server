@@ -286,8 +286,8 @@ const quickStartAuctionItem = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
 
-  if (product.status === 'sold' || product.status === 'pending') {
-    throw new ApiError(StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}).`)
+  if (product.status === 'sold' || (product.stock !== undefined && product.stock <= 0)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}, stock: ${product.stock ?? 0}).`)
   }
 
   // Create auction item via createAuctionItem helper
@@ -685,8 +685,11 @@ const completeAuction = async (
 
     const [order] = await Order.create([orderPayload])
 
-    // Mark product sold
-    await Product.findByIdAndUpdate(product._id, { status: 'sold', stock: 0 })
+    // Decrement product stock by 1; mark status as sold only when stock reaches 0
+    const currentStock = typeof product.stock === 'number' ? product.stock : 1
+    const newStock = Math.max(0, currentStock - 1)
+    const newStatus = newStock > 0 ? 'active' : 'sold'
+    await Product.findByIdAndUpdate(product._id, { status: newStatus, stock: newStock })
 
     // Mark auction completed
     auctionItem.status = 'completed'
@@ -743,8 +746,11 @@ const completeAuction = async (
     return { checkoutUrl: '', auctionItem }
   }
 
-  // 3. Fallback: Create Stripe checkout session for manual payment
-  await Product.findByIdAndUpdate(product._id, { status: 'pending' })
+  // Decrement stock by 1 for manual checkout session; if remaining stock > 0 keep active, else set pending
+  const currentStock = typeof product.stock === 'number' ? product.stock : 1
+  const newStock = Math.max(0, currentStock - 1)
+  const newStatus = newStock > 0 ? 'active' : 'pending'
+  await Product.findByIdAndUpdate(product._id, { status: newStatus, stock: newStock })
 
   auctionItem.status = 'completed'
   await auctionItem.save()
