@@ -12,6 +12,13 @@ import {
 import { fileAndBodyProcessorUsingDiskStorage } from '../../middleware/processReqBody'
 const router = express.Router()
 
+
+router.patch(
+  '/promo-code',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  UserController.applyPromoCodeToUser,
+)
+
 router.patch(
   '/switch-role',
   auth(USER_ROLES.BUYER, USER_ROLES.SELLER),

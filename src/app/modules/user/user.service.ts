@@ -1,3 +1,4 @@
+import { Partner } from '../partner/partner.model'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import { IUser, IUserFilterables } from './user.interface'
@@ -525,6 +526,33 @@ const getBlockedUsers = async (userId: string): Promise<any[]> => {
   return user.blockedUsers || []
 }
 
+
+const applyPromoCodeToUser = async (userId: string, promoCode: string) => {
+  if (!promoCode) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Promo code is required.')
+  }
+  const formattedPromoCode = promoCode.trim().toUpperCase()
+  const partner = await Partner.findOne({ promoCode: formattedPromoCode })
+  if (!partner) {
+    throw new ApiError(StatusCodes.NOT_FOUND, `Invalid promo code '${formattedPromoCode}'.`)
+  }
+
+  const user = await User.findById(userId)
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User account not found.')
+  }
+
+  user.referredByPartnerId = partner._id as any
+  user.promoCode = formattedPromoCode
+  await user.save()
+
+  return {
+    referredByPartnerId: partner._id,
+    promoCode: formattedPromoCode,
+    partnerName: partner.name,
+  }
+}
+
 export const UserServices = {
   updateProfile,
   createAdmin,
@@ -535,6 +563,7 @@ export const UserServices = {
   getProfile,
   deleteProfile,
   deactivateProfile,
+  applyPromoCodeToUser,
   switchRole,
   blockUser,
   unblockUser,

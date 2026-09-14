@@ -180,6 +180,17 @@ const getBlockedUsers = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+
+const applyPromoCodeToUser = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as any
+  const { promoCode } = req.body
+  const result = await UserServices.applyPromoCodeToUser(user?.id || user?.userId, promoCode)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+  })
+})
+
 export const UserController = {
   updateProfile,
   getAllUsers,
@@ -189,6 +200,7 @@ export const UserController = {
   getProfile,
   deleteProfile,
   deactivateProfile,
+  applyPromoCodeToUser,
   switchRole,
   blockUser,
   unblockUser,

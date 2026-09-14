@@ -350,6 +350,23 @@ const sendMagicLinkEmailToPartner = async (partnerId: string, customOrigin?: str
   return { success: true, message: `Magic portal link sent to ${partner.email}` }
 }
 
+
+const validatePromoCode = async (code: string) => {
+  if (!code) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Promo code query parameter is required.')
+  }
+  const cleanCode = code.trim().toUpperCase()
+  const partner = await Partner.findOne({ promoCode: cleanCode }).select('name promoCode')
+  if (!partner) {
+    return { valid: false, promoCode: cleanCode }
+  }
+  return {
+    valid: true,
+    promoCode: partner.promoCode,
+    partnerName: partner.name,
+  }
+}
+
 export const PartnerService = {
   createPartnerByAdmin,
   getAllPartners,
@@ -357,4 +374,5 @@ export const PartnerService = {
   updatePartnerBankDetails,
   recordCommissionForOrder,
   sendMagicLinkEmailToPartner,
+  validatePromoCode,
 }

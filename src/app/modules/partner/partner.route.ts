@@ -23,6 +23,7 @@ router.get(
 )
 
 // GET /dashboard — Secret Token authenticated magic link dashboard query
+router.get('/validate-code', PartnerController.validatePromoCode)
 router.get('/dashboard', PartnerController.getPartnerDashboardByToken)
 
 // PATCH /bank-details — Update bank info via access token

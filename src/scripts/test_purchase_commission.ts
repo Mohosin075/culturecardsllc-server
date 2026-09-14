@@ -74,7 +74,7 @@ async function run() {
   // 5. Trigger Partner Commission Recording
   await PartnerService.recordCommissionForOrder({
     buyerId: user._id.toString(),
-    orderId: testOrder._id.toString(),
+    orderId: (testOrder as any)._id?.toString(),
     transactionAmount,
     isTrade: false,
   })

@@ -158,6 +158,15 @@ const getBlockedUsers = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const applyPromoCodeToUser = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { promoCode } = req.body;
+    const result = await user_service_1.UserServices.applyPromoCodeToUser((user === null || user === void 0 ? void 0 : user.id) || (user === null || user === void 0 ? void 0 : user.userId), promoCode);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+    });
+});
 exports.UserController = {
     updateProfile,
     getAllUsers,
@@ -167,6 +176,7 @@ exports.UserController = {
     getProfile,
     deleteProfile,
     deactivateProfile,
+    applyPromoCodeToUser,
     switchRole,
     blockUser,
     unblockUser,

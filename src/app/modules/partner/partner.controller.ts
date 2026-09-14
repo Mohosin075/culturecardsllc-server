@@ -58,10 +58,23 @@ const sendMagicLinkEmailToPartner = catchAsync(async (req: Request, res: Respons
   })
 })
 
+
+const validatePromoCode = catchAsync(async (req: Request, res: Response) => {
+  const code = req.query.code as string
+  const result = await PartnerService.validatePromoCode(code)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result.valid ? 'Promo code is valid' : 'Invalid promo code',
+    data: result,
+  })
+})
+
 export const PartnerController = {
   createPartnerByAdmin,
   getAllPartners,
   getPartnerDashboardByToken,
   updatePartnerBankDetails,
   sendMagicLinkEmailToPartner,
+  validatePromoCode,
 }

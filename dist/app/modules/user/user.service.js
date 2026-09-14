@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserServices = exports.getProfile = void 0;
+const partner_model_1 = require("../partner/partner.model");
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const user_model_1 = require("./user.model");
@@ -376,6 +377,28 @@ const getBlockedUsers = async (userId) => {
     }
     return user.blockedUsers || [];
 };
+const applyPromoCodeToUser = async (userId, promoCode) => {
+    if (!promoCode) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Promo code is required.');
+    }
+    const formattedPromoCode = promoCode.trim().toUpperCase();
+    const partner = await partner_model_1.Partner.findOne({ promoCode: formattedPromoCode });
+    if (!partner) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, `Invalid promo code '${formattedPromoCode}'.`);
+    }
+    const user = await user_model_1.User.findById(userId);
+    if (!user) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User account not found.');
+    }
+    user.referredByPartnerId = partner._id;
+    user.promoCode = formattedPromoCode;
+    await user.save();
+    return {
+        referredByPartnerId: partner._id,
+        promoCode: formattedPromoCode,
+        partnerName: partner.name,
+    };
+};
 exports.UserServices = {
     updateProfile,
     createAdmin,
@@ -386,6 +409,7 @@ exports.UserServices = {
     getProfile: exports.getProfile,
     deleteProfile,
     deactivateProfile,
+    applyPromoCodeToUser,
     switchRole,
     blockUser,
     unblockUser,
