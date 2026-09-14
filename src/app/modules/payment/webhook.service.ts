@@ -64,10 +64,10 @@ const handleCheckoutSessionCompleted = async (
 
       // ─── BUY NOW: update order paymentStatus + product status ───────────────────
       if (purchaseType === 'buy_now' && meta.orderId) {
-        await Order.findByIdAndUpdate(
+        const paidOrder = await Order.findByIdAndUpdate(
           meta.orderId,
           { paymentStatus: 'paid' },
-          { session: mongoSession },
+          { session: mongoSession, new: true },
         )
         if (meta.productId) {
           await Product.findByIdAndUpdate(
@@ -75,6 +75,16 @@ const handleCheckoutSessionCompleted = async (
             { status: 'sold' },
             { session: mongoSession },
           )
+        }
+
+        if (paidOrder) {
+          const paidOrderAny = paidOrder as any
+          const totalPaid = (sessionWithDetails.amount_total || 0) / 100 || paidOrderAny.amountDetails?.totalPaid || 0
+          PartnerService.recordCommissionForOrder({
+            buyerId: paidOrderAny.buyerId?.toString(),
+            orderId: paidOrderAny._id?.toString(),
+            transactionAmount: totalPaid,
+          }).catch(err => console.error('Partner commission error for buy_now:', err))
         }
       }
 

@@ -20,7 +20,7 @@ const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const tradeVote_service_1 = require("../trade/tradeVote.service");
 const partner_service_1 = require("../partner/partner.service");
 const handleCheckoutSessionCompleted = async (sessionData) => {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     try {
         console.log('🔔 Processing Checkout Session Completed:', sessionData.id);
         const sessionWithDetails = await stripe_1.default.checkout.sessions.retrieve(sessionData.id, {
@@ -59,9 +59,18 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
             const purchaseType = meta.purchaseType;
             // ─── BUY NOW: update order paymentStatus + product status ───────────────────
             if (purchaseType === 'buy_now' && meta.orderId) {
-                await order_model_1.Order.findByIdAndUpdate(meta.orderId, { paymentStatus: 'paid' }, { session: mongoSession });
+                const paidOrder = await order_model_1.Order.findByIdAndUpdate(meta.orderId, { paymentStatus: 'paid' }, { session: mongoSession, new: true });
                 if (meta.productId) {
                     await product_model_1.Product.findByIdAndUpdate(meta.productId, { status: 'sold' }, { session: mongoSession });
+                }
+                if (paidOrder) {
+                    const paidOrderAny = paidOrder;
+                    const totalPaid = (sessionWithDetails.amount_total || 0) / 100 || ((_b = paidOrderAny.amountDetails) === null || _b === void 0 ? void 0 : _b.totalPaid) || 0;
+                    partner_service_1.PartnerService.recordCommissionForOrder({
+                        buyerId: (_c = paidOrderAny.buyerId) === null || _c === void 0 ? void 0 : _c.toString(),
+                        orderId: (_d = paidOrderAny._id) === null || _d === void 0 ? void 0 : _d.toString(),
+                        transactionAmount: totalPaid,
+                    }).catch(err => console.error('Partner commission error for buy_now:', err));
                 }
             }
             // ─── AUCTION WIN: create order + mark product sold ─────────────────────────
@@ -71,11 +80,11 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                     const totalPaid = (sessionWithDetails.amount_total || 0) / 100;
                     const buyerUser = await user_model_1.User.findById(meta.winnerId).session(mongoSession);
                     const shippingAddress = {
-                        street: ((_b = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _b === void 0 ? void 0 : _b.presentAddress) || '123 Collectors St',
-                        city: ((_c = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _c === void 0 ? void 0 : _c.city) || 'Collector City',
+                        street: ((_e = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _e === void 0 ? void 0 : _e.presentAddress) || '123 Collectors St',
+                        city: ((_f = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _f === void 0 ? void 0 : _f.city) || 'Collector City',
                         state: 'AP',
-                        postalCode: ((_d = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _d === void 0 ? void 0 : _d.postalCode) || '10001',
-                        country: ((_e = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _e === void 0 ? void 0 : _e.country) || 'US',
+                        postalCode: ((_g = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _g === void 0 ? void 0 : _g.postalCode) || '10001',
+                        country: ((_h = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _h === void 0 ? void 0 : _h.country) || 'US',
                     };
                     // Check if there is an existing pending order for the same buyer, seller, and stream in the last 12 hours
                     const existingOrder = await order_model_1.Order.findOne({
