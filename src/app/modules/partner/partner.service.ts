@@ -107,15 +107,108 @@ const getAllPartners = async () => {
   }))
 }
 
-const getPartnerDashboardByToken = async (accessToken: string) => {
+
+const maskEmail = (email: string) => {
+  if (!email || !email.includes('@')) return email;
+  const [name, domain] = email.split('@');
+  if (name.length <= 2) return `${name.charAt(0)}*@${domain}`;
+  return `${name.charAt(0)}***${name.charAt(name.length - 1)}@${domain}`;
+};
+
+const requestPartnerOTP = async (accessToken: string) => {
+  if (!accessToken || typeof accessToken !== 'string') {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'A valid partner access token is required.');
+  }
+
+  const partner = await Partner.findOne({ accessToken });
+  if (!partner) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Invalid or expired partner access token.');
+  }
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  partner.otpCode = otpCode;
+  partner.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await partner.save();
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
+      <h2 style="color: #111827; margin-bottom: 8px;">Partner Portal Security Code</h2>
+      <p style="color: #4b5563; font-size: 14px;">Hello ${partner.name},</p>
+      <p style="color: #4b5563; font-size: 14px;">Your 6-digit Security Verification Code to access your Culture Cards Partner Portal is:</p>
+      <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #155dfc;">${otpCode}</span>
+      </div>
+      <p style="color: #6b7280; font-size: 12px;">This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
+    </div>
+  `;
+
+  await emailHelper.sendEmail({
+    to: partner.email,
+    subject: `Your Partner Portal Security Code: ${otpCode}`,
+    html: htmlContent,
+  });
+
+  return {
+    success: true,
+    emailMasked: maskEmail(partner.email),
+    message: 'OTP verification code sent to partner email.',
+  };
+};
+
+const verifyPartnerOTP = async (accessToken: string, otp: string) => {
+  if (!accessToken || typeof accessToken !== 'string') {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'A valid partner access token is required.');
+  }
+  if (!otp || typeof otp !== 'string') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP code is required.');
+  }
+
+  const partner = await Partner.findOne({ accessToken });
+  if (!partner) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Invalid or expired partner access token.');
+  }
+
+  if (!partner.otpCode || partner.otpCode !== otp.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid OTP code. Please check your email and try again.');
+  }
+
+  if (!partner.otpExpiresAt || new Date() > new Date(partner.otpExpiresAt)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'OTP code has expired. Please request a new code.');
+  }
+
+  const otpSessionToken = crypto.randomBytes(32).toString('hex');
+  partner.otpSessionToken = otpSessionToken;
+  partner.otpCode = undefined;
+  partner.otpExpiresAt = undefined;
+  await partner.save();
+
+  return {
+    success: true,
+    message: 'OTP verified successfully.',
+    otpToken: otpSessionToken,
+  };
+};
+
+const getPartnerDashboardByToken = async (accessToken: string, otpToken?: string, skipOtpCheck: boolean = false): Promise<any> => {
   if (!accessToken || typeof accessToken !== 'string') {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'A valid partner access token is required.')
   }
 
   const partner = await Partner.findOne({ accessToken })
+
   if (!partner) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Invalid or expired partner access token.')
   }
+
+  // OTP Verification Requirement Check
+  if (!skipOtpCheck && (!otpToken || partner.otpSessionToken !== otpToken)) {
+    return {
+      otpRequired: true,
+      emailMasked: maskEmail(partner.email),
+      message: 'Security verification required. Please enter the OTP sent to your email.',
+    }
+  }
+
 
   const partnerObjectId = new Types.ObjectId(partner._id)
 
@@ -368,6 +461,8 @@ const validatePromoCode = async (code: string) => {
 }
 
 export const PartnerService = {
+  requestPartnerOTP,
+  verifyPartnerOTP,
   createPartnerByAdmin,
   getAllPartners,
   getPartnerDashboardByToken,

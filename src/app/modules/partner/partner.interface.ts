@@ -15,6 +15,9 @@ export type IPartner = {
   revenueSharePercentage: number // default 50
   bankDetails?: IBankDetails
   accessToken: string // unique 64-character hex token for magic link access
+  otpCode?: string
+  otpExpiresAt?: Date
+  otpSessionToken?: string
   totalEarnings: number
   createdAt: Date
   updatedAt: Date

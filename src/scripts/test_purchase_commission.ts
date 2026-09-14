@@ -27,7 +27,7 @@ async function run() {
   console.log(`Partner: ${partner.name} (Code: ${partner.promoCode})`)
 
   // 3. Stats BEFORE purchase
-  const dashboardBefore = await PartnerService.getPartnerDashboardByToken(partner.accessToken)
+  const dashboardBefore = await PartnerService.getPartnerDashboardByToken(partner.accessToken, undefined, true)
   console.log('\n--- Partner Stats BEFORE Purchase ---')
   console.log(`Total Referred Users: ${dashboardBefore.metrics.totalReferredUsers}`)
   console.log(`Total Earnings: $${dashboardBefore.partnerInfo.totalEarnings}`)
@@ -94,7 +94,7 @@ async function run() {
   }
 
   // 7. Stats AFTER purchase
-  const dashboardAfter = await PartnerService.getPartnerDashboardByToken(partner.accessToken)
+  const dashboardAfter = await PartnerService.getPartnerDashboardByToken(partner.accessToken, undefined, true)
   console.log('\n--- Partner Stats AFTER Purchase ---')
   console.log(`Total Referred Users: ${dashboardAfter.metrics.totalReferredUsers}`)
   console.log(`Total Earnings: $${dashboardAfter.partnerInfo.totalEarnings}`)

@@ -24,9 +24,34 @@ const getAllPartners = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+
+const requestPartnerOTP = catchAsync(async (req: Request, res: Response) => {
+  const token = (req.body.token as string) || (req.query.token as string) || (req.headers['x-partner-token'] as string);
+  const result = await PartnerService.requestPartnerOTP(token);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
+const verifyPartnerOTP = catchAsync(async (req: Request, res: Response) => {
+  const token = (req.body.token as string) || (req.query.token as string) || (req.headers['x-partner-token'] as string);
+  const { otp } = req.body;
+  const result = await PartnerService.verifyPartnerOTP(token, otp);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
 const getPartnerDashboardByToken = catchAsync(async (req: Request, res: Response) => {
   const token = (req.query.token as string) || (req.headers['x-partner-token'] as string)
-  const result = await PartnerService.getPartnerDashboardByToken(token)
+  const otpToken = (req.query.otpToken as string) || (req.headers['x-partner-otp-token'] as string)
+  const result = await PartnerService.getPartnerDashboardByToken(token, otpToken)
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -71,6 +96,8 @@ const validatePromoCode = catchAsync(async (req: Request, res: Response) => {
 })
 
 export const PartnerController = {
+  requestPartnerOTP,
+  verifyPartnerOTP,
   createPartnerByAdmin,
   getAllPartners,
   getPartnerDashboardByToken,

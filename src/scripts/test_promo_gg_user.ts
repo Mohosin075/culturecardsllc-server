@@ -34,7 +34,7 @@ async function run() {
   }
 
   // Check stats before
-  const statsBefore = await PartnerService.getPartnerDashboardByToken(partner.accessToken)
+  const statsBefore = await PartnerService.getPartnerDashboardByToken(partner.accessToken, undefined, true)
   console.log(`\nStats before adding user:`)
   console.log(`- Total Referred Users: ${statsBefore.metrics.totalReferredUsers}`)
   console.log(`- Magic Portal Link: http://localhost:3000/partner/dashboard?token=${partner.accessToken}`)
@@ -76,7 +76,7 @@ async function run() {
   console.log(`Partner ID Matches: ${isLinkedCorrectly ? 'YES (SUCCESS)' : 'NO (FAILED)'}`)
 
   // Step 4: Check Partner Dashboard stats after user registration
-  const statsAfter = await PartnerService.getPartnerDashboardByToken(partner.accessToken)
+  const statsAfter = await PartnerService.getPartnerDashboardByToken(partner.accessToken, undefined, true)
   console.log(`\nStats after adding user:`)
   console.log(`- Total Referred Users: ${statsAfter.metrics.totalReferredUsers}`)
   console.log(`- Increment Verified: ${statsAfter.metrics.totalReferredUsers === statsBefore.metrics.totalReferredUsers + 1 ? 'YES' : 'NO'}`)

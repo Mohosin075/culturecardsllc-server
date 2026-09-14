@@ -14,6 +14,9 @@ const PartnerSchema = new Schema<IPartner>(
       accountHolderName: { type: String, default: '' },
     },
     accessToken: { type: String, required: true, unique: true, index: true },
+    otpCode: { type: String, default: null },
+    otpExpiresAt: { type: Date, default: null },
+    otpSessionToken: { type: String, default: null },
     totalEarnings: { type: Number, default: 0, min: 0 },
   },
   {
@@ -39,8 +42,14 @@ const PartnerEarningSchema = new Schema<IPartnerEarning>(
 )
 
 // Idempotency: Prevent duplicate earnings on webhook retries
-PartnerEarningSchema.index({ partnerId: 1, orderId: 1 }, { unique: true, sparse: true })
-PartnerEarningSchema.index({ partnerId: 1, tradeOfferId: 1 }, { unique: true, sparse: true })
+PartnerEarningSchema.index(
+  { partnerId: 1, orderId: 1 },
+  { unique: true, partialFilterExpression: { orderId: { $exists: true, $ne: null } } },
+)
+PartnerEarningSchema.index(
+  { partnerId: 1, tradeOfferId: 1 },
+  { unique: true, partialFilterExpression: { tradeOfferId: { $exists: true, $ne: null } } },
+)
 PartnerEarningSchema.index({ partnerId: 1, createdAt: -1 })
 PartnerEarningSchema.index({ createdAt: 1 })
 
