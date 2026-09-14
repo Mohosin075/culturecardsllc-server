@@ -16,6 +16,7 @@ const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelpe
 const user_model_1 = require("../user/user.model");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const tradeVote_service_1 = require("./tradeVote.service");
+const partner_service_1 = require("../partner/partner.service");
 const createTradeOffer = async (payload) => {
     const { senderProductId, receiverProductId, senderId, receiverId } = payload;
     // Check if either user has blocked the other
@@ -200,6 +201,7 @@ const declineTradeOffer = async (offerId) => {
 };
 // ─── Trade Complete: ownership swap + escrow release ───────────────────────
 const completeTradeOffer = async (offerId, userId) => {
+    var _a, _b;
     if (!mongoose_1.Types.ObjectId.isValid(offerId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Offer ID');
     }
@@ -284,6 +286,15 @@ const completeTradeOffer = async (offerId, userId) => {
         await session.commitTransaction();
         // Create Community Trade Vote entry (non-blocking)
         tradeVote_service_1.TradeVoteServices.createTradeVoteFromCompletedTrade(offer).catch(err => console.error('Failed to auto-create trade vote:', err));
+        // Record partner commission on trade completion (3% + 3% = 6% fee)
+        const senderVal = ((_a = offer.senderProductId) === null || _a === void 0 ? void 0 : _a.estValue) || 0;
+        const receiverVal = ((_b = offer.receiverProductId) === null || _b === void 0 ? void 0 : _b.estValue) || 0;
+        partner_service_1.PartnerService.recordCommissionForOrder({
+            buyerId: offer.senderId.toString(),
+            tradeOfferId: offer._id.toString(),
+            transactionAmount: senderVal + receiverVal,
+            isTrade: true,
+        }).catch(err => console.error('Failed to record partner trade commission:', err));
         // Notify both parties
         const notifyIds = [offer.senderId.toString(), offer.receiverId.toString()];
         notifyIds.forEach(uid => {

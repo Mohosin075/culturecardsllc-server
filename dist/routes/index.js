@@ -25,6 +25,7 @@ const order_route_1 = require("../app/modules/order/order.route");
 const dashboard_route_1 = require("../app/modules/dashboard/dashboard.route");
 const follow_route_1 = require("../app/modules/follow/follow.route");
 const giveaway_route_1 = require("../app/modules/giveaway/giveaway.route");
+const partner_route_1 = require("../app/modules/partner/partner.route");
 const router = express_1.default.Router();
 const apiRoutes = [
     {
@@ -57,6 +58,7 @@ const apiRoutes = [
     { path: '/dashboard', route: dashboard_route_1.DashboardRoutes },
     { path: '/follow', route: follow_route_1.FollowRoutes },
     { path: '/giveaway', route: giveaway_route_1.GiveawayRoutes },
+    { path: '/partner', route: partner_route_1.PartnerRoutes },
 ];
 apiRoutes.forEach(route => {
     router.use(route.path, route.route);

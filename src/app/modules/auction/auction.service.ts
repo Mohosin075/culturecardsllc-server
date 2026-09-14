@@ -18,6 +18,7 @@ import { NotificationIntegration } from '../notification/notification.integratio
 import { NotificationServices } from '../notification/notification.service'
 import { NotificationType, NotificationChannel, NotificationPriority } from '../notification/notification.interface'
 import { Payment } from '../payment/payment.model'
+import { PartnerService } from '../partner/partner.service'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -684,6 +685,13 @@ const completeAuction = async (
     }
 
     const [order] = await Order.create([orderPayload])
+
+    // Record partner commission (50/50 split)
+    PartnerService.recordCommissionForOrder({
+      buyerId: auctionItem.highestBidderId.toString(),
+      orderId: (order as any)._id.toString(),
+      transactionAmount: auctionItem.currentBid,
+    }).catch(err => console.error('Failed to record partner commission:', err))
 
     // Decrement product stock by 1; mark status as sold only when stock reaches 0
     const currentStock = typeof product.stock === 'number' ? product.stock : 1

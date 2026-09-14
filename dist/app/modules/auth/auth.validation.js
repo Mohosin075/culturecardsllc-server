@@ -152,6 +152,7 @@ const createUserZodSchema = zod_1.z.object({
             .optional(),
         address: addressSchema.optional(),
         role: zod_1.z.enum([user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER]).optional(),
+        promoCode: zod_1.z.string().optional(),
     }),
 });
 const socialLoginZodSchema = zod_1.z.object({

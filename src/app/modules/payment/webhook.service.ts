@@ -12,6 +12,7 @@ import { io } from '../../../server'
 import { User } from '../user/user.model'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import { TradeVoteServices } from '../trade/tradeVote.service'
+import { PartnerService } from '../partner/partner.service'
 
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
@@ -137,6 +138,13 @@ const handleCheckoutSessionCompleted = async (
 
           // Create order
           const [order] = await Order.create([orderPayload], { session: mongoSession })
+
+          // Record partner commission (50/50 split)
+          PartnerService.recordCommissionForOrder({
+            buyerId: meta.winnerId,
+            orderId: (order as any)._id.toString(),
+            transactionAmount: totalPaid,
+          }).catch(err => console.error('Partner commission error in webhook:', err))
 
           // Decrement product stock by 1; mark status as sold only when remaining stock reaches 0
           const currentStock = typeof product.stock === 'number' ? product.stock : 1

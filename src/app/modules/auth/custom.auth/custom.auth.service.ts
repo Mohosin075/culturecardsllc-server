@@ -16,6 +16,7 @@ import { JwtPayload } from 'jsonwebtoken'
 import { IUser } from '../../user/user.interface'
 import { emailHelper } from '../../../../helpers/emailHelper'
 import { GiveawayService } from '../../giveaway/giveaway.service'
+import { Partner } from '../../partner/partner.model'
 // ProfessionalProfile removed
 // import { emailQueue } from '../../../../helpers/bull-mq-producer'
 
@@ -68,8 +69,21 @@ const createUser = async (payload: IUser) => {
     activeRole = USER_ROLES.SELLER
   }
 
+  // Check if promoCode was passed and link partner
+  let referredByPartnerId = undefined
+  let formattedPromoCode = undefined
+  if (userData.promoCode) {
+    formattedPromoCode = String(userData.promoCode).trim().toUpperCase()
+    const partner = await Partner.findOne({ promoCode: formattedPromoCode })
+    if (partner) {
+      referredByPartnerId = partner._id
+    }
+  }
+
   const user = await User.create({
     ...userData,
+    promoCode: formattedPromoCode,
+    referredByPartnerId,
     roles,
     activeRole,
     password: payload.password,

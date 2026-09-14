@@ -20,6 +20,7 @@ import { OrderRoutes } from '../app/modules/order/order.route'
 import { DashboardRoutes } from '../app/modules/dashboard/dashboard.route'
 import { FollowRoutes } from '../app/modules/follow/follow.route'
 import { GiveawayRoutes } from '../app/modules/giveaway/giveaway.route'
+import { PartnerRoutes } from '../app/modules/partner/partner.route'
 
 const router = express.Router()
 
@@ -55,6 +56,7 @@ const apiRoutes: { path: string; route: Router }[] = [
   { path: '/dashboard', route: DashboardRoutes },
   { path: '/follow', route: FollowRoutes },
   { path: '/giveaway', route: GiveawayRoutes },
+  { path: '/partner', route: PartnerRoutes },
 ]
 
 apiRoutes.forEach(route => {

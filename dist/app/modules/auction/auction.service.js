@@ -23,6 +23,7 @@ const notification_integration_1 = require("../notification/notification.integra
 const notification_service_1 = require("../notification/notification.service");
 const notification_interface_1 = require("../notification/notification.interface");
 const payment_model_1 = require("../payment/payment.model");
+const partner_service_1 = require("../partner/partner.service");
 const generateAgoraToken = async (channelName, uid = 0, role = 'subscriber', requestingUserId) => {
     const appId = config_1.default.agora.app_id;
     const appCertificate = config_1.default.agora.app_certificate;
@@ -484,6 +485,12 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
             await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
         }
         const [order] = await order_model_1.Order.create([orderPayload]);
+        // Record partner commission (50/50 split)
+        partner_service_1.PartnerService.recordCommissionForOrder({
+            buyerId: auctionItem.highestBidderId.toString(),
+            orderId: order._id.toString(),
+            transactionAmount: auctionItem.currentBid,
+        }).catch(err => console.error('Failed to record partner commission:', err));
         // Decrement product stock by 1; mark status as sold only when stock reaches 0
         const currentStock = typeof product.stock === 'number' ? product.stock : 1;
         const newStock = Math.max(0, currentStock - 1);

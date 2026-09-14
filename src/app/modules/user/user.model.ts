@@ -70,6 +70,8 @@ const UserSchema = new Schema<IUser, UserModel>(
     deviceToken: { type: String },
     timezone: { type: String, default: 'UTC' },
     isOnboardingComplete: { type: Boolean, default: false },
+    promoCode: { type: String, uppercase: true, trim: true },
+    referredByPartnerId: { type: Schema.Types.ObjectId, ref: 'Partner' },
 
     settings: {
       pushNotification: { type: Boolean, default: true },
@@ -106,8 +108,9 @@ UserSchema.index({ location: '2dsphere' }) // Geo queries support
 
 // ------------------ PRE HOOKS ------------------
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next()
-  this.password = await bcrypt.hash(this.password, 10)
+  const user = this as any
+  if (!user.isModified('password')) return next()
+  user.password = await bcrypt.hash(user.password, 10)
   next()
 })
 

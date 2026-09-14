@@ -72,6 +72,8 @@ export type IUser = {
   subscriptionExpiresAt?: Date
   isOnline: boolean
   lastActive: Date
+  promoCode?: string
+  referredByPartnerId?: Types.ObjectId
   // membership: Membership
 
   settings?: {

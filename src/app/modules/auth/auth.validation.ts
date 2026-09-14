@@ -162,6 +162,7 @@ const createUserZodSchema = z.object({
       .optional(),
     address: addressSchema.optional(),
     role: z.enum([USER_ROLES.BUYER, USER_ROLES.SELLER]).optional(),
+    promoCode: z.string().optional(),
   }),
 })
 

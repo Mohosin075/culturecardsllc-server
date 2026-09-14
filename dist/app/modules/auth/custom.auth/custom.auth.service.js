@@ -51,6 +51,7 @@ const common_1 = require("../common");
 const jwtHelper_1 = require("../../../../helpers/jwtHelper");
 const emailHelper_1 = require("../../../../helpers/emailHelper");
 const giveaway_service_1 = require("../../giveaway/giveaway.service");
+const partner_model_1 = require("../../partner/partner.model");
 // ProfessionalProfile removed
 // import { emailQueue } from '../../../../helpers/bull-mq-producer'
 const createUser = async (payload) => {
@@ -91,8 +92,20 @@ const createUser = async (payload) => {
         roles.push(user_1.USER_ROLES.SELLER);
         activeRole = user_1.USER_ROLES.SELLER;
     }
+    // Check if promoCode was passed and link partner
+    let referredByPartnerId = undefined;
+    let formattedPromoCode = undefined;
+    if (userData.promoCode) {
+        formattedPromoCode = String(userData.promoCode).trim().toUpperCase();
+        const partner = await partner_model_1.Partner.findOne({ promoCode: formattedPromoCode });
+        if (partner) {
+            referredByPartnerId = partner._id;
+        }
+    }
     const user = await user_model_1.User.create({
         ...userData,
+        promoCode: formattedPromoCode,
+        referredByPartnerId,
         roles,
         activeRole,
         password: payload.password,

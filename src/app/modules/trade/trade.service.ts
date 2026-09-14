@@ -11,6 +11,7 @@ import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 import { User } from '../user/user.model'
 import stripe from '../../../config/stripe'
 import { TradeVoteServices } from './tradeVote.service'
+import { PartnerService } from '../partner/partner.service'
 
 const createTradeOffer = async (
   payload: Partial<ITradeOffer>,
@@ -407,6 +408,16 @@ const completeTradeOffer = async (
     TradeVoteServices.createTradeVoteFromCompletedTrade(offer).catch(err =>
       console.error('Failed to auto-create trade vote:', err),
     )
+
+    // Record partner commission on trade completion (3% + 3% = 6% fee)
+    const senderVal = (offer.senderProductId as any)?.estValue || 0
+    const receiverVal = (offer.receiverProductId as any)?.estValue || 0
+    PartnerService.recordCommissionForOrder({
+      buyerId: offer.senderId.toString(),
+      tradeOfferId: offer._id.toString(),
+      transactionAmount: senderVal + receiverVal,
+      isTrade: true,
+    }).catch(err => console.error('Failed to record partner trade commission:', err))
 
     // Notify both parties
     const notifyIds = [offer.senderId.toString(), offer.receiverId.toString()]

@@ -69,6 +69,8 @@ const UserSchema = new mongoose_1.Schema({
     deviceToken: { type: String },
     timezone: { type: String, default: 'UTC' },
     isOnboardingComplete: { type: Boolean, default: false },
+    promoCode: { type: String, uppercase: true, trim: true },
+    referredByPartnerId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Partner' },
     settings: {
         pushNotification: { type: Boolean, default: true },
         emailNotification: { type: Boolean, default: true },
@@ -99,9 +101,10 @@ const UserSchema = new mongoose_1.Schema({
 UserSchema.index({ location: '2dsphere' }); // Geo queries support
 // ------------------ PRE HOOKS ------------------
 UserSchema.pre('save', async function (next) {
-    if (!this.isModified('password'))
+    const user = this;
+    if (!user.isModified('password'))
         return next();
-    this.password = await bcrypt_1.default.hash(this.password, 10);
+    user.password = await bcrypt_1.default.hash(user.password, 10);
     next();
 });
 // ------------------ STATIC METHODS ------------------

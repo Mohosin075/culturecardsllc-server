@@ -18,6 +18,7 @@ const server_1 = require("../../../server");
 const user_model_1 = require("../user/user.model");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const tradeVote_service_1 = require("../trade/tradeVote.service");
+const partner_service_1 = require("../partner/partner.service");
 const handleCheckoutSessionCompleted = async (sessionData) => {
     var _a, _b, _c, _d, _e;
     try {
@@ -120,6 +121,12 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                     }
                     // Create order
                     const [order] = await order_model_1.Order.create([orderPayload], { session: mongoSession });
+                    // Record partner commission (50/50 split)
+                    partner_service_1.PartnerService.recordCommissionForOrder({
+                        buyerId: meta.winnerId,
+                        orderId: order._id.toString(),
+                        transactionAmount: totalPaid,
+                    }).catch(err => console.error('Partner commission error in webhook:', err));
                     // Decrement product stock by 1; mark status as sold only when remaining stock reaches 0
                     const currentStock = typeof product.stock === 'number' ? product.stock : 1;
                     const newStock = Math.max(0, currentStock - 1);
