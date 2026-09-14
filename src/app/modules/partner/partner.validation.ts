@@ -30,10 +30,12 @@ const createPartnerZodSchema = z.object({
 const updateBankDetailsZodSchema = z.object({
   body: z.object({
     accountNumber: z
-      .string({ required_error: 'Account number is required' })
+      .string()
       .min(4, 'Account number must be at least 4 digits')
       .max(34, 'Account number cannot exceed 34 characters')
-      .trim(),
+      .trim()
+      .optional()
+      .or(z.literal('')),
     routingNumber: z
       .string()
       .regex(/^\d{9}$/, 'US Routing number must be exactly 9 digits')

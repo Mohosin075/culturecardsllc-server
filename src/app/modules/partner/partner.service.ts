@@ -68,7 +68,6 @@ const createPartnerByAdmin = async (payload: {
 
 const getAllPartners = async () => {
   const partners = await Partner.find()
-    .select('-accessToken')
     .sort({ createdAt: -1 })
     .lean()
 
@@ -211,8 +210,13 @@ const updatePartnerBankDetails = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Partner record not found.')
   }
 
+  const rawAccount = bankDetails.accountNumber ? bankDetails.accountNumber.trim() : ''
+  const isMasked = rawAccount.includes('•')
+
   partner.bankDetails = {
-    accountNumber: bankDetails.accountNumber ? bankDetails.accountNumber.trim() : partner.bankDetails?.accountNumber || '',
+    accountNumber: isMasked
+      ? (partner.bankDetails?.accountNumber || '')
+      : (rawAccount || partner.bankDetails?.accountNumber || ''),
     routingNumber: bankDetails.routingNumber ? bankDetails.routingNumber.trim() : partner.bankDetails?.routingNumber || '',
     bankName: bankDetails.bankName ? bankDetails.bankName.trim() : partner.bankDetails?.bankName || '',
     accountHolderName: bankDetails.accountHolderName ? bankDetails.accountHolderName.trim() : partner.bankDetails?.accountHolderName || '',
