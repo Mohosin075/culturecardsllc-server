@@ -212,11 +212,17 @@ const getPartnerDashboardByToken = async (accessToken: string, otpToken?: string
 
   const partnerObjectId = new Types.ObjectId(partner._id)
 
-  // Concurrent Execution: Count referred users and aggregate earnings in parallel
-  const [totalReferredUsers, [aggregationResult]] = await Promise.all([
+  // Concurrent Execution: Count referred users, fetch referred users list, and aggregate earnings in parallel
+  const [totalReferredUsers, referredUsersList, [aggregationResult]] = await Promise.all([
     User.countDocuments({
       $or: [{ referredByPartnerId: partnerObjectId }, { promoCode: partner.promoCode }],
     }),
+    User.find({
+      $or: [{ referredByPartnerId: partnerObjectId }, { promoCode: partner.promoCode }],
+    })
+      .select('name email createdAt profileImage')
+      .sort({ createdAt: -1 })
+      .limit(100),
     PartnerEarning.aggregate([
       {
         $match: { partnerId: partnerObjectId },
