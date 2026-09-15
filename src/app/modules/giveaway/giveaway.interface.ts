@@ -1,20 +1,25 @@
-import { Schema, Document } from 'mongoose'
+import { Schema, Document, Types } from 'mongoose'
 
 export type IGiveawayParticipant = {
-  userId: Schema.Types.ObjectId
+  giveawaySlug?: string
+  userId: Types.ObjectId
   name: string
   email: string
-  status: 'active' | 'won' | 'expired'
+  status: 'active' | 'won' | 'expired' | 'shortlisted'
   enteredAt: Date
-  expiresAt: Date
-  wonStreamId?: Schema.Types.ObjectId
+  expiresAt?: Date
+  wonStreamId?: Types.ObjectId
   wonAt?: Date
   createdAt: Date
   updatedAt: Date
 } & Document
 
 export type IGiveawayConfig = {
+  slug: string
   title: string
+  prizeTitle?: string
+  prizeImage?: string
+  drawDate?: Date
   durationDays: number
   isActive: boolean
   description?: string

@@ -3,11 +3,15 @@ import { IGiveawayParticipant, IGiveawayConfig } from './giveaway.interface'
 
 const GiveawayParticipantSchema = new Schema<IGiveawayParticipant>(
   {
+    giveawaySlug: {
+      type: String,
+      default: 'michael-vick-jersey-2026',
+      index: true,
+    },
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
       index: true,
     },
     name: {
@@ -23,7 +27,7 @@ const GiveawayParticipantSchema = new Schema<IGiveawayParticipant>(
     },
     status: {
       type: String,
-      enum: ['active', 'won', 'expired'],
+      enum: ['active', 'won', 'expired', 'shortlisted'],
       default: 'active',
       index: true,
     },
@@ -33,7 +37,6 @@ const GiveawayParticipantSchema = new Schema<IGiveawayParticipant>(
     },
     expiresAt: {
       type: Date,
-      required: true,
       index: true,
     },
     wonStreamId: {
@@ -53,18 +56,38 @@ const GiveawayParticipantSchema = new Schema<IGiveawayParticipant>(
   },
 )
 
+GiveawayParticipantSchema.index({ giveawaySlug: 1, userId: 1 }, { unique: true })
 GiveawayParticipantSchema.index({ status: 1, expiresAt: 1 })
 
 const GiveawayConfigSchema = new Schema<IGiveawayConfig>(
   {
+    slug: {
+      type: String,
+      required: true,
+      default: 'michael-vick-jersey-2026',
+      unique: true,
+      index: true,
+    },
     title: {
       type: String,
       required: true,
-      default: 'Welcome Giveaway',
+      default: 'Michael Vick Jersey Giveaway',
+    },
+    prizeTitle: {
+      type: String,
+      default: 'Official Signed Michael Vick Jersey',
+    },
+    prizeImage: {
+      type: String,
+      default: '',
+    },
+    drawDate: {
+      type: Date,
+      default: () => new Date('2026-09-25T23:59:59.999Z'),
     },
     durationDays: {
       type: Number,
-      default: 14, // Default 2 weeks duration
+      default: 14,
     },
     isActive: {
       type: Boolean,
@@ -72,7 +95,8 @@ const GiveawayConfigSchema = new Schema<IGiveawayConfig>(
     },
     description: {
       type: String,
-      default: 'No Purchase Necessary - All newly registered users are automatically entered.',
+      default:
+        'Enter for a chance to win the Michael Vick Jersey! Winner will be drawn on September 25th.',
     },
   },
   {
@@ -89,3 +113,4 @@ export const GiveawayConfig = model<IGiveawayConfig>(
   'GiveawayConfig',
   GiveawayConfigSchema,
 )
+
