@@ -45,13 +45,17 @@ const getRandomPool = catchAsync(async (req: Request, res: Response) => {
 })
 
 const drawWinner = catchAsync(async (req: Request, res: Response) => {
-  const { streamId, participantId } = req.body
-  const result = await GiveawayService.drawLiveWinner(streamId, participantId)
+  const { streamId, participantId, userId } = req.body
+  const result = await GiveawayService.drawLiveWinner(
+    streamId,
+    participantId,
+    userId,
+  )
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: `Giveaway winner drawn successfully: ${result?.name || 'Winner'}`,
+    message: `Giveaway winner drawn successfully: ${(result?.userId as any)?.fullName || result?.name || 'Winner'}`,
     data: result,
   })
 })

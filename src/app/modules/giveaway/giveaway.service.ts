@@ -164,22 +164,26 @@ const autoEnrollUser = async (userId: string, name: string, email: string) => {
   }
 }
 
-const drawLiveWinner = async (streamId?: string, participantId?: string) => {
+const drawLiveWinner = async (
+  streamId?: string,
+  participantId?: string,
+  userId?: string,
+) => {
   const now = new Date()
   const activeConfig = await getActiveConfig()
   const slug = activeConfig.slug || 'michael-vick-jersey-2026'
 
   let winnerParticipant: any = null
+  const targetId = participantId || userId
 
-  if (participantId && Types.ObjectId.isValid(participantId)) {
+  if (targetId && Types.ObjectId.isValid(targetId)) {
     winnerParticipant = await GiveawayParticipant.findOne({
-      _id: participantId,
       giveawaySlug: slug,
+      $or: [{ _id: targetId }, { userId: targetId }],
     })
-    if (!winnerParticipant) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Participant not found')
-    }
-  } else {
+  }
+
+  if (!winnerParticipant) {
     // Pick randomly via MongoDB $sample
     const results = await GiveawayParticipant.aggregate([
       {
