@@ -46,6 +46,11 @@ const LiveStreamSchema = new Schema<ILiveStream>(
       default: 'scheduled',
       index: true,
     },
+    isCelebrity: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     agoraChannelName: {
       type: String,
       required: true,

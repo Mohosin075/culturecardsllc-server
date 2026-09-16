@@ -52,6 +52,12 @@ const createLiveStream = catchAsync(async (req: Request, res: Response) => {
 
 const getLiveStreams = catchAsync(async (req: Request, res: Response) => {
   const status = req.query.status as string
+  const isCelebrity =
+    req.query.isCelebrity === 'true'
+      ? true
+      : req.query.isCelebrity === 'false'
+        ? false
+        : undefined
   
   let userId: string | undefined
   const tokenWithBearer = req.headers.authorization
@@ -68,7 +74,7 @@ const getLiveStreams = catchAsync(async (req: Request, res: Response) => {
     }
   }
 
-  const result = await AuctionServices.getLiveStreams(status, userId)
+  const result = await AuctionServices.getLiveStreams(status, userId, isCelebrity)
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,

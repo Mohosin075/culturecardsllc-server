@@ -104,6 +104,11 @@ const createLiveStream = async (
     payload.status = payload.scheduledStartTime ? 'scheduled' : 'live'
   }
 
+  // Auto-inherit isCelebrity from seller if not explicitly provided
+  if (payload.isCelebrity === undefined) {
+    payload.isCelebrity = Boolean(seller.isCelebrity)
+  }
+
   if (payload.status === 'live') {
     payload.startedAt = new Date()
   }
@@ -184,7 +189,7 @@ const getSavedShows = async (userId: string) => {
     .populate({
       path: 'streamId',
       populate: [
-        { path: 'sellerId', select: 'name fullName email image photo' },
+        { path: 'sellerId', select: 'name fullName email image photo profile isCelebrity' },
         { path: 'inventoryIds' },
       ],
     })
@@ -304,9 +309,14 @@ const quickStartAuctionItem = async (
   return auctionItem
 }
 
-const getLiveStreams = async (status?: string, requestingUserId?: string): Promise<ILiveStream[]> => {
+const getLiveStreams = async (
+  status?: string,
+  requestingUserId?: string,
+  isCelebrity?: boolean,
+): Promise<ILiveStream[]> => {
   const query: any = {}
   if (status) query.status = status
+  if (typeof isCelebrity === 'boolean') query.isCelebrity = isCelebrity
 
   if (requestingUserId) {
     // 1. Users blocked by current user
@@ -324,10 +334,10 @@ const getLiveStreams = async (status?: string, requestingUserId?: string): Promi
   }
 
   return await LiveStream.find(query)
-    .populate('sellerId', 'name fullName email image photo')
+    .populate('sellerId', 'name fullName email image photo profile isCelebrity')
     .populate('pinnedProductId')
     .populate('inventoryIds')
-    .sort({ createdAt: -1 })
+    .sort({ isCelebrity: -1, createdAt: -1 })
     .limit(50)
     .lean() as unknown as ILiveStream[]
 }

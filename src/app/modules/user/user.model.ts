@@ -23,6 +23,7 @@ const UserSchema = new Schema<IUser, UserModel>(
     },
     verified: { type: Boolean, default: false },
     sellerVerified: { type: Boolean, default: false },
+    isCelebrity: { type: Boolean, default: false },
 
     address: {
       city: String,

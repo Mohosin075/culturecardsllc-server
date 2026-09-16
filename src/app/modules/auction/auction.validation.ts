@@ -14,6 +14,7 @@ const createLiveStreamSchema = z.object({
       .optional(),
     scheduledStartTime: z.string().optional(),
     status: z.enum(['scheduled', 'live']).optional(),
+    isCelebrity: z.boolean().optional(),
     inventoryIds: z.array(z.string()).optional(),
     // sellerId is injected from req.user in the controller — not accepted from body
     agoraChannelName: z.string().optional(),
