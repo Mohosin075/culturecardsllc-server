@@ -38,6 +38,8 @@ export const updateUserStatusSchema = z.object({
   body: z.object({
     status: z.nativeEnum(USER_STATUS).optional(),
     verified: z.boolean().optional(),
+    sellerVerified: z.boolean().optional(),
+    isCelebrity: z.boolean().optional(),
   }),
 })
 
