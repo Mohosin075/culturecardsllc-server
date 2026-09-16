@@ -12,6 +12,7 @@ import webhookApp from './webhook'
 import sendResponse from './shared/sendResponse'
 import morgan from 'morgan'
 import helmet from 'helmet'
+import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import swaggerDocs from './utils/swagger'
 import { DeepLinkRoutes } from './app/modules/deeplink/deeplink.route'
@@ -45,10 +46,13 @@ app.options('*', cors())
 // Security headers
 app.use(helmet())
 
-// Rate limiting
+// Gzip/Brotli payload compression (Shrinks JSON payloads by 70%-90% for ultra-fast mobile loading)
+app.use(compression())
+
+// Rate limiting (Tuned for high-concurrency mobile app traffic)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Limit each IP to 1000 requests per windowMs
   message: 'Too many requests from this IP, please try again after 15 minutes',
   standardHeaders: true,
   legacyHeaders: false,
@@ -91,10 +95,15 @@ app.use(cookieParser())
 // Logging
 app.use(morgan('dev'))
 
-// -------------------- Static Files --------------------
-// Serve uploads folder statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
-app.use(express.static(path.join(process.cwd(), 'uploads')))
+// -------------------- Static Files with High-Performance Cache Headers --------------------
+// Cache uploaded static images in mobile/browser for 30 days to avoid re-fetching on every screen
+const staticCacheOptions = {
+  maxAge: '30d',
+  etag: true,
+  immutable: true,
+}
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), staticCacheOptions))
+app.use(express.static(path.join(process.cwd(), 'uploads'), staticCacheOptions))
 
 // -------------------- Deep Linking & Open Graph Social Previews --------------------
 app.use('/', DeepLinkRoutes)

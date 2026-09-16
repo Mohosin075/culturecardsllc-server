@@ -29,7 +29,12 @@ export let io: SocketServer
 
 async function main() {
   try {
-    await mongoose.connect(config.database_url as string)
+    await mongoose.connect(config.database_url as string, {
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    })
     logger.info(colors.green('🚀 Database connected successfully'))
 
     const port =
