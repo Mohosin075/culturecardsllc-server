@@ -5,7 +5,6 @@ import { ICategory, ICategoryFilterables } from './category.interface'
 import { Category } from './category.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
-import { Product } from '../product/product.model'
 
 const createCategory = async (payload: ICategory) => {
   const existingCategory = await Category.findOne({ name: payload.name })

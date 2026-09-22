@@ -4,8 +4,6 @@ import { Types } from 'mongoose'
 import { TradeVote, UserVoteLog } from './tradeVote.model'
 import { ITradeVote } from './tradeVote.interface'
 import { TradeOffer } from './trade.model'
-import { Product } from '../product/product.model'
-import { User } from '../user/user.model'
 
 /**
  * Format relative time (e.g. "Completed 2h ago")
@@ -43,7 +41,7 @@ const getTradeVoteFeed = async (
     .limit(limit)
     .lean()
 
-  let userVoteMap = new Map<string, 'A' | 'B'>()
+  const userVoteMap = new Map<string, 'A' | 'B'>()
 
   if (userId && Types.ObjectId.isValid(userId) && votes.length > 0) {
     const tradeVoteIds = votes.map(v => v._id)

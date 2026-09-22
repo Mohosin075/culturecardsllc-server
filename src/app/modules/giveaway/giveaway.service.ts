@@ -141,7 +141,7 @@ const autoEnrollUser = async (userId: string, name: string, email: string) => {
     const existing = await GiveawayParticipant.findOne({ userId, giveawaySlug: slug })
     if (existing) return existing
 
-    let durationDays = activeConfig.durationDays || 14
+    const durationDays = activeConfig.durationDays || 14
     const enteredAt = new Date()
     const expiresAt =
       activeConfig.drawDate ||

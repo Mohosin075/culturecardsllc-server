@@ -5,7 +5,7 @@ import config from '../../config'
 import { jwtHelper } from '../../helpers/jwtHelper'
 import ApiError from '../../errors/ApiError'
 import { User } from '../modules/user/user.model'
-import { USER_ROLES, USER_STATUS } from '../../enum/user'
+import { USER_STATUS } from '../../enum/user'
 
 type IVerifyUser = {
   userId?: string

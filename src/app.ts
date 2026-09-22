@@ -66,8 +66,8 @@ app.use(webhookApp)
 
 // -------------------- Middleware --------------------
 // Body parsers must come after webhook
-app.use(express.json({ limit: '50mb' }))
-app.use(express.urlencoded({ limit: '50mb', extended: true }))
+app.use(express.json({ limit: '2mb' }))
+app.use(express.urlencoded({ limit: '2mb', extended: true }))
 
 // Session must come before passport
 app.use(

@@ -20,8 +20,20 @@ export const updateUserSchema = z.object({
   body: z.object({
     name: z.string().optional(),
     username: z.string().optional(),
-    profile: z.string().optional(),
-    coverPhoto: z.string().optional(),
+    profile: z
+      .string()
+      .max(2048, 'Profile URL length too long')
+      .refine(val => !val.startsWith('data:image'), {
+        message: 'Direct Base64 image strings are not allowed.',
+      })
+      .optional(),
+    coverPhoto: z
+      .string()
+      .max(2048, 'Cover photo URL length too long')
+      .refine(val => !val.startsWith('data:image'), {
+        message: 'Direct Base64 image strings are not allowed.',
+      })
+      .optional(),
     phone: z.string().optional(),
     description: z.string().optional(),
     specialty: z.string().optional(),

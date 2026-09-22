@@ -7,7 +7,14 @@ const createProductSchema = z.object({
       .min(3, 'Title must be at least 3 characters long'),
     description: z.string().optional(),
     images: z
-      .array(z.string())
+      .array(
+        z
+          .string()
+          .max(2048, 'Image URL length too long')
+          .refine(val => !val.startsWith('data:image'), {
+            message: 'Direct Base64 image strings are not allowed. Please upload to S3 first.',
+          }),
+      )
       .min(1, 'At least one product image is required'),
     video: z.string().optional(),
     category: z
