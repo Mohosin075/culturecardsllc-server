@@ -1,13 +1,12 @@
 node_modules
-.env
 /logs
 # /uploads
 *~
 *.ts~
-.vscode/
 .vercel
 
 firebase-service-account.json
 *.pem
 deploy-key.pem
 dist
+config.bat
