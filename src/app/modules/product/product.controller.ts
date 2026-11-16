@@ -6,7 +6,12 @@ import sendResponse from '../../../shared/sendResponse'
 import { JwtPayload } from 'jsonwebtoken'
 
 const createProduct = catchAsync(async (req: Request, res: Response) => {
-  const result = await ProductServices.createProduct(req.body)
+  const user = req.user as JwtPayload
+  // Security: the seller is always the authenticated user, never a body field
+  const result = await ProductServices.createProduct({
+    ...req.body,
+    sellerId: user.userId || user.authId,
+  })
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
     success: true,
@@ -79,7 +84,11 @@ const deleteProduct = catchAsync(async (req: Request, res: Response) => {
 })
 
 const clearAllProducts = catchAsync(async (req: Request, res: Response) => {
-  const result = await ProductServices.clearAllProducts()
+  const user = req.user as JwtPayload
+  const result = await ProductServices.clearAllProducts(
+    user.userId || user.authId,
+    user.role || user.activeRole,
+  )
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,

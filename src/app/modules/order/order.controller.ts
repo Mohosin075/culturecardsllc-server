@@ -5,10 +5,16 @@ import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
 import { JwtPayload } from 'jsonwebtoken'
+import { USER_ROLES } from '../../../enum/user'
+
+const isAdmin = (user: JwtPayload) =>
+  user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPER_ADMIN
 
 const createOrder = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
-  const payload = { ...req.body, buyerId: req.body.buyerId || user.userId }
+  // Security: buyer is always the authenticated user. Seller, payment status
+  // and paid amount are resolved server-side in the service.
+  const payload = { ...req.body, buyerId: user.userId || user.authId }
   const result = await OrderServices.createOrder(payload)
   sendResponse(res, {
     statusCode: StatusCodes.CREATED,
@@ -20,8 +26,11 @@ const createOrder = catchAsync(async (req: Request, res: Response) => {
 
 const getOrdersForUser = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
-  const userId = (req.query.userId as string) || user.userId
-  const role = (req.query.role as 'buyer' | 'seller') || 'buyer'
+  // Only admins may look up another user's orders
+  const userId = isAdmin(user)
+    ? (req.query.userId as string) || user.userId
+    : user.userId || user.authId
+  const role = req.query.role === 'seller' ? 'seller' : 'buyer'
 
   if (!userId) {
     throw new ApiError(
@@ -40,7 +49,16 @@ const getOrdersForUser = catchAsync(async (req: Request, res: Response) => {
 })
 
 const getOrderById = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
   const result = await OrderServices.getOrderById(req.params.id)
+  if (!isAdmin(user)) {
+    const me = String(user.userId || user.authId)
+    const buyer = (result.buyerId as any)?._id ?? result.buyerId
+    const seller = (result.sellerId as any)?._id ?? result.sellerId
+    if (String(buyer) !== me && String(seller) !== me) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only view your own orders.')
+    }
+  }
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -60,10 +78,12 @@ const updateOrderJourney = catchAsync(async (req: Request, res: Response) => {
     )
   }
 
+  const user = req.user as JwtPayload
   const result = await OrderServices.updateOrderJourney(
     req.params.id,
     { status, description, location, timestamp: new Date() },
     deliveryStatus,
+    { userId: String(user.userId || user.authId), isAdmin: isAdmin(user) },
   )
 
   sendResponse(res, {

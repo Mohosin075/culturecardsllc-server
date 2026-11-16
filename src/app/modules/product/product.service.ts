@@ -11,6 +11,7 @@ import { Payment } from '../payment/payment.model'
 import { Category } from '../category/category.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
+import { USER_ROLES } from '../../../enum/user'
 
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   const seller = await User.findById(payload.sellerId)
@@ -241,8 +242,17 @@ const deleteProduct = async (
   return result
 }
 
-const clearAllProducts = async (): Promise<{ deletedCount: number }> => {
-  const result = await Product.deleteMany({})
+const clearAllProducts = async (
+  userId: string,
+  userRole: string,
+): Promise<{ deletedCount: number }> => {
+  // Only a super admin may wipe the whole catalogue; everyone else can only
+  // clear their own inventory.
+  const filter =
+    userRole === USER_ROLES.SUPER_ADMIN
+      ? {}
+      : { sellerId: new Types.ObjectId(userId) }
+  const result = await Product.deleteMany(filter)
   return { deletedCount: result.deletedCount || 0 }
 }
 

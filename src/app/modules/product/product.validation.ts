@@ -33,9 +33,8 @@ const createProductSchema = z.object({
     shippingWeight: z.number().nonnegative().optional(),
     allowOffers: z.boolean().optional(),
     minOfferAmount: z.number().nonnegative().optional(),
-    sellerId: z
-      .string({ required_error: 'Seller ID is required' })
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Seller ID format'),
+    // Ignored: the server always uses the authenticated user as seller
+    sellerId: z.string().optional(),
   }),
 })
 

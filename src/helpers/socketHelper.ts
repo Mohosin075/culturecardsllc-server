@@ -4,6 +4,9 @@ import { User } from '../app/modules/user/user.model'
 import { LiveStream } from '../app/modules/auction/auction.model'
 import { AuctionServices } from '../app/modules/auction/auction.service'
 import { GiveawayService } from '../app/modules/giveaway/giveaway.service'
+import { jwtHelper } from './jwtHelper'
+import config from '../config'
+import { Secret } from 'jsonwebtoken'
 
 // Weighted drop rates for the Seller's Spin Wheel:
 // Common: 65%, Rare: 25%, Epic: 9%, Legendary: 1%
@@ -56,25 +59,60 @@ const pickWeightedPrize = () => {
   return { ...SPIN_WHEEL_PRIZES[0], degreeIndex: 45 }
 }
 
+/**
+ * Verify the JWT sent in the socket handshake (auth.token, query.token or
+ * Authorization header) and return the user id, or null if absent/invalid.
+ */
+const resolveSocketUserId = (socket: Socket): string | null => {
+  const raw =
+    (socket.handshake.auth as any)?.token ||
+    (socket.handshake.query as any)?.token ||
+    socket.handshake.headers.authorization
+  if (!raw || typeof raw !== 'string') return null
+  const token = raw.startsWith('Bearer ') ? raw.slice(7) : raw
+  try {
+    const payload = jwtHelper.verifyToken(token, config.jwt.jwt_secret as Secret)
+    const id = payload.userId || payload.authId
+    return id ? String(id) : null
+  } catch {
+    return null
+  }
+}
+
 const socket = (io: Server) => {
-  io.on('connection', (socket: Socket) => {
+  io.on('connection', async (socket: Socket) => {
     console.log(colors.blue('A user connected:'), socket.id)
 
-    // 1. Notification room registration
-    socket.on('join-notification', async (userId: string) => {
-      if (userId) {
-        socket.join(userId)
-        console.log(
-          colors.green(`User ${socket.id} joined notification room: ${userId}`),
-        )
-
-        await User.findByIdAndUpdate(userId, {
+    // Security: identity comes ONLY from a verified JWT in the handshake.
+    // Unauthenticated sockets may still connect (e.g. to watch), but they have
+    // no userId, so every privileged event below rejects them.
+    const authenticatedUserId = resolveSocketUserId(socket)
+    if (authenticatedUserId) {
+      ;(socket as any).userId = authenticatedUserId
+      socket.join(authenticatedUserId)
+      try {
+        await User.findByIdAndUpdate(authenticatedUserId, {
           isOnline: true,
           lastActive: new Date(),
         })
-
-        ;(socket as any).userId = userId
+      } catch (err) {
+        console.error(colors.red('Failed to mark user online:'), err)
       }
+    }
+
+    // 1. Notification room registration (kept for backwards compatibility).
+    // The client-sent id is ignored unless it matches the verified token.
+    socket.on('join-notification', async (userId: string) => {
+      const verifiedId = (socket as any).userId
+      if (!verifiedId || (userId && String(userId) !== String(verifiedId))) {
+        socket.emit('socket_error', {
+          statusCode: 401,
+          error: 'Unauthorized',
+          message: 'Valid access token required to join notifications.',
+        })
+        return
+      }
+      socket.join(verifiedId)
     })
 
     // 2. Room subscriptions & live viewer tracking
@@ -104,8 +142,9 @@ const socket = (io: Server) => {
           }
 
           (socket as any).activeStreamId = streamId
-          if (userId) {
-            (socket as any).streamUserId = userId
+          // Only trust the verified socket identity, never the client-sent userId
+          if ((socket as any).userId) {
+            (socket as any).streamUserId = (socket as any).userId
           }
         }
       },

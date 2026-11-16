@@ -2,12 +2,9 @@ import { z } from 'zod'
 
 const createOrderSchema = z.object({
   body: z.object({
-    buyerId: z
-      .string({ required_error: 'Buyer ID is required' })
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Buyer ID format'),
-    sellerId: z
-      .string({ required_error: 'Seller ID is required' })
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Seller ID format'),
+    // Ignored: buyer = authenticated user, seller = product owner (set server-side)
+    buyerId: z.string().optional(),
+    sellerId: z.string().optional(),
     productId: z
       .string({ required_error: 'Product ID is required' })
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),

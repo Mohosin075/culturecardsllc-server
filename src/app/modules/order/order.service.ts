@@ -8,6 +8,7 @@ import { Message } from '../message/message.model'
 import { Types } from 'mongoose'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
+import stripe from '../../../config/stripe'
 
 const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   const product = await Product.findById(payload.productId)
@@ -17,6 +18,36 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
 
   if (product.stock <= 0) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Product is out of stock.')
+  }
+
+  // Security: seller always comes from the product, never from the client
+  payload.sellerId = product.sellerId as any
+  if (String(payload.sellerId) === String(payload.buyerId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot buy your own item.')
+  }
+
+  // Security: payment status is decided server-side. An order is only "paid"
+  // if the client supplies a Stripe PaymentIntent that actually succeeded,
+  // covers the amount, and has not been used by another order.
+  payload.paymentStatus = 'pending'
+  if (payload.paymentIntentId) {
+    const alreadyUsed = await Order.exists({ paymentIntentId: payload.paymentIntentId })
+    if (alreadyUsed) {
+      throw new ApiError(StatusCodes.CONFLICT, 'This payment has already been used for another order.')
+    }
+    let intent
+    try {
+      intent = await stripe.paymentIntents.retrieve(payload.paymentIntentId)
+    } catch {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid payment reference.')
+    }
+    const claimedTotal = Number(payload.amountDetails?.totalPaid || 0)
+    if (intent.status === 'succeeded' && intent.amount_received >= Math.round(claimedTotal * 100)) {
+      payload.paymentStatus = 'paid'
+      if (payload.amountDetails) {
+        payload.amountDetails.totalPaid = intent.amount_received / 100
+      }
+    }
   }
 
   // Populate shipping weight, tracking number, and mock PDF label
@@ -116,6 +147,7 @@ const updateOrderJourney = async (
   orderId: string,
   journeyUpdate: IJourneyUpdate,
   deliveryStatus: 'pending' | 'shipped' | 'delivered' | 'cancelled',
+  requester?: { userId: string; isAdmin: boolean },
 ): Promise<IOrder> => {
   if (!Types.ObjectId.isValid(orderId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Order ID')
@@ -124,6 +156,22 @@ const updateOrderJourney = async (
   const order = await Order.findById(orderId).populate('productId buyerId')
   if (!order) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Order not found')
+  }
+
+  // Security: seller (or admin) can push any checkpoint; the buyer may only
+  // confirm delivery of their own order.
+  if (requester && !requester.isAdmin) {
+    const buyerRef = (order.buyerId as any)?._id ?? order.buyerId
+    const isSeller = String(order.sellerId) === requester.userId
+    const isBuyer = String(buyerRef) === requester.userId
+    if (!isSeller && !(isBuyer && deliveryStatus === 'delivered')) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        isBuyer
+          ? 'Buyers can only confirm delivery.'
+          : 'You can only update your own orders.',
+      )
+    }
   }
 
   order.deliveryStatus = deliveryStatus

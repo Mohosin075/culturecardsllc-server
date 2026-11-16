@@ -643,11 +643,12 @@ const completeAuction = async (
     }
   }
 
-  // UPDATE 5: Sandbox Test Mode Bypass
-  // If in development, test mode, or winner does not have off-session card configured,
-  // allow instant test payment approval so the entire sell-order-shipping flow can be tested end-to-end!
-  const isTestEnv = config.node_env === 'development' || process.env.TEST_MODE === 'true'
-  if (!isAutoPaid && (isTestEnv || !winner.stripeCustomerId || winner.email?.includes('test'))) {
+  // Sandbox Test Mode Bypass — ONLY when TEST_MODE=true is explicitly set AND
+  // the server is not running in production. A missing saved card or a "test"
+  // email no longer marks an order paid: those winners go to Stripe Checkout below.
+  const isTestEnv =
+    process.env.TEST_MODE === 'true' && config.node_env !== 'production'
+  if (!isAutoPaid && isTestEnv) {
     isAutoPaid = true
     paymentIntentId = `pi_test_sandbox_${Date.now()}`
     console.log(`[SANDBOX] Test payment automatically confirmed for Auction:${auctionItemId}`)
