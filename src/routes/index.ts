@@ -21,10 +21,41 @@ import { DashboardRoutes } from '../app/modules/dashboard/dashboard.route'
 import { FollowRoutes } from '../app/modules/follow/follow.route'
 import { GiveawayRoutes } from '../app/modules/giveaway/giveaway.route'
 import { PartnerRoutes } from '../app/modules/partner/partner.route'
+import { LiveStream } from '../app/modules/auction/auction.model'
+import catchAsync from '../shared/catchAsync'
+import sendResponse from '../shared/sendResponse'
+import { StatusCodes } from 'http-status-codes'
 
 const router = express.Router()
 
+const liveStreamRouter = express.Router()
+liveStreamRouter.get(
+  '/user/:userId',
+  catchAsync(async (req, res) => {
+    const { userId } = req.params
+    const status = req.query.status as string
+    const query: any = { sellerId: userId }
+    if (status) {
+      if (status === 'upcoming') {
+        query.status = { $in: ['scheduled', 'upcoming'] }
+      } else {
+        query.status = status
+      }
+    }
+    const streams = await LiveStream.find(query)
+      .populate('sellerId', 'name fullName email image photo profile isCelebrity')
+      .sort({ scheduledStartTime: 1, createdAt: -1 })
+    sendResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: 'User live streams retrieved successfully',
+      data: streams,
+    })
+  }),
+)
+
 const apiRoutes: { path: string; route: Router }[] = [
+  { path: '/live-stream', route: liveStreamRouter },
   {
     path: '/auth',
     route: AuthRoutes,

@@ -646,7 +646,7 @@ const completeAuction = async (
   // UPDATE 5: Sandbox Test Mode Bypass
   // If in development, test mode, or winner does not have off-session card configured,
   // allow instant test payment approval so the entire sell-order-shipping flow can be tested end-to-end!
-  const isTestEnv = config.env === 'development' || process.env.TEST_MODE === 'true'
+  const isTestEnv = config.node_env === 'development' || process.env.TEST_MODE === 'true'
   if (!isAutoPaid && (isTestEnv || !winner.stripeCustomerId || winner.email?.includes('test'))) {
     isAutoPaid = true
     paymentIntentId = `pi_test_sandbox_${Date.now()}`
@@ -926,7 +926,7 @@ const addStreamInventoryItem = async (
 
   // Append to stream inventory if not already present
   const existingIds = (stream.inventoryIds || []).map(id => id.toString())
-  if (!existingIds.includes(productId)) {
+  if (productId && !existingIds.includes(productId)) {
     stream.inventoryIds = [...(stream.inventoryIds || []), new Types.ObjectId(productId) as any]
     await stream.save()
   }
