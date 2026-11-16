@@ -20,6 +20,7 @@ import { NotificationType, NotificationChannel, NotificationPriority } from '../
 import { Payment } from '../payment/payment.model'
 import { PartnerService } from '../partner/partner.service'
 import { GiveawayService } from '../giveaway/giveaway.service'
+import { Category } from '../category/category.model'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -40,6 +41,17 @@ const generateAgoraToken = async (
       StatusCodes.INTERNAL_SERVER_ERROR,
       'Agora configuration (App ID or App Certificate) is missing from system configuration.',
     )
+  }
+
+  // Security: only the stream's host may get a publisher (broadcast) token
+  if (role === 'publisher') {
+    const hostStream = await LiveStream.findOne({ agoraChannelName: channelName }).select('sellerId')
+    if (!hostStream || !requestingUserId || hostStream.sellerId.toString() !== requestingUserId) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only the host of this live show can broadcast on it.',
+      )
+    }
   }
 
   if (requestingUserId) {
@@ -396,8 +408,16 @@ const placeBidSecure = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, `Auction is not active. Current status: ${currentState.status}`)
   }
 
+  // Timer ended: no more bids (1.5s grace for network latency)
+  if (currentState.endsAt && new Date(currentState.endsAt).getTime() + 1500 < Date.now()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Bidding has closed for this item.')
+  }
+
   // Check if either user has blocked the other
   const stream = await LiveStream.findById(currentState.streamId)
+  if (stream && stream.sellerId.toString() === bidderId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "You can't bid on your own auction.")
+  }
   if (stream) {
     const isBlocked = await User.findOne({
       _id: { $in: [bidderId, stream.sellerId.toString()] },
@@ -563,6 +583,19 @@ const completeAuction = async (
     )
   }
 
+  // Authorize FIRST (before any state change): only the stream host can complete
+  const stream = auctionItem.streamId as any
+  if (
+    stream &&
+    stream.sellerId.toString() !== requestingUserId &&
+    requestingUserId !== 'admin'
+  ) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Only the auction host can complete this auction.',
+    )
+  }
+
   if (!auctionItem.highestBidderId) {
     // No bids placed: mark as failed
     auctionItem.status = 'failed'
@@ -584,18 +617,16 @@ const completeAuction = async (
     )
   }
 
-  // Authorize: only the stream seller or admin can complete
-  const stream = auctionItem.streamId as any
-  if (
-    stream &&
-    stream.sellerId.toString() !== requestingUserId &&
-    requestingUserId !== 'admin'
-  ) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Only the auction host can complete this auction.',
-    )
+  // Atomically claim this auction so two concurrent "complete" calls can't
+  // both create an order / charge the winner.
+  const claimed = await AuctionItem.findOneAndUpdate(
+    { _id: auctionItem._id, status: 'active' },
+    { $set: { status: 'completed' } },
+  )
+  if (!claimed) {
+    throw new ApiError(StatusCodes.CONFLICT, 'This auction is already being completed.')
   }
+  auctionItem.status = 'completed'
 
   // Get winner info
   const winner = await User.findById(auctionItem.highestBidderId)
@@ -870,6 +901,44 @@ const completeAuction = async (
   return { checkoutUrl: stripeSession.url!, auctionItem }
 }
 
+const LIVE_ITEM_PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=800'
+
+/** Accepts a category ObjectId or a category name; returns a valid id or null. */
+const resolveCategoryId = async (input?: string): Promise<Types.ObjectId | null> => {
+  if (input && Types.ObjectId.isValid(input)) {
+    const byId = await Category.findById(input).select('_id')
+    if (byId) return byId._id as Types.ObjectId
+  }
+  if (input) {
+    const name = input.split('(')[0].trim()
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const byName = await Category.findOne({
+      name: { $regex: `^${escaped}$`, $options: 'i' },
+    }).select('_id')
+    if (byName) return byName._id as Types.ObjectId
+  }
+  const other = await Category.findOne({ name: { $regex: '^Other', $options: 'i' } }).select('_id')
+  return (other?._id as Types.ObjectId) || null
+}
+
+/** Maps grading labels (PSA 10, BGS 9.5, Raw…) onto the product condition enum. */
+const normalizeCondition = (input?: string): string => {
+  const allowed = ['Mint', 'Near Mint', 'Excellent', 'Good', 'Fair']
+  if (!input) return 'Near Mint'
+  const exact = allowed.find(c => c.toLowerCase() === input.trim().toLowerCase())
+  if (exact) return exact
+  const grade = parseFloat(input.replace(/[^0-9.]/g, ''))
+  if (!isNaN(grade)) {
+    if (grade >= 9.5) return 'Mint'
+    if (grade >= 8) return 'Near Mint'
+    if (grade >= 6) return 'Excellent'
+    if (grade >= 4) return 'Good'
+    return 'Fair'
+  }
+  return 'Near Mint'
+}
+
 const addStreamInventoryItem = async (
   streamId: string,
   sellerId: string,
@@ -898,6 +967,10 @@ const addStreamInventoryItem = async (
   let productId = payload.productId
   let product: any = null
 
+  if (stream.status === 'ended') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'This live show has already ended.')
+  }
+
   if (productId) {
     if (!Types.ObjectId.isValid(productId)) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
@@ -906,18 +979,33 @@ const addStreamInventoryItem = async (
     if (!product) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
     }
+    if (product.sellerId.toString() !== sellerId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only add your own items to your show.')
+    }
+    if (product.status === 'sold' || product.status === 'pending') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'This item is already sold or reserved.')
+    }
   } else if (payload.title) {
     // Create new product on-the-fly without leaving stream
+    const categoryId = await resolveCategoryId(payload.category)
+    if (!categoryId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Please choose a valid category.')
+    }
+    const price = Number(payload.buyNowPrice || payload.startingBid || 0)
     product = await Product.create({
       sellerId: new Types.ObjectId(sellerId),
       title: payload.title,
-      buyNowPrice: payload.buyNowPrice || payload.startingBid || 0,
-      startingBid: payload.startingBid || payload.buyNowPrice || 0,
-      category: payload.category || 'Trading Cards & TCG',
-      condition: payload.condition || 'PSA 10',
+      buyNowPrice: price,
+      startingBid: Number(payload.startingBid || payload.buyNowPrice || 0),
+      estValue: price,
+      category: categoryId,
+      condition: normalizeCondition(payload.condition),
       allowTrade: false,
       status: 'active',
-      images: payload.images || [],
+      images:
+        payload.images && payload.images.length
+          ? payload.images
+          : [LIVE_ITEM_PLACEHOLDER_IMAGE],
       description: payload.isGiveaway ? 'Live Stream Giveaway Item' : 'Live Stream Item',
     })
     productId = product._id.toString()
@@ -1155,20 +1243,35 @@ const spinWheel = async (
   // Persist winning prize on Buyer's Order if orderId or buyerId provided
   let updatedOrder: any = null
   if (payload.orderId && Types.ObjectId.isValid(payload.orderId)) {
-    updatedOrder = await Order.findByIdAndUpdate(
-      payload.orderId,
+    // Only this seller's own order can receive the prize
+    updatedOrder = await Order.findOneAndUpdate(
+      { _id: payload.orderId, sellerId: new Types.ObjectId(sellerId) },
       { spinWheelPrize: winningItem },
       { new: true },
     )
   } else if (payload.buyerId && Types.ObjectId.isValid(payload.buyerId)) {
+    // Attach to the buyer's order from THIS show (not any older order)
     updatedOrder = await Order.findOneAndUpdate(
       {
         buyerId: new Types.ObjectId(payload.buyerId),
         sellerId: new Types.ObjectId(sellerId),
+        streamId: new Types.ObjectId(streamId),
       },
       { spinWheelPrize: winningItem },
       { sort: { createdAt: -1 }, new: true },
     )
+    if (!updatedOrder) {
+      // Order not created yet (checkout pending): store it on the buyer's
+      // winning auction item; it is copied into the order when it's created.
+      await AuctionItem.findOneAndUpdate(
+        {
+          streamId: new Types.ObjectId(streamId),
+          highestBidderId: new Types.ObjectId(payload.buyerId),
+        },
+        { spinWheelPrize: winningItem },
+        { sort: { updatedAt: -1 } },
+      )
+    }
   }
 
   // Broadcast real-time spin result to both host and viewers

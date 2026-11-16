@@ -3,61 +3,10 @@ import { Server, Socket } from 'socket.io'
 import { User } from '../app/modules/user/user.model'
 import { LiveStream } from '../app/modules/auction/auction.model'
 import { AuctionServices } from '../app/modules/auction/auction.service'
-import { GiveawayService } from '../app/modules/giveaway/giveaway.service'
 import { jwtHelper } from './jwtHelper'
 import config from '../config'
 import { Secret } from 'jsonwebtoken'
-
-// Weighted drop rates for the Seller's Spin Wheel:
-// Common: 65%, Rare: 25%, Epic: 9%, Legendary: 1%
-const SPIN_WHEEL_PRIZES = [
-  {
-    name: '10% Shop Coupon',
-    rarity: 'Common',
-    weight: 65,
-    degreeMin: 0,
-    degreeMax: 90,
-  },
-  {
-    name: 'Free Mystery Sticker Pack',
-    rarity: 'Rare',
-    weight: 25,
-    degreeMin: 91,
-    degreeMax: 210,
-  },
-  {
-    name: 'Rare Card Sleeves',
-    rarity: 'Epic',
-    weight: 9,
-    degreeMin: 211,
-    degreeMax: 330,
-  },
-  {
-    name: 'Vintage Booster Pack (Legendary Drop)',
-    rarity: 'Legendary',
-    weight: 1,
-    degreeMin: 331,
-    degreeMax: 359,
-  },
-]
-
-const pickWeightedPrize = () => {
-  const randomValue = Math.floor(Math.random() * 100)
-  let cumulativeWeight = 0
-
-  for (const prize of SPIN_WHEEL_PRIZES) {
-    cumulativeWeight += prize.weight
-    if (randomValue < cumulativeWeight) {
-      // Pick a random degree inside the slice for frontend animation mapping
-      const degreeIndex = Math.floor(
-        Math.random() * (prize.degreeMax - prize.degreeMin + 1) +
-          prize.degreeMin,
-      )
-      return { ...prize, degreeIndex }
-    }
-  }
-  return { ...SPIN_WHEEL_PRIZES[0], degreeIndex: 45 }
-}
+import { Types } from 'mongoose'
 
 /**
  * Verify the JWT sent in the socket handshake (auth.token, query.token or
@@ -284,90 +233,49 @@ const socket = (io: Server) => {
     // 5. Live Reactions Count
     socket.on(
       'stream-reaction',
-      async (data: { streamId: string; reactionType: string }) => {
-        const { streamId, reactionType } = data
-        if (streamId) {
-          const stream = await LiveStream.findByIdAndUpdate(
-            streamId,
-            { $inc: { likesCount: 1 } },
-            { new: true },
+      async (data: { streamId: string; reactionType: string; count?: number }) => {
+        const { streamId, reactionType } = data || ({} as any)
+        if (!streamId || !Types.ObjectId.isValid(streamId)) return
+
+        // Clients batch taps (~1/sec). Cap each batch and rate-limit per socket
+        // so a modified client can't flood the DB or the room.
+        const now = Date.now()
+        const last = (socket as any).lastReactionAt || 0
+        if (now - last < 500) return
+        ;(socket as any).lastReactionAt = now
+        const count = Math.min(Math.max(Math.floor(Number(data.count) || 1), 1), 30)
+
+        try {
+          const stream = await LiveStream.findOneAndUpdate(
+            { _id: streamId, status: 'live' },
+            { $inc: { likesCount: count } },
+            { new: true, projection: { likesCount: 1 } },
           )
+          if (!stream) return
 
           io.to(`stream:${streamId}`).emit('new-reaction', {
             streamId,
-            reactionType,
-            likesCount: stream ? stream.likesCount : 0,
+            reactionType: reactionType || 'heart',
+            count,
+            fromUserId: (socket as any).userId || null,
+            likesCount: stream.likesCount,
           })
+        } catch (err) {
+          console.error(colors.red('stream-reaction error:'), err)
         }
       },
     )
 
     // 6. Seller-controlled Spin Wheel Drop Calculation
-    socket.on(
-      'trigger-spin',
-      async (data: { streamId: string }) => {
-        const { streamId } = data
-        // Security: use authenticated socket userId — never trust client-provided sellerId
-        const authenticatedSellerId = (socket as any).userId
-        try {
-          if (!authenticatedSellerId) {
-            socket.emit('spin-error', { message: 'Unauthorized: Not authenticated.' })
-            return
-          }
-
-          const stream = await LiveStream.findById(streamId)
-          if (!stream) {
-            socket.emit('spin-error', { message: 'Stream session not found.' })
-            return
-          }
-
-          // Authorize: Only the stream seller can spin
-          if (stream.sellerId.toString() !== authenticatedSellerId) {
-            socket.emit('spin-error', {
-              message:
-                'Unauthorized: Only the stream host can trigger the Spin Wheel.',
-            })
-            return
-          }
-
-          // Calculate weighted prize selection & draw real participant winner
-          const outcome = pickWeightedPrize()
-          let winner: any = null
-          try {
-            winner = await GiveawayService.drawLiveWinner(streamId)
-          } catch (e) {
-            // Pool empty fallback
-          }
-
-          // Broadcast animation degree, outcome, and winner to room
-          io.to(`stream:${streamId}`).emit('spin-result', {
-            streamId,
-            prizeName: outcome.name,
-            rarity: outcome.rarity,
-            degreeIndex: outcome.degreeIndex,
-            winner: winner
-              ? {
-                  id: winner.userId,
-                  name: winner.name,
-                }
-              : null,
-            timestamp: new Date(),
-          })
-
-          console.log(
-            colors.magenta(
-              `Spin Wheel triggered. Prize: ${outcome.name}. Winner: ${
-                winner ? winner.name : 'No active participant'
-              }`,
-            ),
-          )
-        } catch (err: any) {
-          socket.emit('spin-error', {
-            message: err.message || 'Spin wheel trigger failed.',
-          })
-        }
-      },
-    )
+    // Legacy random-prize spin (hardcoded prizes + global giveaway draw) is
+    // disabled: it awarded prizes the seller never entered and marked random
+    // platform giveaway participants as winners. The app uses the REST
+    // spin-wheel endpoint, which spins the seller's own entries.
+    socket.on('trigger-spin', () => {
+      socket.emit('spin-error', {
+        message: 'Please use the Spin Wheel in the latest app version.',
+      })
+    })
 
     // 6b. Seller-controlled Attach Spin Wheel Prize to Order
     socket.on(

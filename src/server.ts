@@ -10,6 +10,7 @@ import os from 'os'
 import { UserServices } from './app/modules/user/user.service'
 import { socketHelper } from './helpers/socketHelper'
 import { seedSubscriptionPlans } from './app/modules/subscription/subscription.seed'
+import { seedAreisCategories } from './app/modules/category/category.seed'
 import { logger, errorLogger } from './shared/logger'
 import { startTradeExpiryCron } from './task/tradeExpiryCron'
 import { startOrderAutoDeliverCron } from './task/orderAutoDeliverCron'
@@ -116,6 +117,9 @@ async function main() {
 
     // Seed subscription plans
     await seedSubscriptionPlans()
+
+    // Ensure the 16 AREIS marketplace categories exist
+    await seedAreisCategories().catch(err => errorLogger.error('Category seed failed:', err))
 
     // Socket helper
     socketHelper.socket(io);

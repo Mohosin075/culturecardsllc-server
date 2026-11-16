@@ -25,7 +25,7 @@ router.get('/winners', GiveawayController.getWinners)
 // Draw & Random Pool endpoints (Admin / Super Admin / Seller)
 router.get(
   '/random-pool',
-  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN, USER_ROLES.SELLER),
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   GiveawayController.getRandomPool,
 )
 

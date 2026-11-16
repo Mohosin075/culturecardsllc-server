@@ -210,6 +210,19 @@ const updateProduct = async (
     if (product.sellerId.toString() !== userId) {
       throw new ApiError(StatusCodes.FORBIDDEN, 'You can only edit your own listings')
     }
+    // Sellers can't self-feature, change ownership or reset a sold/reserved item
+    const p = payload as any
+    delete p.isFeatured
+    delete p.boostedUntil
+    delete p.sellerId
+    delete p.views
+    delete p.shareCount
+    if (p.status !== undefined) {
+      const locked = product.status === 'sold' || product.status === 'pending'
+      if (locked || !['active', 'unsold'].includes(p.status)) {
+        delete p.status
+      }
+    }
   }
   const result = await Product.findByIdAndUpdate(id, payload, {
     new: true,
