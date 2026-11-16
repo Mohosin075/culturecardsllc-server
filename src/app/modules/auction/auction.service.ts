@@ -305,8 +305,23 @@ const quickStartAuctionItem = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
 
-  if (product.status === 'sold' || (product.stock !== undefined && product.stock <= 0)) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, `This product is unavailable (status: ${product.status}, stock: ${product.stock ?? 0}).`)
+  if (product.sellerId.toString() !== sellerId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You can only auction your own items.')
+  }
+
+  if (product.status !== 'active' || (product.stock !== undefined && product.stock <= 0)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      product.status === 'pending'
+        ? 'This item is reserved in a pending trade or checkout.'
+        : 'This item is sold out or unavailable.',
+    )
+  }
+
+  // One running auction per item at a time
+  const running = await AuctionItem.exists({ productId: product._id, status: 'active' })
+  if (running) {
+    throw new ApiError(StatusCodes.CONFLICT, 'This item is already being auctioned.')
   }
 
   // Create auction item via createAuctionItem helper

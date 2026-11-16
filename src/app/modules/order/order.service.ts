@@ -16,7 +16,7 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
 
-  if (product.stock <= 0) {
+  if (product.stock <= 0 || product.status === 'sold') {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Product is out of stock.')
   }
 
@@ -60,11 +60,18 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     const orders = await Order.create([payload], { session })
     const order = orders[0]
 
-    product.stock -= 1
-    if (product.stock === 0) {
-      product.status = 'sold'
+    // Atomic stock decrement: two buyers can't both take the last unit
+    const reserved = await Product.findOneAndUpdate(
+      { _id: product._id, stock: { $gt: 0 }, status: { $ne: 'sold' } },
+      { $inc: { stock: -1 } },
+      { new: true, session },
+    )
+    if (!reserved) {
+      throw new ApiError(StatusCodes.CONFLICT, 'Sorry, this item just sold out.')
     }
-    await product.save({ session })
+    if (reserved.stock <= 0) {
+      await Product.updateOne({ _id: product._id }, { status: 'sold' }, { session })
+    }
 
     // Use participants[] array — consistent with Chat model schema
     let chat = await Chat.findOne({

@@ -89,6 +89,8 @@ const getAllProducts = async (
     sellerId?: string
     minPrice?: number
     maxPrice?: number
+    /** true only for the owner's own "My Inventory" view */
+    includePrivate?: boolean
   },
   paginationOptions: IPaginationOptions = {},
 ): Promise<{
@@ -112,13 +114,15 @@ const getAllProducts = async (
     sellerId,
     minPrice,
     maxPrice,
+    includePrivate,
   } = filters
   const query: any = {}
 
   if (searchTerm) {
+    const safe = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     query.$or = [
-      { title: { $regex: searchTerm, $options: 'i' } },
-      { description: { $regex: searchTerm, $options: 'i' } },
+      { title: { $regex: safe, $options: 'i' } },
+      { description: { $regex: safe, $options: 'i' } },
     ]
   }
 
@@ -138,6 +142,9 @@ const getAllProducts = async (
   }
   if (condition) query.condition = condition
   if (allowTrade !== undefined) query.allowTrade = allowTrade
+  // Private inventory (saved, not listed for trade) is only visible to its
+  // owner via /products/my. Public lists never show it.
+  if (!includePrivate && allowTrade === undefined) query.allowTrade = { $ne: false }
   if (status) query.status = status
   if (sellerId && Types.ObjectId.isValid(sellerId)) {
     query.sellerId = new Types.ObjectId(sellerId)

@@ -20,6 +20,30 @@ const createProduct = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+/** Seller's own inventory, including private (not listed) items. */
+const getMyProducts = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const result = await ProductServices.getAllProducts(
+    {
+      searchTerm: req.query.searchTerm as string,
+      status: req.query.status as string,
+      allowTrade: req.query.allowTrade ? req.query.allowTrade === 'true' : undefined,
+      sellerId: user.userId || user.authId,
+      includePrivate: true,
+    },
+    {
+      page: req.query.page ? Number(req.query.page) : 1,
+      limit: req.query.limit ? Number(req.query.limit) : 100,
+    },
+  )
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Your inventory retrieved successfully.',
+    data: result,
+  })
+})
+
 const getAllProducts = catchAsync(async (req: Request, res: Response) => {
   const filters = {
     searchTerm: req.query.searchTerm as string,
@@ -121,6 +145,7 @@ const incrementShareCount = catchAsync(async (req: Request, res: Response) => {
 
 export const ProductControllers = {
   createProduct,
+  getMyProducts,
   getAllProducts,
   getProductById,
   updateProduct,

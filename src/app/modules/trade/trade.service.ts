@@ -150,16 +150,24 @@ const acceptTradeOffer = async (offerId: string): Promise<ITradeOffer> => {
     offer.escrowStatus = 'held'
     await offer.save({ session })
 
-    await Product.findByIdAndUpdate(
-      offer.senderProductId,
+    // Atomically reserve both items: fails if either was sold/reserved
+    // meanwhile (e.g. won in a live auction), so nothing is sold twice.
+    const reservedSender = await Product.findOneAndUpdate(
+      { _id: offer.senderProductId, status: 'active' },
       { status: 'pending' },
       { session },
     )
-    await Product.findByIdAndUpdate(
-      offer.receiverProductId,
+    const reservedReceiver = await Product.findOneAndUpdate(
+      { _id: offer.receiverProductId, status: 'active' },
       { status: 'pending' },
       { session },
     )
+    if (!reservedSender || !reservedReceiver) {
+      throw new ApiError(
+        StatusCodes.CONFLICT,
+        'One of these items is no longer available.',
+      )
+    }
 
     // Use participants[] array — consistent with Chat model schema
     let chat = await Chat.findOne({
