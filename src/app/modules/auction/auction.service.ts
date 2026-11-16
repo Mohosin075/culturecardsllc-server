@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import { LiveStream, AuctionItem } from './auction.model'
@@ -1138,74 +1139,111 @@ const runStreamGiveawayItem = async (
     throw new ApiError(StatusCodes.FORBIDDEN, 'Unauthorized: Only host can run giveaways')
   }
 
-  let winner: any = null
-  try {
-    winner = await GiveawayService.drawLiveWinner(streamId)
-  } catch (_) {
-    // Pool empty fallback
+  if (stream.status !== 'live') {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Giveaways can only run during a live show.')
   }
 
-  const winnerData = winner
-    ? {
-        id: winner.userId?._id || winner.userId,
-        name: (winner.userId as any)?.fullName || winner.name || 'Lucky Participant',
-      }
-    : null
+  // The prize must be the host's own, still-available item
+  let giveawayProduct: any = null
+  if (payload.productId) {
+    if (!Types.ObjectId.isValid(payload.productId)) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
+    }
+    giveawayProduct = await Product.findById(payload.productId)
+    if (!giveawayProduct || giveawayProduct.sellerId.toString() !== sellerId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only give away your own items.')
+    }
+    if (giveawayProduct.status !== 'active' || (giveawayProduct.stock ?? 1) <= 0) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'This item is no longer available.')
+    }
+  }
 
-  // Broadcast giveaway draw to stream room
-  io.to(`stream:${streamId}`).emit('giveaway-winner', {
+  // Draw from signed-in viewers currently watching THIS show (not a global pool)
+  const room = `stream:${streamId}`
+  const sockets = io ? await io.in(room).fetchSockets() : []
+  const eligible = Array.from(
+    new Set(
+      sockets
+        .map(s => (s.data?.userId as string | undefined))
+        .filter((id): id is string => !!id && id !== sellerId),
+    ),
+  )
+  if (eligible.length === 0) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'No signed-in viewers are watching right now. Try again when viewers join.',
+    )
+  }
+  const winnerId = eligible[crypto.randomInt(eligible.length)]
+  const winnerUser = await User.findById(winnerId)
+  if (!winnerUser) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Winner profile not found.')
+  }
+  const winnerData = {
+    id: winnerUser._id.toString(),
+    name: (winnerUser as any).fullName || winnerUser.name || 'Lucky Viewer',
+  }
+
+  // $0 order so the winner's prize ships like any purchase
+  let giveawayOrder = null
+  if (giveawayProduct) {
+    try {
+      const addr: any = winnerUser.address || {}
+      const giveawayPayload: any = {
+        buyerId: winnerUser._id,
+        sellerId: stream.sellerId,
+        productId: giveawayProduct._id,
+        streamId: stream._id,
+        isGiveaway: true,
+        purchaseType: 'auction_win',
+        paymentStatus: 'paid',
+        deliveryStatus: 'pending',
+        shippingAddress: {
+          street: addr.presentAddress || 'Pending — winner to confirm',
+          city: addr.city || 'Pending',
+          state: addr.state || 'Pending',
+          postalCode: addr.postalCode || 'Pending',
+          country: addr.country || 'US',
+        },
+        amountDetails: {
+          itemSubtotal: 0,
+          shipping: 0,
+          taxes: 0,
+          processingFee: 0,
+          charityContribution: 0,
+          totalPaid: 0,
+        },
+      }
+      await initializeOrderShipping(giveawayPayload, giveawayProduct)
+      const [createdOrder] = await Order.create([giveawayPayload])
+      giveawayOrder = createdOrder
+
+      const newStock = Math.max(0, (giveawayProduct.stock ?? 1) - 1)
+      await Product.findByIdAndUpdate(giveawayProduct._id, {
+        stock: newStock,
+        status: newStock > 0 ? 'active' : 'sold',
+      })
+    } catch (orderErr) {
+      console.error('Failed to create giveaway order:', orderErr)
+    }
+  }
+
+  io.to(room).emit('giveaway-winner', {
     streamId,
     prizeName: payload.itemTitle,
     itemImage: payload.itemImage,
     productId: payload.productId,
     winner: winnerData,
-    winnerName: winnerData?.name || 'Lucky Participant',
+    winnerName: winnerData.name,
+    buyerId: winnerData.id,
     timestamp: new Date(),
   })
-
-  // UPDATE 2: Automatically create $0 giveaway Order and generate shipping label for the winner!
-  let giveawayOrder = null
-  if (winner && winner.userId) {
-    try {
-      const winnerUser = await User.findById(winner.userId?._id || winner.userId)
-      if (winnerUser) {
-        const giveawayProduct = payload.productId ? await Product.findById(payload.productId) : null
-        const giveawayPayload: any = {
-          buyerId: winnerUser._id,
-          sellerId: stream.sellerId,
-          productId: giveawayProduct?._id || stream.inventoryIds?.[0],
-          streamId: stream._id,
-          isGiveaway: true,
-          purchaseType: 'auction_win',
-          paymentStatus: 'paid',
-          deliveryStatus: 'pending',
-          shippingAddress: {
-            street: winnerUser.address?.presentAddress || '123 Giveaway Way',
-            city: winnerUser.address?.city || 'Collector City',
-            state: 'AP',
-            postalCode: winnerUser.address?.postalCode || '10001',
-            country: winnerUser.address?.country || 'US',
-          },
-          amountDetails: {
-            itemSubtotal: 0,
-            shipping: 0,
-            taxes: 0,
-            processingFee: 0,
-            charityContribution: 0,
-            totalPaid: 0,
-          },
-        }
-
-        if (giveawayProduct) {
-          await initializeOrderShipping(giveawayPayload, giveawayProduct)
-        }
-        const [createdOrder] = await Order.create([giveawayPayload])
-        giveawayOrder = createdOrder
-      }
-    } catch (orderErr) {
-      console.error('Failed to create giveaway order:', orderErr)
-    }
-  }
+  io.to(winnerData.id).emit('giveaway-won', {
+    streamId,
+    prizeName: payload.itemTitle,
+    orderId: (giveawayOrder as any)?._id?.toString() || null,
+    needsAddress: !winnerUser.address?.presentAddress,
+  })
 
   return {
     streamId,
@@ -1213,6 +1251,7 @@ const runStreamGiveawayItem = async (
     productId: payload.productId,
     itemImage: payload.itemImage,
     winner: winnerData,
+    eligibleViewers: eligible.length,
     order: giveawayOrder,
   }
 }

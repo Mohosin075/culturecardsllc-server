@@ -38,6 +38,7 @@ const socket = (io: Server) => {
     const authenticatedUserId = resolveSocketUserId(socket)
     if (authenticatedUserId) {
       ;(socket as any).userId = authenticatedUserId
+      socket.data.userId = authenticatedUserId // survives fetchSockets() across Redis nodes
       socket.join(authenticatedUserId)
       try {
         await User.findByIdAndUpdate(authenticatedUserId, {
