@@ -149,8 +149,10 @@ async function main() {
   })
 }
 
-// Start main
-main()
+// Start main (only when not running test scripts)
+if (process.env.NODE_ENV !== 'test') {
+  main()
+}
 
 // Graceful shutdown on SIGTERM
 process.on('SIGTERM', async () => {

@@ -294,6 +294,42 @@ const runStreamGiveawayItem = catchAsync(async (req: Request, res: Response) => 
   })
 })
 
+const spinWheel = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const { streamId } = req.params
+  const result = await AuctionServices.spinWheel(streamId, user.userId, req.body)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Wheel spun successfully and winning prize recorded.',
+    data: result,
+  })
+})
+
+const getStreamSales = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const { streamId } = req.params
+  const result = await AuctionServices.getStreamSales(streamId, user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Live stream sales retrieved successfully.',
+    data: result,
+  })
+})
+
+const getStreamSummary = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const { streamId } = req.params
+  const result = await AuctionServices.getStreamSummary(streamId, user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Live stream post-show summary retrieved successfully.',
+    data: result,
+  })
+})
+
 export const AuctionControllers = {
   generateAgoraToken,
   createLiveStream,
@@ -312,4 +348,7 @@ export const AuctionControllers = {
   addStreamInventoryItem,
   attachSpinWheelPrize,
   runStreamGiveawayItem,
+  spinWheel,
+  getStreamSales,
+  getStreamSummary,
 }

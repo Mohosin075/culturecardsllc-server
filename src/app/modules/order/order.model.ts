@@ -20,6 +20,15 @@ const OrderSchema = new Schema<IOrder>(
       ref: 'Product',
       required: true,
     },
+    streamId: {
+      type: Schema.Types.ObjectId,
+      ref: 'LiveStream',
+      index: true,
+    },
+    isGiveaway: {
+      type: Boolean,
+      default: false,
+    },
     tradeOfferId: {
       type: Schema.Types.ObjectId,
       ref: 'TradeOffer',

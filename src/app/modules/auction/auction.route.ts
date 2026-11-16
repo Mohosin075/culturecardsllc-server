@@ -128,5 +128,26 @@ router.post(
   AuctionControllers.completeAuction,
 )
 
+// POST /stream/:streamId/spin-wheel — Authoritative server spin wheel (seller only, max 4 items)
+router.post(
+  '/stream/:streamId/spin-wheel',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.spinWheel,
+)
+
+// GET /stream/:streamId/sales — Real-time live show sales view for host (seller only)
+router.get(
+  '/stream/:streamId/sales',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.getStreamSales,
+)
+
+// GET /stream/:streamId/summary — Post-show metrics, sold orders & shipping labels (seller only)
+router.get(
+  '/stream/:streamId/summary',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.getStreamSummary,
+)
+
 export const AuctionRoutes = router
 export default AuctionRoutes

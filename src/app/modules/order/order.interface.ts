@@ -15,6 +15,8 @@ export type IOrder = {
   buyerId: Schema.Types.ObjectId
   sellerId: Schema.Types.ObjectId
   productId: Schema.Types.ObjectId
+  streamId?: Schema.Types.ObjectId
+  isGiveaway?: boolean
   tradeOfferId?: Schema.Types.ObjectId
   purchaseType: IPurchaseType
   amountDetails: {
