@@ -330,6 +330,72 @@ const socket = (io: Server) => {
       },
     )
 
+    // 6b. Seller-controlled Attach Spin Wheel Prize to Order
+    socket.on(
+      'attach-spin-prize',
+      async (data: {
+        streamId: string
+        itemName: string
+        buyerId?: string
+        auctionItemId?: string
+      }) => {
+        const { streamId, itemName, buyerId, auctionItemId } = data
+        const authenticatedSellerId = (socket as any).userId
+        try {
+          if (!authenticatedSellerId) {
+            socket.emit('spin-error', { message: 'Unauthorized: Not authenticated.' })
+            return
+          }
+          if (!streamId || !itemName) {
+            socket.emit('spin-error', { message: 'Missing streamId or itemName.' })
+            return
+          }
+          await AuctionServices.attachSpinWheelPrize(streamId, authenticatedSellerId, {
+            itemName,
+            buyerId,
+            auctionItemId,
+          })
+        } catch (err: any) {
+          socket.emit('spin-error', {
+            message: err.message || 'Failed to attach spin prize.',
+          })
+        }
+      },
+    )
+
+    // 6c. Seller-controlled Run Item Giveaway
+    socket.on(
+      'run-giveaway-item',
+      async (data: {
+        streamId: string
+        itemTitle: string
+        productId?: string
+        itemImage?: string
+      }) => {
+        const { streamId, itemTitle, productId, itemImage } = data
+        const authenticatedSellerId = (socket as any).userId
+        try {
+          if (!authenticatedSellerId) {
+            socket.emit('giveaway-error', { message: 'Unauthorized: Not authenticated.' })
+            return
+          }
+          if (!streamId || !itemTitle) {
+            socket.emit('giveaway-error', { message: 'Missing streamId or itemTitle.' })
+            return
+          }
+          await AuctionServices.runStreamGiveawayItem(streamId, authenticatedSellerId, {
+            itemTitle,
+            productId,
+            itemImage,
+          })
+        } catch (err: any) {
+          socket.emit('giveaway-error', {
+            message: err.message || 'Failed to run item giveaway.',
+          })
+        }
+      },
+    )
+
     // 7. Seller-controlled Live Stream termination
     socket.on(
       'end-stream',

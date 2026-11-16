@@ -195,9 +195,20 @@ const getProductById = async (id: string): Promise<IProduct> => {
 const updateProduct = async (
   id: string,
   payload: Partial<IProduct>,
+  userId?: string,
+  userRole?: string,
 ): Promise<IProduct | null> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
+  }
+  const product = await Product.findById(id)
+  if (!product) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
+  }
+  if (userId && userRole !== USER_ROLES.ADMIN && userRole !== USER_ROLES.SUPER_ADMIN) {
+    if (product.sellerId.toString() !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only edit your own listings')
+    }
   }
   const result = await Product.findByIdAndUpdate(id, payload, {
     new: true,
@@ -209,15 +220,30 @@ const updateProduct = async (
   return result
 }
 
-const deleteProduct = async (id: string): Promise<IProduct | null> => {
+const deleteProduct = async (
+  id: string,
+  userId?: string,
+  userRole?: string,
+): Promise<IProduct | null> => {
   if (!Types.ObjectId.isValid(id)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
   }
-  const result = await Product.findByIdAndDelete(id)
-  if (!result) {
+  const product = await Product.findById(id)
+  if (!product) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
+  if (userId && userRole !== USER_ROLES.ADMIN && userRole !== USER_ROLES.SUPER_ADMIN) {
+    if (product.sellerId.toString() !== userId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'You can only delete your own listings')
+    }
+  }
+  const result = await Product.findByIdAndDelete(id)
   return result
+}
+
+const clearAllProducts = async (): Promise<{ deletedCount: number }> => {
+  const result = await Product.deleteMany({})
+  return { deletedCount: result.deletedCount || 0 }
 }
 
 const boostProduct = async (
@@ -313,6 +339,7 @@ export const ProductServices = {
   getProductById,
   updateProduct,
   deleteProduct,
+  clearAllProducts,
   boostProduct,
   incrementShareCount,
 }

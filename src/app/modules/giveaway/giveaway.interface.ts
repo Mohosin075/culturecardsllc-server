@@ -19,6 +19,7 @@ export type IGiveawayConfig = {
   title: string
   prizeTitle?: string
   prizeImage?: string
+  bannerUrl?: string
   drawDate?: Date
   durationDays: number
   isActive: boolean

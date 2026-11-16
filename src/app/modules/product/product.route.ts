@@ -22,6 +22,11 @@ router.patch(
   ProductControllers.updateProduct,
 )
 router.delete(
+  '/inventory/clear-all',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  ProductControllers.clearAllProducts,
+)
+router.delete(
   '/:id',
   auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   ProductControllers.deleteProduct,

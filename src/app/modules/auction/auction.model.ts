@@ -146,6 +146,9 @@ const AuctionItemSchema = new Schema<IAuctionItem>(
       type: Date,
       index: true,
     },
+    spinWheelPrize: {
+      type: String,
+    },
   },
   {
     timestamps: true,

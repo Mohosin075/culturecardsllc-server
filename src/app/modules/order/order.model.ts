@@ -79,6 +79,9 @@ const OrderSchema = new Schema<IOrder>(
     shippingLabelUrl: {
       type: String,
     },
+    spinWheelPrize: {
+      type: String,
+    },
   },
   {
     timestamps: true,

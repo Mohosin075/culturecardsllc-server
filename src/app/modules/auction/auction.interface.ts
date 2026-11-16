@@ -43,6 +43,7 @@ export type IAuctionItem = {
   bidIncrement: number
   timerDuration: number // in seconds
   endsAt?: Date
+  spinWheelPrize?: string
   createdAt: Date
   updatedAt: Date
 } & Document

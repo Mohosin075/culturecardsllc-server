@@ -81,6 +81,10 @@ const GiveawayConfigSchema = new Schema<IGiveawayConfig>(
       type: String,
       default: '',
     },
+    bannerUrl: {
+      type: String,
+      default: '',
+    },
     drawDate: {
       type: Date,
       default: () => new Date('2026-09-25T23:59:59.999Z'),

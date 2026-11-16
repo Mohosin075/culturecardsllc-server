@@ -275,33 +275,75 @@ const updateGiveawayConfig = async (payload: {
   title?: string
   prizeTitle?: string
   prizeImage?: string
+  bannerUrl?: string
   drawDate?: Date
   durationDays?: number
   isActive?: boolean
   description?: string
 }) => {
-  const targetSlug = payload.slug || 'michael-vick-jersey-2026'
+  // Sync prizeImage and bannerUrl
+  if (payload.bannerUrl && !payload.prizeImage) {
+    payload.prizeImage = payload.bannerUrl
+  }
+  if (payload.prizeImage && !payload.bannerUrl) {
+    payload.bannerUrl = payload.prizeImage
+  }
+  if (payload.title && !payload.prizeTitle) {
+    payload.prizeTitle = payload.title
+  }
+
+  let filter: any = {}
+  if (payload.slug) {
+    filter = { slug: payload.slug }
+  } else {
+    const active = await GiveawayConfig.findOne({ isActive: true }).sort({ updatedAt: -1 })
+    if (active) {
+      filter = { _id: active._id }
+    } else {
+      filter = { slug: 'giannis-antetokounmpo-jersey-2026' }
+    }
+  }
+
   const result = await GiveawayConfig.findOneAndUpdate(
-    { slug: targetSlug },
+    filter,
     { $set: payload },
     { new: true, upsert: true },
   )
+
+  // If marked active, ensure other configs are deactivated
+  if (payload.isActive === true && result) {
+    await GiveawayConfig.updateMany(
+      { _id: { $ne: result._id } },
+      { $set: { isActive: false } },
+    )
+  }
+
   return result
 }
 
 const getActiveConfig = async (): Promise<IGiveawayConfig> => {
-  let configDoc = await GiveawayConfig.findOne({ isActive: true })
+  let configDoc = await GiveawayConfig.findOne({ isActive: true }).sort({ updatedAt: -1 })
   if (!configDoc) {
-    configDoc = await GiveawayConfig.create({
-      slug: 'michael-vick-jersey-2026',
-      title: 'Michael Vick Jersey Giveaway',
-      prizeTitle: 'Official Signed Michael Vick Jersey',
-      drawDate: new Date('2026-09-25T23:59:59.999Z'),
-      durationDays: 14,
-      isActive: true,
-      description:
-        'Enter for a chance to win the Michael Vick Jersey! Winner will be drawn on September 25th.',
-    })
+    configDoc = await GiveawayConfig.findOneAndUpdate(
+      { slug: 'giannis-antetokounmpo-jersey-2026' },
+      {
+        slug: 'giannis-antetokounmpo-jersey-2026',
+        title: 'Giannis Antetokounmpo Jersey Giveaway',
+        prizeTitle: 'Official Signed Giannis Antetokounmpo Jersey',
+        prizeImage: '',
+        bannerUrl: '',
+        drawDate: new Date('2026-12-05T23:59:59.999Z'),
+        durationDays: 30,
+        isActive: true,
+        description:
+          'Enter for a chance to win the Giannis Antetokounmpo Jersey! Winner will be drawn on December 5th.',
+      },
+      { new: true, upsert: true },
+    )
+    await GiveawayConfig.updateMany(
+      { slug: { $ne: 'giannis-antetokounmpo-jersey-2026' } },
+      { $set: { isActive: false } },
+    )
   }
   return configDoc
 }

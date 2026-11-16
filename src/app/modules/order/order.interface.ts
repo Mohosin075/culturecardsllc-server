@@ -43,6 +43,7 @@ export type IOrder = {
   }
   shippingWeight?: number
   shippingLabelUrl?: string
+  spinWheelPrize?: string
   createdAt: Date
   updatedAt: Date
 } & Document

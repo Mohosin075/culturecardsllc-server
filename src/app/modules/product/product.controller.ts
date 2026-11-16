@@ -57,7 +57,8 @@ const getProductById = catchAsync(async (req: Request, res: Response) => {
 })
 
 const updateProduct = catchAsync(async (req: Request, res: Response) => {
-  const result = await ProductServices.updateProduct(req.params.id, req.body)
+  const user = req.user as JwtPayload
+  const result = await ProductServices.updateProduct(req.params.id, req.body, user?.userId, user?.role)
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -67,11 +68,22 @@ const updateProduct = catchAsync(async (req: Request, res: Response) => {
 })
 
 const deleteProduct = catchAsync(async (req: Request, res: Response) => {
-  const result = await ProductServices.deleteProduct(req.params.id)
+  const user = req.user as JwtPayload
+  const result = await ProductServices.deleteProduct(req.params.id, user?.userId, user?.role)
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
     message: 'Product deleted successfully.',
+    data: result,
+  })
+})
+
+const clearAllProducts = catchAsync(async (req: Request, res: Response) => {
+  const result = await ProductServices.clearAllProducts()
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: `Cleared ${result.deletedCount} products from database successfully.`,
     data: result,
   })
 })
@@ -104,6 +116,7 @@ export const ProductControllers = {
   getProductById,
   updateProduct,
   deleteProduct,
+  clearAllProducts,
   boostProduct,
   incrementShareCount,
 }

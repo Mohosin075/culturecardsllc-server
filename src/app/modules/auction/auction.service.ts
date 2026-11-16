@@ -19,6 +19,7 @@ import { NotificationServices } from '../notification/notification.service'
 import { NotificationType, NotificationChannel, NotificationPriority } from '../notification/notification.interface'
 import { Payment } from '../payment/payment.model'
 import { PartnerService } from '../partner/partner.service'
+import { GiveawayService } from '../giveaway/giveaway.service'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -855,6 +856,205 @@ const completeAuction = async (
   return { checkoutUrl: stripeSession.url!, auctionItem }
 }
 
+const addStreamInventoryItem = async (
+  streamId: string,
+  sellerId: string,
+  payload: {
+    productId?: string
+    title?: string
+    buyNowPrice?: number
+    startingBid?: number
+    category?: string
+    condition?: string
+    isGiveaway?: boolean
+    images?: string[]
+  },
+) => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+  if (stream.sellerId.toString() !== sellerId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host can add items')
+  }
+
+  let productId = payload.productId
+  let product: any = null
+
+  if (productId) {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Product ID')
+    }
+    product = await Product.findById(productId)
+    if (!product) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
+    }
+  } else if (payload.title) {
+    // Create new product on-the-fly without leaving stream
+    product = await Product.create({
+      sellerId: new Types.ObjectId(sellerId),
+      title: payload.title,
+      buyNowPrice: payload.buyNowPrice || payload.startingBid || 0,
+      startingBid: payload.startingBid || payload.buyNowPrice || 0,
+      category: payload.category || 'Trading Cards & TCG',
+      condition: payload.condition || 'PSA 10',
+      allowTrade: false,
+      status: 'active',
+      images: payload.images || [],
+      description: payload.isGiveaway ? 'Live Stream Giveaway Item' : 'Live Stream Item',
+    })
+    productId = product._id.toString()
+  } else {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Either productId or item title is required')
+  }
+
+  // Append to stream inventory if not already present
+  const existingIds = (stream.inventoryIds || []).map(id => id.toString())
+  if (!existingIds.includes(productId)) {
+    stream.inventoryIds = [...(stream.inventoryIds || []), new Types.ObjectId(productId) as any]
+    await stream.save()
+  }
+
+  // Real-time broadcast to all viewers in the stream room
+  io.to(`stream:${streamId}`).emit('stream-inventory-item-added', {
+    streamId,
+    product,
+    isGiveaway: payload.isGiveaway || false,
+  })
+
+  return product
+}
+
+const attachSpinWheelPrize = async (
+  streamId: string,
+  sellerId: string,
+  payload: {
+    itemName: string
+    auctionItemId?: string
+    buyerId?: string
+  },
+) => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+  if (stream.sellerId.toString() !== sellerId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Unauthorized: Only host can attach spin prizes')
+  }
+
+  const { itemName, auctionItemId, buyerId } = payload
+  if (!itemName) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Item name is required for spin prize')
+  }
+
+  let updatedAuctionItem: any = null
+  let updatedOrder: any = null
+
+  // 1. Update AuctionItem
+  if (auctionItemId && Types.ObjectId.isValid(auctionItemId)) {
+    updatedAuctionItem = await AuctionItem.findByIdAndUpdate(
+      auctionItemId,
+      { spinWheelPrize: itemName },
+      { new: true },
+    )
+  } else {
+    updatedAuctionItem = await AuctionItem.findOneAndUpdate(
+      { streamId: new Types.ObjectId(streamId) },
+      { spinWheelPrize: itemName },
+      { sort: { updatedAt: -1 }, new: true },
+    )
+  }
+
+  // 2. Attach to Buyer's Order if exists
+  const targetBuyerId = buyerId || updatedAuctionItem?.highestBidderId
+  if (targetBuyerId && Types.ObjectId.isValid(targetBuyerId)) {
+    updatedOrder = await Order.findOneAndUpdate(
+      {
+        buyerId: new Types.ObjectId(targetBuyerId),
+        sellerId: new Types.ObjectId(sellerId),
+      },
+      { spinWheelPrize: itemName },
+      { sort: { createdAt: -1 }, new: true },
+    )
+  }
+
+  // Broadcast to room
+  io.to(`stream:${streamId}`).emit('spin-prize-attached', {
+    streamId,
+    itemName,
+    buyerId: targetBuyerId,
+    auctionItemId: updatedAuctionItem?._id,
+  })
+
+  return {
+    streamId,
+    itemName,
+    buyerId: targetBuyerId,
+    auctionItem: updatedAuctionItem,
+    order: updatedOrder,
+  }
+}
+
+const runStreamGiveawayItem = async (
+  streamId: string,
+  sellerId: string,
+  payload: {
+    itemTitle: string
+    productId?: string
+    itemImage?: string
+  },
+) => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+  const stream = await LiveStream.findById(streamId)
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
+  }
+  if (stream.sellerId.toString() !== sellerId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Unauthorized: Only host can run giveaways')
+  }
+
+  let winner: any = null
+  try {
+    winner = await GiveawayService.drawLiveWinner(streamId)
+  } catch (_) {
+    // Pool empty fallback
+  }
+
+  const winnerData = winner
+    ? {
+        id: winner.userId?._id || winner.userId,
+        name: (winner.userId as any)?.fullName || winner.name || 'Lucky Participant',
+      }
+    : null
+
+  // Broadcast giveaway draw to stream room
+  io.to(`stream:${streamId}`).emit('giveaway-winner', {
+    streamId,
+    prizeName: payload.itemTitle,
+    itemImage: payload.itemImage,
+    productId: payload.productId,
+    winner: winnerData,
+    winnerName: winnerData?.name || 'Lucky Participant',
+    timestamp: new Date(),
+  })
+
+  return {
+    streamId,
+    prizeTitle: payload.itemTitle,
+    productId: payload.productId,
+    itemImage: payload.itemImage,
+    winner: winnerData,
+  }
+}
+
 export const AuctionServices = {
   generateAgoraToken,
   createLiveStream,
@@ -870,4 +1070,7 @@ export const AuctionServices = {
   placeBidSecure,
   updateLiveStreamStatus,
   completeAuction,
+  addStreamInventoryItem,
+  attachSpinWheelPrize,
+  runStreamGiveawayItem,
 }

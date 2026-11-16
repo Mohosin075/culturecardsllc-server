@@ -7,10 +7,7 @@ const createLiveStreamSchema = z.object({
       .min(3, 'Title must be at least 3 characters long'),
     coverImage: z
       .string({ required_error: 'Cover image is required' })
-      .max(2048, 'Image URL length too long')
-      .refine(val => !val.startsWith('data:image'), {
-        message: 'Direct Base64 image strings are not allowed. Please upload to S3 first.',
-      }),
+      .min(1, 'Cover image is required'),
     promoVideo: z.string().optional(),
     description: z.string().optional(),
     scheduledAt: z

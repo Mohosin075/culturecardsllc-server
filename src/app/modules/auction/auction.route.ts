@@ -61,6 +61,27 @@ router.get(
   AuctionControllers.getStreamInventory,
 )
 
+// POST /stream/:streamId/inventory/add — Add new or existing item to live stream inventory (seller only)
+router.post(
+  '/stream/:streamId/inventory/add',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.addStreamInventoryItem,
+)
+
+// POST /stream/:streamId/attach-spin-prize — Attach spin wheel prize to buyer's order (seller only)
+router.post(
+  '/stream/:streamId/attach-spin-prize',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.attachSpinWheelPrize,
+)
+
+// POST /stream/:streamId/giveaway-item — Run item as giveaway and draw winner (seller only)
+router.post(
+  '/stream/:streamId/giveaway-item',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.runStreamGiveawayItem,
+)
+
 // POST /item — Register a product as an auction item (seller only)
 router.post(
   '/item',
