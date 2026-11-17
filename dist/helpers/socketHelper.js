@@ -85,6 +85,11 @@ const socket = (io) => {
                         streamId,
                         viewersCount: stream.viewersCount,
                     });
+                    if (socket.userId && stream.sellerId.toString() === socket.userId) {
+                        ;
+                        socket.isStreamHost = true;
+                        socket.hostedStreamId = streamId;
+                    }
                 }
                 socket.activeStreamId = streamId;
                 // Only trust the verified socket identity, never the client-sent userId
@@ -110,6 +115,17 @@ const socket = (io) => {
                     streamId,
                     viewersCount: currentCount,
                 });
+                if (socket.isStreamHost && socket.hostedStreamId === streamId) {
+                    const liveStream = await auction_model_1.LiveStream.findById(streamId);
+                    if (liveStream && liveStream.status === 'live') {
+                        liveStream.status = 'ended';
+                        liveStream.endedAt = new Date();
+                        await liveStream.save();
+                        io.to(streamRoom).emit('stream-ended', { streamId, status: 'ended' });
+                        console.log(colors_1.default.red(`Host left: ended stream ${streamId}`));
+                    }
+                }
+                ;
                 socket.activeStreamId = null;
             }
         });
@@ -398,6 +414,17 @@ const socket = (io) => {
                     streamId,
                     viewersCount: currentCount,
                 });
+            }
+            if (socket.isStreamHost && socket.hostedStreamId) {
+                const streamId = socket.hostedStreamId;
+                const liveDoc = await auction_model_1.LiveStream.findOne({ _id: streamId, status: 'live' });
+                if (liveDoc) {
+                    liveDoc.status = 'ended';
+                    liveDoc.endedAt = new Date();
+                    await liveDoc.save();
+                    io.to(`stream:${streamId}`).emit('stream-ended', { streamId, status: 'ended' });
+                    console.log(colors_1.default.red(`Host disconnected: marked stream ${streamId} as ended.`));
+                }
             }
         });
     });

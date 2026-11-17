@@ -145,6 +145,8 @@ const getAllProducts = async (
   // Private inventory (saved, not listed for trade) is only visible to its
   // owner via /products/my. Public lists never show it.
   if (!includePrivate && allowTrade === undefined) query.allowTrade = { $ne: false }
+  // Exclude trade-only counter items from public marketplace listings
+  if (!includePrivate) query.isTradeOnly = { $ne: true }
   if (status) query.status = status
   if (sellerId && Types.ObjectId.isValid(sellerId)) {
     query.sellerId = new Types.ObjectId(sellerId)

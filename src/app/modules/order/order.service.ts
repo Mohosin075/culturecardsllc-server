@@ -3,6 +3,7 @@ import ApiError from '../../../errors/ApiError'
 import { Order } from './order.model'
 import { IOrder, IJourneyUpdate } from './order.interface'
 import { Product } from '../product/product.model'
+import { Payment } from '../payment/payment.model'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
 import { Types } from 'mongoose'
@@ -18,6 +19,33 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
 
   if (product.stock <= 0 || product.status === 'sold') {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Product is out of stock.')
+  }
+
+  payload.purchaseType = payload.purchaseType || 'buy_now'
+  if (!payload.amountDetails) {
+    payload.amountDetails = {
+      itemSubtotal: product.buyNowPrice || product.estValue || 0,
+      shipping: 0,
+      taxes: 0,
+      processingFee: 0,
+      charityContribution: 0,
+      totalPaid: (payload as any).totalPaid || product.buyNowPrice || product.estValue || 0,
+    }
+  } else if (payload.amountDetails.totalPaid === undefined || payload.amountDetails.totalPaid === 0) {
+    payload.amountDetails.totalPaid = (payload as any).totalPaid ||
+      ((payload.amountDetails.itemSubtotal || 0) + (payload.amountDetails.shipping || 0) + (payload.amountDetails.taxes || 0))
+  }
+  if (!payload.shippingAddress) {
+    payload.shippingAddress = {
+      street: 'N/A',
+      city: 'N/A',
+      state: 'N/A',
+      postalCode: '00000',
+      country: 'USA',
+    }
+  } else {
+    payload.shippingAddress.postalCode = payload.shippingAddress.postalCode || (payload.shippingAddress as any).zipCode || '00000'
+    payload.shippingAddress.country = payload.shippingAddress.country || 'USA'
   }
 
   // Security: seller always comes from the product, never from the client
@@ -59,6 +87,14 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   try {
     const orders = await Order.create([payload], { session })
     const order = orders[0]
+
+    if (payload.paymentIntentId) {
+      await Payment.updateOne(
+        { paymentIntentId: payload.paymentIntentId },
+        { status: 'succeeded', orderId: order._id },
+        { session },
+      )
+    }
 
     // Atomic stock decrement: two buyers can't both take the last unit
     const reserved = await Product.findOneAndUpdate(

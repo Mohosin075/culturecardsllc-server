@@ -18,7 +18,7 @@ const TradeOfferSchema = new Schema<ITradeOffer>(
     senderProductId: {
       type: Schema.Types.ObjectId,
       ref: 'Product',
-      required: true,
+      required: false,
     },
     receiverProductId: {
       type: Schema.Types.ObjectId,

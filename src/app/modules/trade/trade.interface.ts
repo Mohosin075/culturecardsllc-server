@@ -12,7 +12,7 @@ export type IEscrowStatus = 'pending' | 'held' | 'released' | 'refunded'
 export type ITradeOffer = {
   senderId: Schema.Types.ObjectId
   receiverId: Schema.Types.ObjectId
-  senderProductId: Schema.Types.ObjectId
+  senderProductId?: Schema.Types.ObjectId
   receiverProductId: Schema.Types.ObjectId
   cashSupplement: number // Positive if sender pays receiver, Negative if receiver pays sender
   escrowStatus: IEscrowStatus

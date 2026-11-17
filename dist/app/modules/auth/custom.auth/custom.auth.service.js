@@ -64,7 +64,6 @@ const createUser = async (payload) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `An account with this email already exist, please login or try with another email.`);
     }
     const otp = (0, crypto_1.generateOtp)();
-    console.log({ otp }, 'create user');
     const otpExpiresIn = new Date(Date.now() + 5 * 60 * 1000);
     const authentication = {
         email: payload.email,
@@ -173,7 +172,6 @@ const forgetPassword = async (email, phone) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'No account found with this email or phone');
     }
     const otp = (0, crypto_1.generateOtp)();
-    console.log({ otp }, 'forget password');
     if (phone) {
         //implement this feature using twilio/aws sns
     }
@@ -269,7 +267,7 @@ const verifyAccount = async (onetimeCode, email, phone) => {
     if (!isUserExist.verified) {
         await user_model_1.User.findByIdAndUpdate(isUserExist._id, { $set: { verified: true } }, { new: true });
         const tokens = auth_helper_1.AuthHelper.createToken(isUserExist._id, isUserExist.activeRole, isUserExist.name, isUserExist.email);
-        return (0, common_1.authResponse)(http_status_codes_1.StatusCodes.OK, `Welcome ${isUserExist.name} to our platform.`, isUserExist.activeRole, tokens.accessToken, tokens.refreshToken);
+        return (0, common_1.authResponse)(http_status_codes_1.StatusCodes.OK, `Welcome ${isUserExist.name} to our platform.`, isUserExist.activeRole, tokens.accessToken, tokens.refreshToken, undefined, isUserExist._id.toString());
     }
     else {
         await user_model_1.User.findByIdAndUpdate(isUserExist._id, {
@@ -379,7 +377,6 @@ const resendOtp = async (authType, email, phone) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You have exceeded the maximum number of requests. Please try again later.');
     }
     const otp = (0, crypto_1.generateOtp)();
-    console.log({ otp }, 'resent otp');
     const authenticationPayload = {
         oneTimeCode: otp,
         latestRequestAt: new Date(),

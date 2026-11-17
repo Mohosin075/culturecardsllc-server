@@ -83,7 +83,8 @@ const createCheckoutSession = async (
       bookingId: payload.bookingId,
       orderId: payload.orderId,
       tradeOfferId: payload.tradeOfferId,
-      userEmail: user.email,
+      // The JWT carries no email; use the user record loaded above.
+      userEmail: userData.email,
       amount: payload.amount,
       currency: payload.currency || 'usd',
       paymentMethod: 'stripe',

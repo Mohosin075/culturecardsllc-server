@@ -99,6 +99,9 @@ const getAllProducts = async (filters, paginationOptions = {}) => {
     // owner via /products/my. Public lists never show it.
     if (!includePrivate && allowTrade === undefined)
         query.allowTrade = { $ne: false };
+    // Exclude trade-only counter items from public marketplace listings
+    if (!includePrivate)
+        query.isTradeOnly = { $ne: true };
     if (status)
         query.status = status;
     if (sellerId && mongoose_1.Types.ObjectId.isValid(sellerId)) {

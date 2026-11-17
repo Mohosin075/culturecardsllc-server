@@ -18,7 +18,7 @@ const TradeOfferSchema = new mongoose_1.Schema({
     senderProductId: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Product',
-        required: true,
+        required: false,
     },
     receiverProductId: {
         type: mongoose_1.Schema.Types.ObjectId,

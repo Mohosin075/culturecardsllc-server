@@ -29,4 +29,5 @@ export type IAuthResponse = {
   token?: string
   accessToken?: string
   refreshToken?: string
+  userId?: string
 }

@@ -78,6 +78,7 @@ const apiRoutes: { path: string; route: Router }[] = [
   { path: '/chat', route: ChatRoutes },
   { path: '/review', route: ReviewRoutes },
   { path: '/category', route: CategoryRoutes },
+  { path: '/categories', route: CategoryRoutes },
   { path: '/favourite', route: FavouriteRoutes },
   { path: '/public', route: PublicRoutes },
   { path: '/locations', route: LocationRoutes },

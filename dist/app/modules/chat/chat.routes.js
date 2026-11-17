@@ -11,5 +11,8 @@ const user_1 = require("../../../enum/user");
 const router = express_1.default.Router();
 router.post('/contact-admin', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER), chat_controller_1.ChatController.createAdminChat);
 router.post('/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), chat_controller_1.ChatController.createChat);
+router.patch('/:id/read', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), chat_controller_1.ChatController.markChatAsRead);
+router.post('/:id/read', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), chat_controller_1.ChatController.markChatAsRead);
+router.post('/read', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), chat_controller_1.ChatController.markChatAsRead);
 router.get('/', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.SELLER), chat_controller_1.ChatController.getChat);
 exports.ChatRoutes = router;

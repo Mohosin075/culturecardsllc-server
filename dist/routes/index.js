@@ -77,6 +77,7 @@ const apiRoutes = [
     { path: '/chat', route: chat_routes_1.ChatRoutes },
     { path: '/review', route: review_route_1.ReviewRoutes },
     { path: '/category', route: category_route_1.CategoryRoutes },
+    { path: '/categories', route: category_route_1.CategoryRoutes },
     { path: '/favourite', route: favourite_route_1.FavouriteRoutes },
     { path: '/public', route: public_route_1.PublicRoutes },
     { path: '/locations', route: location_route_1.LocationRoutes },

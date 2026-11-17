@@ -8,6 +8,7 @@ const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const order_model_1 = require("./order.model");
 const product_model_1 = require("../product/product.model");
+const payment_model_1 = require("../payment/payment.model");
 const chat_model_1 = require("../chat/chat.model");
 const message_model_1 = require("../message/message.model");
 const mongoose_1 = require("mongoose");
@@ -22,6 +23,34 @@ const createOrder = async (payload) => {
     }
     if (product.stock <= 0 || product.status === 'sold') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Product is out of stock.');
+    }
+    payload.purchaseType = payload.purchaseType || 'buy_now';
+    if (!payload.amountDetails) {
+        payload.amountDetails = {
+            itemSubtotal: product.buyNowPrice || product.estValue || 0,
+            shipping: 0,
+            taxes: 0,
+            processingFee: 0,
+            charityContribution: 0,
+            totalPaid: payload.totalPaid || product.buyNowPrice || product.estValue || 0,
+        };
+    }
+    else if (payload.amountDetails.totalPaid === undefined || payload.amountDetails.totalPaid === 0) {
+        payload.amountDetails.totalPaid = payload.totalPaid ||
+            ((payload.amountDetails.itemSubtotal || 0) + (payload.amountDetails.shipping || 0) + (payload.amountDetails.taxes || 0));
+    }
+    if (!payload.shippingAddress) {
+        payload.shippingAddress = {
+            street: 'N/A',
+            city: 'N/A',
+            state: 'N/A',
+            postalCode: '00000',
+            country: 'USA',
+        };
+    }
+    else {
+        payload.shippingAddress.postalCode = payload.shippingAddress.postalCode || payload.shippingAddress.zipCode || '00000';
+        payload.shippingAddress.country = payload.shippingAddress.country || 'USA';
     }
     // Security: seller always comes from the product, never from the client
     payload.sellerId = product.sellerId;
@@ -59,6 +88,9 @@ const createOrder = async (payload) => {
     try {
         const orders = await order_model_1.Order.create([payload], { session });
         const order = orders[0];
+        if (payload.paymentIntentId) {
+            await payment_model_1.Payment.updateOne({ paymentIntentId: payload.paymentIntentId }, { status: 'succeeded', orderId: order._id }, { session });
+        }
         // Atomic stock decrement: two buyers can't both take the last unit
         const reserved = await product_model_1.Product.findOneAndUpdate({ _id: product._id, stock: { $gt: 0 }, status: { $ne: 'sold' } }, { $inc: { stock: -1 } }, { new: true, session });
         if (!reserved) {

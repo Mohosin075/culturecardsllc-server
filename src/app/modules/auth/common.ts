@@ -23,7 +23,6 @@ const handleLoginLogic = async (
     //send otp to user
 
     const otp = generateOtp()
-    console.log({ otp })
     const otpExpiresIn = new Date(Date.now() + 5 * 60 * 1000)
 
     const authentication = {
@@ -156,6 +155,7 @@ export const authResponse = (
   accessToken?: string,
   refreshToken?: string,
   token?: string,
+  userId?: string,
 ): IAuthResponse => {
   return {
     status,
@@ -165,5 +165,6 @@ export const authResponse = (
     ...(accessToken && { accessToken }),
     ...(refreshToken && { refreshToken }),
     ...(token && { token }),
+    ...(userId && { userId }),
   }
 }

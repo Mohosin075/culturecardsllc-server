@@ -91,6 +91,10 @@ const socket = (io: Server) => {
               streamId,
               viewersCount: stream.viewersCount,
             })
+            if ((socket as any).userId && stream.sellerId.toString() === (socket as any).userId) {
+              ;(socket as any).isStreamHost = true
+              ;(socket as any).hostedStreamId = streamId
+            }
           }
 
           (socket as any).activeStreamId = streamId
@@ -129,6 +133,17 @@ const socket = (io: Server) => {
           streamId,
           viewersCount: currentCount,
         })
+
+        if ((socket as any).isStreamHost && (socket as any).hostedStreamId === streamId) {
+          const liveStream = await LiveStream.findById(streamId)
+          if (liveStream && liveStream.status === 'live') {
+            liveStream.status = 'ended'
+            liveStream.endedAt = new Date()
+            await liveStream.save()
+            io.to(streamRoom).emit('stream-ended', { streamId, status: 'ended' })
+            console.log(colors.red(`Host left: ended stream ${streamId}`))
+          }
+        }
 
         ;(socket as any).activeStreamId = null
       }
@@ -508,6 +523,18 @@ const socket = (io: Server) => {
           streamId,
           viewersCount: currentCount,
         })
+      }
+
+      if ((socket as any).isStreamHost && (socket as any).hostedStreamId) {
+        const streamId = (socket as any).hostedStreamId
+        const liveDoc = await LiveStream.findOne({ _id: streamId, status: 'live' })
+        if (liveDoc) {
+          liveDoc.status = 'ended'
+          liveDoc.endedAt = new Date()
+          await liveDoc.save()
+          io.to(`stream:${streamId}`).emit('stream-ended', { streamId, status: 'ended' })
+          console.log(colors.red(`Host disconnected: marked stream ${streamId} as ended.`))
+        }
       }
     })
   })

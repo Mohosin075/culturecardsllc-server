@@ -39,6 +39,7 @@ export type IProduct = {
   maxValue?: number
   boostedUntil?: Date
   allowTrade: boolean
+  isTradeOnly?: boolean
   shippingWeight?: number
   allowOffers?: boolean
   minOfferAmount?: number

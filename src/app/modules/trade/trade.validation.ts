@@ -7,8 +7,9 @@ const createTradeOfferSchema = z.object({
       .string({ required_error: 'Receiver ID is required' })
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Receiver ID format'),
     senderProductId: z
-      .string({ required_error: 'Sender Product ID is required' })
-      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Sender Product ID format'),
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Sender Product ID format')
+      .optional(),
     receiverProductId: z
       .string({ required_error: 'Receiver Product ID is required' })
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Receiver Product ID format'),

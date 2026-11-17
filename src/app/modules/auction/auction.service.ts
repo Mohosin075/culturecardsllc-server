@@ -561,7 +561,18 @@ const updateLiveStreamStatus = async (
     )
   }
 
+  // Prevent reviving an already ended stream session
+  if (stream.status === 'ended' && status !== 'ended') {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'This live stream has already ended and cannot be revived.',
+    )
+  }
+
   stream.status = status
+  if (status === 'ended') {
+    stream.endedAt = new Date()
+  }
   await stream.save()
 
   if (status === 'live') {
@@ -570,6 +581,11 @@ const updateLiveStreamStatus = async (
       streamId,
       stream.title
     ).catch(err => console.error('Failed to send go-live notification to followers:', err))
+  } else if (status === 'ended') {
+    const io = (global as any).io
+    if (io) {
+      io.to(`stream:${streamId}`).emit('stream-ended', { streamId, status: 'ended' })
+    }
   }
 
   return stream

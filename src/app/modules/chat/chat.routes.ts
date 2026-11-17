@@ -19,6 +19,36 @@ router.post(
   ),
   ChatController.createChat,
 )
+router.patch(
+  '/:id/read',
+  auth(
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+    USER_ROLES.SELLER,
+  ),
+  ChatController.markChatAsRead,
+)
+router.post(
+  '/:id/read',
+  auth(
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+    USER_ROLES.SELLER,
+  ),
+  ChatController.markChatAsRead,
+)
+router.post(
+  '/read',
+  auth(
+    USER_ROLES.BUYER,
+    USER_ROLES.ADMIN,
+    USER_ROLES.SUPER_ADMIN,
+    USER_ROLES.SELLER,
+  ),
+  ChatController.markChatAsRead,
+)
 router.get(
   '/',
   auth(

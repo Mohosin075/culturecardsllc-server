@@ -8,34 +8,37 @@ const createOrderSchema = z.object({
     productId: z
       .string({ required_error: 'Product ID is required' })
       .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),
-    purchaseType: z.enum(['auction_win', 'buy_now', 'trade_swap'], {
-      required_error: 'Purchase type is required',
-    }),
-    amountDetails: z.object(
-      {
-        itemSubtotal: z
-          .number({ required_error: 'Subtotal is required' })
-          .nonnegative(),
+    purchaseType: z
+      .enum(['auction_win', 'buy_now', 'trade_swap'])
+      .optional()
+      .default('buy_now'),
+    totalPaid: z.number().nonnegative().optional(),
+    amountDetails: z
+      .object({
+        itemSubtotal: z.number().nonnegative().optional().default(0),
         shipping: z.number().nonnegative().optional().default(0),
         taxes: z.number().nonnegative().optional().default(0),
         processingFee: z.number().nonnegative().optional().default(0),
         charityContribution: z.number().nonnegative().optional().default(0),
-        totalPaid: z
-          .number({ required_error: 'Total paid amount is required' })
-          .nonnegative(),
-      },
-      { required_error: 'Amount details are required' },
-    ),
-    shippingAddress: z.object(
-      {
+        totalPaid: z.number().nonnegative().optional(),
+      })
+      .optional()
+      .default({ itemSubtotal: 0, shipping: 0, taxes: 0, processingFee: 0, charityContribution: 0, totalPaid: 0 }),
+    shippingAddress: z
+      .object({
+        fullName: z.string().optional(),
+        phone: z.string().optional(),
         street: z.string({ required_error: 'Street address is required' }),
         city: z.string({ required_error: 'City is required' }),
         state: z.string({ required_error: 'State is required' }),
-        postalCode: z.string({ required_error: 'Postal code is required' }),
-        country: z.string({ required_error: 'Country is required' }),
-      },
-      { required_error: 'Shipping address is required' },
-    ),
+        postalCode: z.string().optional(),
+        zipCode: z.string().optional(),
+        country: z.string().optional().default('USA'),
+      })
+      .transform((val) => ({
+        ...val,
+        postalCode: val.postalCode || val.zipCode || '00000',
+      })),
     paymentIntentId: z.string().optional(),
     shippingWeight: z.number().nonnegative().optional(),
     shippingLabelUrl: z.string().optional(),

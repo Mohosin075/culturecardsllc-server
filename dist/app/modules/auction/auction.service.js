@@ -382,10 +382,23 @@ const updateLiveStreamStatus = async (streamId, userId, userRole, status) => {
         stream.sellerId.toString() !== userId) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Unauthorized: Only the stream host or administrators can change the stream status.');
     }
+    // Prevent reviving an already ended stream session
+    if (stream.status === 'ended' && status !== 'ended') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This live stream has already ended and cannot be revived.');
+    }
     stream.status = status;
+    if (status === 'ended') {
+        stream.endedAt = new Date();
+    }
     await stream.save();
     if (status === 'live') {
         notification_integration_1.NotificationIntegration.onLiveStreamGoLive(stream.sellerId.toString(), streamId, stream.title).catch(err => console.error('Failed to send go-live notification to followers:', err));
+    }
+    else if (status === 'ended') {
+        const io = global.io;
+        if (io) {
+            io.to(`stream:${streamId}`).emit('stream-ended', { streamId, status: 'ended' });
+        }
     }
     return stream;
 };

@@ -27,32 +27,62 @@ const createTradeOffer = async (payload) => {
     if (isBlocked) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Cannot trade with this user due to block restrictions.');
     }
-    const senderProduct = await product_model_1.Product.findById(senderProductId);
-    const receiverProduct = await product_model_1.Product.findById(receiverProductId);
-    if (!senderProduct || !receiverProduct) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'One or both of the products were not found.');
+    let senderProduct = null;
+    if (senderProductId) {
+        senderProduct = await product_model_1.Product.findById(senderProductId);
+        if (!senderProduct) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Sender product not found.');
+        }
+        if (!senderProduct.allowTrade) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'The offered item is not marked for trade.');
+        }
+        if (senderProduct.status !== 'active') {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'The offered item is not currently active.');
+        }
     }
-    // Allow trade/offer if sender allows trade, and receiver allows trade or offers
-    const isSenderTradeAllowed = senderProduct.allowTrade;
+    else {
+        // Pure cash offer
+        if (!payload.cashSupplement || payload.cashSupplement <= 0) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'A cash offer must specify a positive cash amount.');
+        }
+    }
+    const receiverProduct = await product_model_1.Product.findById(receiverProductId);
+    if (!receiverProduct) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Target product not found.');
+    }
     const isReceiverTradeOrOfferAllowed = receiverProduct.allowTrade || receiverProduct.allowOffers;
-    if (!isSenderTradeAllowed || !isReceiverTradeOrOfferAllowed) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'One or both items are not configured to allow trading or custom offers.');
+    if (!isReceiverTradeOrOfferAllowed) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This item is not configured to allow trading or custom offers.');
     }
     // Validate minimum offer amount if configured on receiver product
     if (receiverProduct.allowOffers && receiverProduct.minOfferAmount && receiverProduct.minOfferAmount > 0) {
-        const totalOfferValue = (senderProduct.estValue || 0) + (payload.cashSupplement || 0);
+        const totalOfferValue = ((senderProduct === null || senderProduct === void 0 ? void 0 : senderProduct.estValue) || 0) + (payload.cashSupplement || 0);
         if (totalOfferValue < receiverProduct.minOfferAmount) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `Your offer total value ($${totalOfferValue}) is below the seller's minimum acceptable offer ($${receiverProduct.minOfferAmount}).`);
         }
     }
-    if (senderProduct.status !== 'active' ||
-        receiverProduct.status !== 'active') {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'One or both products are not currently active.');
+    if (receiverProduct.status !== 'active') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Target product is not currently active.');
     }
     payload.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     payload.status = 'pending';
     payload.escrowStatus = 'pending';
     const offer = (await trade_model_1.TradeOffer.create(payload));
+    // Notify receiver via push notification and socket
+    const receiverUser = await user_model_1.User.findById(receiverId);
+    if (receiverUser === null || receiverUser === void 0 ? void 0 : receiverUser.deviceToken) {
+        (0, pushnotificationHelper_1.sendPushNotification)(receiverUser.deviceToken, 'New Offer Received 🎁', senderProduct
+            ? `You received an offer: ${senderProduct.title} for ${receiverProduct.title}.`
+            : `You received a cash offer of $${payload.cashSupplement} for ${receiverProduct.title}.`, { type: 'NEW_TRADE_OFFER', tradeOfferId: offer._id.toString() }).catch(err => console.error('Push error:', err));
+    }
+    const io = global.io;
+    if (io && receiverId) {
+        io.to(receiverId.toString()).emit('new_trade_offer', {
+            offerId: offer._id.toString(),
+            senderId: (senderId === null || senderId === void 0 ? void 0 : senderId.toString()) || '',
+            receiverProductId: (receiverProductId === null || receiverProductId === void 0 ? void 0 : receiverProductId.toString()) || '',
+        });
+    }
     // Find existing chat between sender and receiver using participants array
     let chat = await chat_model_1.Chat.findOne({
         participants: { $all: [senderId, receiverId] },
@@ -109,12 +139,17 @@ const acceptTradeOffer = async (offerId) => {
         offer.status = 'accepted';
         offer.escrowStatus = 'held';
         await offer.save({ session });
-        // Atomically reserve both items: fails if either was sold/reserved
+        // Atomically reserve items: fails if either was sold/reserved
         // meanwhile (e.g. won in a live auction), so nothing is sold twice.
-        const reservedSender = await product_model_1.Product.findOneAndUpdate({ _id: offer.senderProductId, status: 'active' }, { status: 'pending' }, { session });
+        if (offer.senderProductId) {
+            const reservedSender = await product_model_1.Product.findOneAndUpdate({ _id: offer.senderProductId, status: 'active' }, { status: 'pending' }, { session });
+            if (!reservedSender) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'The offered item is no longer available.');
+            }
+        }
         const reservedReceiver = await product_model_1.Product.findOneAndUpdate({ _id: offer.receiverProductId, status: 'active' }, { status: 'pending' }, { session });
-        if (!reservedSender || !reservedReceiver) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'One of these items is no longer available.');
+        if (!reservedReceiver) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'This item is no longer available.');
         }
         // Use participants[] array — consistent with Chat model schema
         let chat = await chat_model_1.Chat.findOne({
@@ -263,7 +298,9 @@ const completeTradeOffer = async (offerId, userId) => {
     session.startTransaction();
     try {
         // Swap product ownership
-        await product_model_1.Product.findByIdAndUpdate(offer.senderProductId._id, { sellerId: offer.receiverId, status: 'active' }, { session });
+        if (offer.senderProductId) {
+            await product_model_1.Product.findByIdAndUpdate(offer.senderProductId._id, { sellerId: offer.receiverId, status: 'active' }, { session });
+        }
         await product_model_1.Product.findByIdAndUpdate(offer.receiverProductId._id, { sellerId: offer.senderId, status: 'active' }, { session });
         // Update offer
         offer.status = 'completed';

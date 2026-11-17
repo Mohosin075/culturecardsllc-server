@@ -19,7 +19,6 @@ const handleLoginLogic = async (payload, isUserExist) => {
     if (!verified) {
         //send otp to user
         const otp = (0, crypto_1.generateOtp)();
-        console.log({ otp });
         const otpExpiresIn = new Date(Date.now() + 5 * 60 * 1000);
         const authentication = {
             email: payload.email,
@@ -90,7 +89,7 @@ const handleLoginLogic = async (payload, isUserExist) => {
 exports.AuthCommonServices = {
     handleLoginLogic,
 };
-const authResponse = (status, message, role, accessToken, refreshToken, token) => {
+const authResponse = (status, message, role, accessToken, refreshToken, token, userId) => {
     return {
         status,
         message,
@@ -99,6 +98,7 @@ const authResponse = (status, message, role, accessToken, refreshToken, token) =
         ...(accessToken && { accessToken }),
         ...(refreshToken && { refreshToken }),
         ...(token && { token }),
+        ...(userId && { userId }),
     };
 };
 exports.authResponse = authResponse;

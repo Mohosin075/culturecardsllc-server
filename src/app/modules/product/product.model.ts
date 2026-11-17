@@ -99,6 +99,11 @@ const ProductSchema = new Schema<IProduct>(
       default: true,
       index: true,
     },
+    isTradeOnly: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     shippingWeight: {
       type: Number,
       default: 0,
