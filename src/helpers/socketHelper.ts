@@ -72,6 +72,8 @@ const socket = (io: Server) => {
         const { streamId, userId } = data
         if (streamId) {
           const streamRoom = `stream:${streamId}`
+          // Re-joins (e.g. after a reconnect) must not inflate the viewer count.
+          if (socket.rooms.has(streamRoom)) return
           socket.join(streamRoom)
           console.log(
             colors.green(`User ${socket.id} joined stream room: ${streamId}`),
@@ -197,36 +199,108 @@ const socket = (io: Server) => {
       },
     )
 
-    // 4. Live Chat Overlay
+    // 4. Live Chat Overlay (comments) — server is the single source of truth.
     socket.on(
       'stream-chat',
-      async (data: { streamId: string; message: string }) => {
-        const { streamId, message } = data
-        // Security: use authenticated socket userId — never trust client-provided userId
-        const authenticatedUserId = (socket as any).userId
+      async (data: { streamId: string; message: string; clientId?: string }) => {
+        try {
+          const streamId = data?.streamId
+          const authenticatedUserId = (socket as any).userId
+          const message = (data?.message ?? '').toString().trim().slice(0, 300)
+          if (!authenticatedUserId || !message || !streamId || !Types.ObjectId.isValid(streamId)) return
 
-        if (streamId && authenticatedUserId && message) {
-          const userInfo = await User.findById(authenticatedUserId).select(
-            'name fullName email image photo',
-          )
+          // Basic anti-spam: max ~2 comments per second per socket
+          const now = Date.now()
+          const last = (socket as any).lastChatAt || 0
+          if (now - last < 450) {
+            socket.emit('stream-chat-error', { clientId: data?.clientId, message: 'You are sending messages too fast.' })
+            return
+          }
+          ;(socket as any).lastChatAt = now
+
+          const userInfo = await User.findById(authenticatedUserId).select('name fullName image photo')
           const displayName = userInfo?.fullName || userInfo?.name || 'User'
+          const messageId = new Types.ObjectId()
+          const timestamp = new Date()
 
-          await LiveStream.findByIdAndUpdate(streamId, {
-            $push: {
-              chatMessages: {
-                user: displayName,
-                message: message,
-                timestamp: new Date(),
+          const updated = await LiveStream.findOneAndUpdate(
+            { _id: streamId, status: { $in: ['live', 'scheduled'] } },
+            {
+              $push: {
+                chatMessages: {
+                  _id: messageId,
+                  user: displayName,
+                  userId: new Types.ObjectId(authenticatedUserId),
+                  message,
+                  timestamp,
+                  likedBy: [],
+                },
               },
             },
-          })
+            { projection: { _id: 1 } },
+          )
+          if (!updated) {
+            socket.emit('stream-chat-error', { clientId: data?.clientId, message: 'This show has ended.' })
+            return
+          }
 
           io.to(`stream:${streamId}`).emit('new-chat-message', {
             streamId,
-            user: userInfo,
+            messageId: messageId.toString(),
+            clientId: data?.clientId,
+            user: {
+              _id: authenticatedUserId,
+              name: displayName,
+              image: (userInfo as any)?.image || (userInfo as any)?.photo || '',
+            },
             message,
-            timestamp: new Date(),
+            likes: 0,
+            timestamp,
           })
+        } catch (err: any) {
+          console.error(colors.red('stream-chat error:'), err?.message)
+        }
+      },
+    )
+
+    // 4b. Like / unlike a comment (toggle, atomic, one like per user)
+    socket.on(
+      'stream-chat-like',
+      async (data: { streamId: string; messageId: string }) => {
+        try {
+          const authenticatedUserId = (socket as any).userId
+          const { streamId, messageId } = data || ({} as any)
+          if (!authenticatedUserId || !Types.ObjectId.isValid(streamId) || !Types.ObjectId.isValid(messageId)) return
+          const uid = new Types.ObjectId(authenticatedUserId)
+          const mid = new Types.ObjectId(messageId)
+
+          // Try to add the like; if the user already liked it, remove it instead.
+          let liked = true
+          let doc = await LiveStream.findOneAndUpdate(
+            { _id: streamId, chatMessages: { $elemMatch: { _id: mid, likedBy: { $ne: uid } } } },
+            { $addToSet: { 'chatMessages.$.likedBy': uid } },
+            { new: true, projection: { chatMessages: { $elemMatch: { _id: mid } } } },
+          )
+          if (!doc) {
+            liked = false
+            doc = await LiveStream.findOneAndUpdate(
+              { _id: streamId, 'chatMessages._id': mid },
+              { $pull: { 'chatMessages.$.likedBy': uid } },
+              { new: true, projection: { chatMessages: { $elemMatch: { _id: mid } } } },
+            )
+          }
+          const msg: any = (doc as any)?.chatMessages?.[0]
+          if (!msg) return
+
+          io.to(`stream:${streamId}`).emit('chat-message-liked', {
+            streamId,
+            messageId,
+            likes: (msg.likedBy || []).length,
+            userId: authenticatedUserId,
+            liked,
+          })
+        } catch (err: any) {
+          console.error(colors.red('stream-chat-like error:'), err?.message)
         }
       },
     )

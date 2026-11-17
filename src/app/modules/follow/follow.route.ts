@@ -11,6 +11,12 @@ router.post(
   FollowControllers.toggleFollow
 )
 
+router.get(
+  '/:id/status',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  FollowControllers.getFollowStatus
+)
+
 router.get('/:id/followers', FollowControllers.getFollowers)
 router.get('/:id/following', FollowControllers.getFollowing)
 

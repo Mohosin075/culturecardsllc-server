@@ -85,8 +85,10 @@ const LiveStreamSchema = new Schema<ILiveStream>(
     chatMessages: [
       {
         user: { type: String, required: true },
+        userId: { type: Schema.Types.ObjectId, ref: 'User' },
         message: { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
+        likedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
       }
     ],
   },

@@ -19,6 +19,16 @@ const toggleFollow = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const getFollowStatus = catchAsync(async (req: Request, res: Response) => {
+  const result = await FollowServices.getFollowStatus((req as any).user.userId, req.params.id)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Follow status retrieved',
+    data: result,
+  })
+})
+
 const getFollowers = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params
   const paginationOptions = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder'])
@@ -51,6 +61,7 @@ const getFollowing = catchAsync(async (req: Request, res: Response) => {
 
 export const FollowControllers = {
   toggleFollow,
+  getFollowStatus,
   getFollowers,
   getFollowing,
 }

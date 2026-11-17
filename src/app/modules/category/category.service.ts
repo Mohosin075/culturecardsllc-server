@@ -5,6 +5,7 @@ import { ICategory, ICategoryFilterables } from './category.interface'
 import { Category } from './category.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
+import { AREIS_CATEGORIES } from './category.seed'
 
 const createCategory = async (payload: ICategory) => {
   const existingCategory = await Category.findOne({ name: payload.name })
@@ -63,7 +64,23 @@ const getAllCategories = async (
 
   const pipeline: any[] = [
     { $match: whereConditions },
-    { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+    // Default order: the 16 AREIS categories in the client's order first,
+    // then anything else. An explicit sortBy from the caller wins.
+    {
+      $addFields: {
+        _areisOrder: {
+          $let: {
+            vars: { i: { $indexOfArray: [AREIS_CATEGORIES.map(c => c.name), '$name'] } },
+            in: { $cond: [{ $gte: ['$$i', 0] }, '$$i', 999] },
+          },
+        },
+      },
+    },
+    {
+      $sort: (paginationOptions as any)?.sortBy
+        ? { [sortBy]: sortOrder === 'asc' ? 1 : -1 }
+        : { _areisOrder: 1, [sortBy]: sortOrder === 'asc' ? 1 : -1 },
+    },
     { $skip: skip },
     { $limit: limit },
     {
