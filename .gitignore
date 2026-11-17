@@ -5,10 +5,10 @@ node_modules
 # /uploads
 *~
 *.ts~
+.vscode/
 .vercel
 
 firebase-service-account.json
 *.pem
 deploy-key.pem
 dist
-config.bat
