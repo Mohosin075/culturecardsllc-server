@@ -130,7 +130,6 @@ Modern, scalable backend for a social/media platform built with Node.js, TypeScr
 
 - Stripe client config: [`stripe.ts`](file:///d:/Mohosin/Mohosin/projects/culturecardsllc-server/src/config/stripe.ts)
 - Webhook handling lives in the payment module
-
 ## Notifications
 
 - Schedulers and templates under the notification module
