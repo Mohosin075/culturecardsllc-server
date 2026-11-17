@@ -345,6 +345,11 @@ const getActiveConfig = async (): Promise<IGiveawayConfig> => {
       { $set: { isActive: false } },
     )
   }
+  // upsert + new always returns a doc; this guard satisfies the type checker
+  // (the nullable type here was failing `npm run build` and blocking deploys).
+  if (!configDoc) {
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Giveaway configuration is unavailable.')
+  }
   return configDoc
 }
 
