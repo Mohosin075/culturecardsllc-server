@@ -4,12 +4,9 @@ exports.OrderValidations = void 0;
 const zod_1 = require("zod");
 const createOrderSchema = zod_1.z.object({
     body: zod_1.z.object({
-        buyerId: zod_1.z
-            .string({ required_error: 'Buyer ID is required' })
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Buyer ID format'),
-        sellerId: zod_1.z
-            .string({ required_error: 'Seller ID is required' })
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Seller ID format'),
+        // Ignored: buyer = authenticated user, seller = product owner (set server-side)
+        buyerId: zod_1.z.string().optional(),
+        sellerId: zod_1.z.string().optional(),
         productId: zod_1.z
             .string({ required_error: 'Product ID is required' })
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),

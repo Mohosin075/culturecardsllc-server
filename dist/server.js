@@ -15,6 +15,7 @@ const os_1 = __importDefault(require("os"));
 const user_service_1 = require("./app/modules/user/user.service");
 const socketHelper_1 = require("./helpers/socketHelper");
 const subscription_seed_1 = require("./app/modules/subscription/subscription.seed");
+const category_seed_1 = require("./app/modules/category/category.seed");
 const logger_1 = require("./shared/logger");
 const tradeExpiryCron_1 = require("./task/tradeExpiryCron");
 const orderAutoDeliverCron_1 = require("./task/orderAutoDeliverCron");
@@ -29,7 +30,12 @@ exports.onlineUsers = new Map();
 let server;
 async function main() {
     try {
-        await mongoose_1.default.connect(config_1.default.database_url);
+        await mongoose_1.default.connect(config_1.default.database_url, {
+            maxPoolSize: 50,
+            minPoolSize: 10,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        });
         logger_1.logger.info(colors_1.default.green('🚀 Database connected successfully'));
         const port = typeof config_1.default.port === 'number' ? config_1.default.port : Number(config_1.default.port);
         server = app_1.default.listen(port, '0.0.0.0', () => {
@@ -79,6 +85,8 @@ async function main() {
         await user_service_1.UserServices.createAdmin();
         // Seed subscription plans
         await (0, subscription_seed_1.seedSubscriptionPlans)();
+        // Ensure the 16 AREIS marketplace categories exist
+        await (0, category_seed_1.seedAreisCategories)().catch(err => logger_1.errorLogger.error('Category seed failed:', err));
         // Socket helper
         socketHelper_1.socketHelper.socket(exports.io);
         global.io = exports.io;
@@ -106,8 +114,10 @@ async function main() {
         }
     });
 }
-// Start main
-main();
+// Start main (only when not running test scripts)
+if (process.env.NODE_ENV !== 'test') {
+    main();
+}
 // Graceful shutdown on SIGTERM
 process.on('SIGTERM', async () => {
     logger_1.logger.info('👋 SIGTERM received, shutting down server...');

@@ -32,6 +32,11 @@ export type IProduct = {
   status: 'active' | 'sold' | 'unsold' | 'pending'
   stock: number
   isFeatured: boolean
+  isGiveaway?: boolean
+  lookingFor?: string
+  targetCategory?: string
+  minValue?: number
+  maxValue?: number
   boostedUntil?: Date
   allowTrade: boolean
   shippingWeight?: number

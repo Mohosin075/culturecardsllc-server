@@ -81,7 +81,15 @@ const getFollowing = async (userId, paginationOptions) => {
         data: following.map(f => f.followingId),
     };
 };
+const getFollowStatus = async (followerId, followingId) => {
+    const [following, followersCount] = await Promise.all([
+        follow_model_1.Follow.exists({ followerId, followingId }),
+        follow_model_1.Follow.countDocuments({ followingId }),
+    ]);
+    return { following: !!following, followersCount };
+};
 exports.FollowServices = {
+    getFollowStatus,
     toggleFollow,
     getFollowers,
     getFollowing,

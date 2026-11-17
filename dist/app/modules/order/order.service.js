@@ -13,13 +13,44 @@ const message_model_1 = require("../message/message.model");
 const mongoose_1 = require("mongoose");
 const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
+const stripe_1 = __importDefault(require("../../../config/stripe"));
 const createOrder = async (payload) => {
+    var _a;
     const product = await product_model_1.Product.findById(payload.productId);
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }
-    if (product.stock <= 0) {
+    if (product.stock <= 0 || product.status === 'sold') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Product is out of stock.');
+    }
+    // Security: seller always comes from the product, never from the client
+    payload.sellerId = product.sellerId;
+    if (String(payload.sellerId) === String(payload.buyerId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You cannot buy your own item.');
+    }
+    // Security: payment status is decided server-side. An order is only "paid"
+    // if the client supplies a Stripe PaymentIntent that actually succeeded,
+    // covers the amount, and has not been used by another order.
+    payload.paymentStatus = 'pending';
+    if (payload.paymentIntentId) {
+        const alreadyUsed = await order_model_1.Order.exists({ paymentIntentId: payload.paymentIntentId });
+        if (alreadyUsed) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'This payment has already been used for another order.');
+        }
+        let intent;
+        try {
+            intent = await stripe_1.default.paymentIntents.retrieve(payload.paymentIntentId);
+        }
+        catch (_b) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid payment reference.');
+        }
+        const claimedTotal = Number(((_a = payload.amountDetails) === null || _a === void 0 ? void 0 : _a.totalPaid) || 0);
+        if (intent.status === 'succeeded' && intent.amount_received >= Math.round(claimedTotal * 100)) {
+            payload.paymentStatus = 'paid';
+            if (payload.amountDetails) {
+                payload.amountDetails.totalPaid = intent.amount_received / 100;
+            }
+        }
     }
     // Populate shipping weight, tracking number, and mock PDF label
     await (0, shippingHelper_1.initializeOrderShipping)(payload, product);
@@ -28,11 +59,14 @@ const createOrder = async (payload) => {
     try {
         const orders = await order_model_1.Order.create([payload], { session });
         const order = orders[0];
-        product.stock -= 1;
-        if (product.stock === 0) {
-            product.status = 'sold';
+        // Atomic stock decrement: two buyers can't both take the last unit
+        const reserved = await product_model_1.Product.findOneAndUpdate({ _id: product._id, stock: { $gt: 0 }, status: { $ne: 'sold' } }, { $inc: { stock: -1 } }, { new: true, session });
+        if (!reserved) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'Sorry, this item just sold out.');
         }
-        await product.save({ session });
+        if (reserved.stock <= 0) {
+            await product_model_1.Product.updateOne({ _id: product._id }, { status: 'sold' }, { session });
+        }
         // Use participants[] array — consistent with Chat model schema
         let chat = await chat_model_1.Chat.findOne({
             participants: { $all: [order.buyerId, order.sellerId] },
@@ -94,13 +128,26 @@ const getOrderById = async (id) => {
     }
     return order;
 };
-const updateOrderJourney = async (orderId, journeyUpdate, deliveryStatus) => {
+const updateOrderJourney = async (orderId, journeyUpdate, deliveryStatus, requester) => {
+    var _a, _b;
     if (!mongoose_1.Types.ObjectId.isValid(orderId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Order ID');
     }
     const order = await order_model_1.Order.findById(orderId).populate('productId buyerId');
     if (!order) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Order not found');
+    }
+    // Security: seller (or admin) can push any checkpoint; the buyer may only
+    // confirm delivery of their own order.
+    if (requester && !requester.isAdmin) {
+        const buyerRef = (_b = (_a = order.buyerId) === null || _a === void 0 ? void 0 : _a._id) !== null && _b !== void 0 ? _b : order.buyerId;
+        const isSeller = String(order.sellerId) === requester.userId;
+        const isBuyer = String(buyerRef) === requester.userId;
+        if (!isSeller && !(isBuyer && deliveryStatus === 'delivered')) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, isBuyer
+                ? 'Buyers can only confirm delivery.'
+                : 'You can only update your own orders.');
+        }
     }
     order.deliveryStatus = deliveryStatus;
     order.trackingDetails.journeyUpdates.push(journeyUpdate);

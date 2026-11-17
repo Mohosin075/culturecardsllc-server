@@ -9,11 +9,36 @@ const product_service_1 = require("./product.service");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const createProduct = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await product_service_1.ProductServices.createProduct(req.body);
+    const user = req.user;
+    // Security: the seller is always the authenticated user, never a body field
+    const result = await product_service_1.ProductServices.createProduct({
+        ...req.body,
+        sellerId: user.userId || user.authId,
+    });
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         success: true,
         message: 'Product created successfully.',
+        data: result,
+    });
+});
+/** Seller's own inventory, including private (not listed) items. */
+const getMyProducts = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const result = await product_service_1.ProductServices.getAllProducts({
+        searchTerm: req.query.searchTerm,
+        status: req.query.status,
+        allowTrade: req.query.allowTrade ? req.query.allowTrade === 'true' : undefined,
+        sellerId: user.userId || user.authId,
+        includePrivate: true,
+    }, {
+        page: req.query.page ? Number(req.query.page) : 1,
+        limit: req.query.limit ? Number(req.query.limit) : 100,
+    });
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Your inventory retrieved successfully.',
         data: result,
     });
 });
@@ -55,7 +80,8 @@ const getProductById = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const updateProduct = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await product_service_1.ProductServices.updateProduct(req.params.id, req.body);
+    const user = req.user;
+    const result = await product_service_1.ProductServices.updateProduct(req.params.id, req.body, user === null || user === void 0 ? void 0 : user.userId, user === null || user === void 0 ? void 0 : user.role);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -64,11 +90,22 @@ const updateProduct = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const deleteProduct = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await product_service_1.ProductServices.deleteProduct(req.params.id);
+    const user = req.user;
+    const result = await product_service_1.ProductServices.deleteProduct(req.params.id, user === null || user === void 0 ? void 0 : user.userId, user === null || user === void 0 ? void 0 : user.role);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
         message: 'Product deleted successfully.',
+        data: result,
+    });
+});
+const clearAllProducts = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const result = await product_service_1.ProductServices.clearAllProducts(user.userId || user.authId, user.role || user.activeRole);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: `Cleared ${result.deletedCount} products from database successfully.`,
         data: result,
     });
 });
@@ -94,10 +131,12 @@ const incrementShareCount = (0, catchAsync_1.default)(async (req, res) => {
 });
 exports.ProductControllers = {
     createProduct,
+    getMyProducts,
     getAllProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    clearAllProducts,
     boostProduct,
     incrementShareCount,
 };

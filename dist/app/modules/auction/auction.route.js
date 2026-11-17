@@ -27,6 +27,12 @@ router.get('/streams', auction_controller_1.AuctionControllers.getLiveStreams);
 router.patch('/stream/:streamId/inventory', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.updateStreamInventorySchema), auction_controller_1.AuctionControllers.updateStreamInventory);
 // GET /stream/:streamId/inventory — Get inventory products attached to a live stream (public/auth)
 router.get('/stream/:streamId/inventory', auction_controller_1.AuctionControllers.getStreamInventory);
+// POST /stream/:streamId/inventory/add — Add new or existing item to live stream inventory (seller only)
+router.post('/stream/:streamId/inventory/add', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.addStreamInventoryItem);
+// POST /stream/:streamId/attach-spin-prize — Attach spin wheel prize to buyer's order (seller only)
+router.post('/stream/:streamId/attach-spin-prize', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.attachSpinWheelPrize);
+// POST /stream/:streamId/giveaway-item — Run item as giveaway and draw winner (seller only)
+router.post('/stream/:streamId/giveaway-item', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.runStreamGiveawayItem);
 // POST /item — Register a product as an auction item (seller only)
 router.post('/item', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.createAuctionItemSchema), auction_controller_1.AuctionControllers.createAuctionItem);
 // POST /item/quick-start — 1-Click quick launch active auction from stream inventory (seller only)
@@ -39,5 +45,11 @@ router.get('/stream/:streamId/items', (0, auth_1.default)(user_1.USER_ROLES.BUYE
 router.patch('/stream/:streamId/status', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(auction_validation_1.AuctionValidations.updateLiveStreamStatusSchema), auction_controller_1.AuctionControllers.updateLiveStreamStatus);
 // POST /item/:id/complete — Complete auction, trigger winner payment (seller only)
 router.post('/item/:id/complete', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.completeAuction);
+// POST /stream/:streamId/spin-wheel — Authoritative server spin wheel (seller only, max 4 items)
+router.post('/stream/:streamId/spin-wheel', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.spinWheel);
+// GET /stream/:streamId/sales — Real-time live show sales view for host (seller only)
+router.get('/stream/:streamId/sales', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.getStreamSales);
+// GET /stream/:streamId/summary — Post-show metrics, sold orders & shipping labels (seller only)
+router.get('/stream/:streamId/summary', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.getStreamSummary);
 exports.AuctionRoutes = router;
 exports.default = exports.AuctionRoutes;

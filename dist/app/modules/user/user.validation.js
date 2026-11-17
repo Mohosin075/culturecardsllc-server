@@ -20,8 +20,20 @@ exports.updateUserSchema = zod_1.z.object({
     body: zod_1.z.object({
         name: zod_1.z.string().optional(),
         username: zod_1.z.string().optional(),
-        profile: zod_1.z.string().optional(),
-        coverPhoto: zod_1.z.string().optional(),
+        profile: zod_1.z
+            .string()
+            .max(2048, 'Profile URL length too long')
+            .refine(val => !val.startsWith('data:image'), {
+            message: 'Direct Base64 image strings are not allowed.',
+        })
+            .optional(),
+        coverPhoto: zod_1.z
+            .string()
+            .max(2048, 'Cover photo URL length too long')
+            .refine(val => !val.startsWith('data:image'), {
+            message: 'Direct Base64 image strings are not allowed.',
+        })
+            .optional(),
         phone: zod_1.z.string().optional(),
         description: zod_1.z.string().optional(),
         specialty: zod_1.z.string().optional(),
@@ -35,6 +47,8 @@ exports.updateUserStatusSchema = zod_1.z.object({
     body: zod_1.z.object({
         status: zod_1.z.nativeEnum(user_1.USER_STATUS).optional(),
         verified: zod_1.z.boolean().optional(),
+        sellerVerified: zod_1.z.boolean().optional(),
+        isCelebrity: zod_1.z.boolean().optional(),
     }),
 });
 exports.switchRoleSchema = zod_1.z.object({

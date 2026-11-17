@@ -9,6 +9,7 @@ const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const category_model_1 = require("./category.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
+const category_seed_1 = require("./category.seed");
 const createCategory = async (payload) => {
     const existingCategory = await category_model_1.Category.findOne({ name: payload.name });
     if (existingCategory) {
@@ -47,7 +48,23 @@ const getAllCategories = async (filters, paginationOptions) => {
     const whereConditions = andConditions.length > 0 ? { $and: andConditions } : {};
     const pipeline = [
         { $match: whereConditions },
-        { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+        // Default order: the 16 AREIS categories in the client's order first,
+        // then anything else. An explicit sortBy from the caller wins.
+        {
+            $addFields: {
+                _areisOrder: {
+                    $let: {
+                        vars: { i: { $indexOfArray: [category_seed_1.AREIS_CATEGORIES.map(c => c.name), '$name'] } },
+                        in: { $cond: [{ $gte: ['$$i', 0] }, '$$i', 999] },
+                    },
+                },
+            },
+        },
+        {
+            $sort: (paginationOptions === null || paginationOptions === void 0 ? void 0 : paginationOptions.sortBy)
+                ? { [sortBy]: sortOrder === 'asc' ? 1 : -1 }
+                : { _areisOrder: 1, [sortBy]: sortOrder === 'asc' ? 1 : -1 },
+        },
         { $skip: skip },
         { $limit: limit },
         {

@@ -14,6 +14,7 @@ const user_model_1 = require("../user/user.model");
 const payment_model_1 = require("../payment/payment.model");
 const category_model_1 = require("../category/category.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
+const user_1 = require("../../../enum/user");
 const createProduct = async (payload) => {
     const seller = await user_model_1.User.findById(payload.sellerId);
     if (!seller) {
@@ -65,12 +66,13 @@ const populateCategoriesSafely = async (products) => {
 };
 const getAllProducts = async (filters, paginationOptions = {}) => {
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(paginationOptions);
-    const { searchTerm, category, condition, allowTrade, status, sellerId, minPrice, maxPrice, } = filters;
+    const { searchTerm, category, condition, allowTrade, status, sellerId, minPrice, maxPrice, includePrivate, } = filters;
     const query = {};
     if (searchTerm) {
+        const safe = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         query.$or = [
-            { title: { $regex: searchTerm, $options: 'i' } },
-            { description: { $regex: searchTerm, $options: 'i' } },
+            { title: { $regex: safe, $options: 'i' } },
+            { description: { $regex: safe, $options: 'i' } },
         ];
     }
     if (category) {
@@ -93,6 +95,10 @@ const getAllProducts = async (filters, paginationOptions = {}) => {
         query.condition = condition;
     if (allowTrade !== undefined)
         query.allowTrade = allowTrade;
+    // Private inventory (saved, not listed for trade) is only visible to its
+    // owner via /products/my. Public lists never show it.
+    if (!includePrivate && allowTrade === undefined)
+        query.allowTrade = { $ne: false };
     if (status)
         query.status = status;
     if (sellerId && mongoose_1.Types.ObjectId.isValid(sellerId)) {
@@ -145,9 +151,31 @@ const getProductById = async (id) => {
     const [result] = await populateCategoriesSafely([rawProduct]);
     return result;
 };
-const updateProduct = async (id, payload) => {
+const updateProduct = async (id, payload, userId, userRole) => {
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Product ID');
+    }
+    const product = await product_model_1.Product.findById(id);
+    if (!product) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
+    }
+    if (userId && userRole !== user_1.USER_ROLES.ADMIN && userRole !== user_1.USER_ROLES.SUPER_ADMIN) {
+        if (product.sellerId.toString() !== userId) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You can only edit your own listings');
+        }
+        // Sellers can't self-feature, change ownership or reset a sold/reserved item
+        const p = payload;
+        delete p.isFeatured;
+        delete p.boostedUntil;
+        delete p.sellerId;
+        delete p.views;
+        delete p.shareCount;
+        if (p.status !== undefined) {
+            const locked = product.status === 'sold' || product.status === 'pending';
+            if (locked || !['active', 'unsold'].includes(p.status)) {
+                delete p.status;
+            }
+        }
     }
     const result = await product_model_1.Product.findByIdAndUpdate(id, payload, {
         new: true,
@@ -158,15 +186,30 @@ const updateProduct = async (id, payload) => {
     }
     return result;
 };
-const deleteProduct = async (id) => {
+const deleteProduct = async (id, userId, userRole) => {
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Product ID');
     }
-    const result = await product_model_1.Product.findByIdAndDelete(id);
-    if (!result) {
+    const product = await product_model_1.Product.findById(id);
+    if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
     }
+    if (userId && userRole !== user_1.USER_ROLES.ADMIN && userRole !== user_1.USER_ROLES.SUPER_ADMIN) {
+        if (product.sellerId.toString() !== userId) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You can only delete your own listings');
+        }
+    }
+    const result = await product_model_1.Product.findByIdAndDelete(id);
     return result;
+};
+const clearAllProducts = async (userId, userRole) => {
+    // Only a super admin may wipe the whole catalogue; everyone else can only
+    // clear their own inventory.
+    const filter = userRole === user_1.USER_ROLES.SUPER_ADMIN
+        ? {}
+        : { sellerId: new mongoose_1.Types.ObjectId(userId) };
+    const result = await product_model_1.Product.deleteMany(filter);
+    return { deletedCount: result.deletedCount || 0 };
 };
 const boostProduct = async (productId, userId, boostDurationDays = 7) => {
     if (!mongoose_1.Types.ObjectId.isValid(productId)) {
@@ -244,6 +287,7 @@ exports.ProductServices = {
     getProductById,
     updateProduct,
     deleteProduct,
+    clearAllProducts,
     boostProduct,
     incrementShareCount,
 };

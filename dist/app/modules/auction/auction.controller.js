@@ -42,6 +42,11 @@ const createLiveStream = (0, catchAsync_1.default)(async (req, res) => {
 });
 const getLiveStreams = (0, catchAsync_1.default)(async (req, res) => {
     const status = req.query.status;
+    const isCelebrity = req.query.isCelebrity === 'true'
+        ? true
+        : req.query.isCelebrity === 'false'
+            ? false
+            : undefined;
     let userId;
     const tokenWithBearer = req.headers.authorization;
     if (tokenWithBearer && tokenWithBearer.startsWith('Bearer')) {
@@ -54,7 +59,7 @@ const getLiveStreams = (0, catchAsync_1.default)(async (req, res) => {
             // Ignore token verification errors since this endpoint is public
         }
     }
-    const result = await auction_service_1.AuctionServices.getLiveStreams(status, userId);
+    const result = await auction_service_1.AuctionServices.getLiveStreams(status, userId, isCelebrity);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -201,6 +206,72 @@ const completeAuction = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const addStreamInventoryItem = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.addStreamInventoryItem(streamId, user.userId, req.body);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.CREATED,
+        success: true,
+        message: 'Item added to live stream inventory successfully.',
+        data: result,
+    });
+});
+const attachSpinWheelPrize = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.attachSpinWheelPrize(streamId, user.userId, req.body);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Spin wheel prize attached to order successfully.',
+        data: result,
+    });
+});
+const runStreamGiveawayItem = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.runStreamGiveawayItem(streamId, user.userId, req.body);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Stream giveaway item drawn successfully.',
+        data: result,
+    });
+});
+const spinWheel = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.spinWheel(streamId, user.userId, req.body);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Wheel spun successfully and winning prize recorded.',
+        data: result,
+    });
+});
+const getStreamSales = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.getStreamSales(streamId, user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Live stream sales retrieved successfully.',
+        data: result,
+    });
+});
+const getStreamSummary = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const { streamId } = req.params;
+    const result = await auction_service_1.AuctionServices.getStreamSummary(streamId, user.userId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Live stream post-show summary retrieved successfully.',
+        data: result,
+    });
+});
 exports.AuctionControllers = {
     generateAgoraToken,
     createLiveStream,
@@ -216,4 +287,10 @@ exports.AuctionControllers = {
     placeBidSecure,
     updateLiveStreamStatus,
     completeAuction,
+    addStreamInventoryItem,
+    attachSpinWheelPrize,
+    runStreamGiveawayItem,
+    spinWheel,
+    getStreamSales,
+    getStreamSummary,
 };

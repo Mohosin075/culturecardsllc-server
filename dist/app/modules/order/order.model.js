@@ -20,6 +20,15 @@ const OrderSchema = new mongoose_1.Schema({
         ref: 'Product',
         required: true,
     },
+    streamId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'LiveStream',
+        index: true,
+    },
+    isGiveaway: {
+        type: Boolean,
+        default: false,
+    },
     tradeOfferId: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'TradeOffer',
@@ -77,6 +86,9 @@ const OrderSchema = new mongoose_1.Schema({
         default: 0,
     },
     shippingLabelUrl: {
+        type: String,
+    },
+    spinWheelPrize: {
         type: String,
     },
 }, {

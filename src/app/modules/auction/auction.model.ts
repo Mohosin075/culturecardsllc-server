@@ -82,6 +82,16 @@ const LiveStreamSchema = new Schema<ILiveStream>(
       default: 0,
       min: 0,
     },
+    tipsTotal: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    tipsCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     chatMessages: [
       {
         user: { type: String, required: true },

@@ -26,8 +26,37 @@ const dashboard_route_1 = require("../app/modules/dashboard/dashboard.route");
 const follow_route_1 = require("../app/modules/follow/follow.route");
 const giveaway_route_1 = require("../app/modules/giveaway/giveaway.route");
 const partner_route_1 = require("../app/modules/partner/partner.route");
+const tip_route_1 = require("../app/modules/tip/tip.route");
+const auction_model_1 = require("../app/modules/auction/auction.model");
+const catchAsync_1 = __importDefault(require("../shared/catchAsync"));
+const sendResponse_1 = __importDefault(require("../shared/sendResponse"));
+const http_status_codes_1 = require("http-status-codes");
 const router = express_1.default.Router();
+const liveStreamRouter = express_1.default.Router();
+liveStreamRouter.get('/user/:userId', (0, catchAsync_1.default)(async (req, res) => {
+    const { userId } = req.params;
+    const status = req.query.status;
+    const query = { sellerId: userId };
+    if (status) {
+        if (status === 'upcoming') {
+            query.status = { $in: ['scheduled', 'upcoming'] };
+        }
+        else {
+            query.status = status;
+        }
+    }
+    const streams = await auction_model_1.LiveStream.find(query)
+        .populate('sellerId', 'name fullName email image photo profile isCelebrity')
+        .sort({ scheduledStartTime: 1, createdAt: -1 });
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'User live streams retrieved successfully',
+        data: streams,
+    });
+}));
 const apiRoutes = [
+    { path: '/live-stream', route: liveStreamRouter },
     {
         path: '/auth',
         route: auth_route_1.AuthRoutes,
@@ -59,6 +88,7 @@ const apiRoutes = [
     { path: '/follow', route: follow_route_1.FollowRoutes },
     { path: '/giveaway', route: giveaway_route_1.GiveawayRoutes },
     { path: '/partner', route: partner_route_1.PartnerRoutes },
+    { path: '/tip', route: tip_route_1.TipRoutes },
 ];
 apiRoutes.forEach(route => {
     router.use(route.path, route.route);

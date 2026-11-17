@@ -70,6 +70,27 @@ const ProductSchema = new Schema<IProduct>(
       default: false,
       index: true,
     },
+    isGiveaway: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    lookingFor: {
+      type: String,
+      default: '',
+    },
+    targetCategory: {
+      type: String,
+      default: '',
+    },
+    minValue: {
+      type: Number,
+      default: 0,
+    },
+    maxValue: {
+      type: Number,
+      default: 0,
+    },
     boostedUntil: {
       type: Date,
     },

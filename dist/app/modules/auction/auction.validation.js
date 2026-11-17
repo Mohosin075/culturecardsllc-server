@@ -7,7 +7,9 @@ const createLiveStreamSchema = zod_1.z.object({
         title: zod_1.z
             .string({ required_error: 'Title is required' })
             .min(3, 'Title must be at least 3 characters long'),
-        coverImage: zod_1.z.string({ required_error: 'Cover image is required' }),
+        coverImage: zod_1.z
+            .string({ required_error: 'Cover image is required' })
+            .min(1, 'Cover image is required'),
         promoVideo: zod_1.z.string().optional(),
         description: zod_1.z.string().optional(),
         scheduledAt: zod_1.z
@@ -16,6 +18,7 @@ const createLiveStreamSchema = zod_1.z.object({
             .optional(),
         scheduledStartTime: zod_1.z.string().optional(),
         status: zod_1.z.enum(['scheduled', 'live']).optional(),
+        isCelebrity: zod_1.z.boolean().optional(),
         inventoryIds: zod_1.z.array(zod_1.z.string()).optional(),
         // sellerId is injected from req.user in the controller — not accepted from body
         agoraChannelName: zod_1.z.string().optional(),

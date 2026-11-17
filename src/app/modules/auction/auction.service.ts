@@ -1001,6 +1001,10 @@ const addStreamInventoryItem = async (
     if (product.status === 'sold' || product.status === 'pending') {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'This item is already sold or reserved.')
     }
+    if (payload.isGiveaway !== undefined && product.isGiveaway !== payload.isGiveaway) {
+      product.isGiveaway = payload.isGiveaway
+      await product.save()
+    }
   } else if (payload.title) {
     // Create new product on-the-fly without leaving stream
     const categoryId = await resolveCategoryId(payload.category)
@@ -1017,6 +1021,7 @@ const addStreamInventoryItem = async (
       category: categoryId,
       condition: normalizeCondition(payload.condition),
       allowTrade: false,
+      isGiveaway: payload.isGiveaway || false,
       status: 'active',
       images:
         payload.images && payload.images.length

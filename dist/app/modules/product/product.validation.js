@@ -9,7 +9,12 @@ const createProductSchema = zod_1.z.object({
             .min(3, 'Title must be at least 3 characters long'),
         description: zod_1.z.string().optional(),
         images: zod_1.z
-            .array(zod_1.z.string())
+            .array(zod_1.z
+            .string()
+            .max(2048, 'Image URL length too long')
+            .refine(val => !val.startsWith('data:image'), {
+            message: 'Direct Base64 image strings are not allowed. Please upload to S3 first.',
+        }))
             .min(1, 'At least one product image is required'),
         video: zod_1.z.string().optional(),
         category: zod_1.z
@@ -25,12 +30,16 @@ const createProductSchema = zod_1.z.object({
         reservePrice: zod_1.z.number().nonnegative().optional(),
         buyNowPrice: zod_1.z.number().nonnegative().optional(),
         allowTrade: zod_1.z.boolean().optional(),
+        isGiveaway: zod_1.z.boolean().optional(),
+        lookingFor: zod_1.z.string().optional(),
+        targetCategory: zod_1.z.string().optional(),
+        minValue: zod_1.z.number().nonnegative().optional(),
+        maxValue: zod_1.z.number().nonnegative().optional(),
         shippingWeight: zod_1.z.number().nonnegative().optional(),
         allowOffers: zod_1.z.boolean().optional(),
         minOfferAmount: zod_1.z.number().nonnegative().optional(),
-        sellerId: zod_1.z
-            .string({ required_error: 'Seller ID is required' })
-            .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Seller ID format'),
+        // Ignored: the server always uses the authenticated user as seller
+        sellerId: zod_1.z.string().optional(),
     }),
 });
 const updateProductSchema = zod_1.z.object({
@@ -51,6 +60,11 @@ const updateProductSchema = zod_1.z.object({
         reservePrice: zod_1.z.number().nonnegative().optional(),
         buyNowPrice: zod_1.z.number().nonnegative().optional(),
         allowTrade: zod_1.z.boolean().optional(),
+        isGiveaway: zod_1.z.boolean().optional(),
+        lookingFor: zod_1.z.string().optional(),
+        targetCategory: zod_1.z.string().optional(),
+        minValue: zod_1.z.number().nonnegative().optional(),
+        maxValue: zod_1.z.number().nonnegative().optional(),
         shippingWeight: zod_1.z.number().nonnegative().optional(),
         allowOffers: zod_1.z.boolean().optional(),
         minOfferAmount: zod_1.z.number().nonnegative().optional(),

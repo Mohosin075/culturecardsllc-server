@@ -17,6 +17,7 @@ const webhook_1 = __importDefault(require("./webhook"));
 const sendResponse_1 = __importDefault(require("./shared/sendResponse"));
 const morgan_1 = __importDefault(require("morgan"));
 const helmet_1 = __importDefault(require("helmet"));
+const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const swagger_1 = __importDefault(require("./utils/swagger"));
 const deeplink_route_1 = require("./app/modules/deeplink/deeplink.route");
@@ -45,10 +46,12 @@ app.use((0, cors_1.default)({
 app.options('*', (0, cors_1.default)());
 // Security headers
 app.use((0, helmet_1.default)());
-// Rate limiting
+// Gzip/Brotli payload compression (Shrinks JSON payloads by 70%-90% for ultra-fast mobile loading)
+app.use((0, compression_1.default)());
+// Rate limiting (Tuned for high-concurrency mobile app traffic)
 const limiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Limit each IP to 1000 requests per windowMs
     message: 'Too many requests from this IP, please try again after 15 minutes',
     standardHeaders: true,
     legacyHeaders: false,
@@ -81,10 +84,15 @@ app.use(passport_1.default.session());
 app.use((0, cookie_parser_1.default)());
 // Logging
 app.use((0, morgan_1.default)('dev'));
-// -------------------- Static Files --------------------
-// Serve uploads folder statically
-app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
-app.use(express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
+// -------------------- Static Files with High-Performance Cache Headers --------------------
+// Cache uploaded static images in mobile/browser for 30 days to avoid re-fetching on every screen
+const staticCacheOptions = {
+    maxAge: '30d',
+    etag: true,
+    immutable: true,
+};
+app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads'), staticCacheOptions));
+app.use(express_1.default.static(path_1.default.join(process.cwd(), 'uploads'), staticCacheOptions));
 // -------------------- Deep Linking & Open Graph Social Previews --------------------
 app.use('/', deeplink_route_1.DeepLinkRoutes);
 // -------------------- Public Legal Web Routes --------------------

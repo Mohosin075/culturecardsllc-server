@@ -20,6 +20,15 @@ const toggleFollow = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const getFollowStatus = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await follow_service_1.FollowServices.getFollowStatus(req.user.userId, req.params.id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Follow status retrieved',
+        data: result,
+    });
+});
 const getFollowers = (0, catchAsync_1.default)(async (req, res) => {
     const { id } = req.params;
     const paginationOptions = (0, pick_1.default)(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
@@ -46,6 +55,7 @@ const getFollowing = (0, catchAsync_1.default)(async (req, res) => {
 });
 exports.FollowControllers = {
     toggleFollow,
+    getFollowStatus,
     getFollowers,
     getFollowing,
 };

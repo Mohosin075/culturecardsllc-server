@@ -18,6 +18,8 @@ export type ILiveStream = {
   reminderSent?: boolean
   viewersCount: number
   likesCount: number
+  tipsTotal?: number
+  tipsCount?: number
   chatMessages?: Array<{
     user: string
     message: string

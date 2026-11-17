@@ -46,6 +46,11 @@ const LiveStreamSchema = new mongoose_1.Schema({
         default: 'scheduled',
         index: true,
     },
+    isCelebrity: {
+        type: Boolean,
+        default: false,
+        index: true,
+    },
     agoraChannelName: {
         type: String,
         required: true,
@@ -77,11 +82,23 @@ const LiveStreamSchema = new mongoose_1.Schema({
         default: 0,
         min: 0,
     },
+    tipsTotal: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
+    tipsCount: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
     chatMessages: [
         {
             user: { type: String, required: true },
+            userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
             message: { type: String, required: true },
             timestamp: { type: Date, default: Date.now },
+            likedBy: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }],
         }
     ],
 }, {
@@ -135,6 +152,9 @@ const AuctionItemSchema = new mongoose_1.Schema({
     endsAt: {
         type: Date,
         index: true,
+    },
+    spinWheelPrize: {
+        type: String,
     },
 }, {
     timestamps: true,

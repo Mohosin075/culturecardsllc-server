@@ -25,6 +25,7 @@ const UserSchema = new mongoose_1.Schema({
     },
     verified: { type: Boolean, default: false },
     sellerVerified: { type: Boolean, default: false },
+    isCelebrity: { type: Boolean, default: false },
     address: {
         city: String,
         postalCode: String,
