@@ -11,10 +11,10 @@ const router = express.Router()
 // All order endpoints require authentication
 // ============================================================
 
-// POST / — Create new order (buyer only)
+// POST / — Create new order
 router.post(
   '/',
-  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validateRequest(OrderValidations.createOrderSchema),
   OrderControllers.createOrder,
 )

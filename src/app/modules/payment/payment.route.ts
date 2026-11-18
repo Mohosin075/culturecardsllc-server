@@ -43,14 +43,14 @@ router.delete(
 
 router.post(
   '/create-checkout-session',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validateRequest(PaymentValidations.create),
   PaymentController.createCheckoutSession,
 )
 
 router.get(
   '/verify-checkout/:sessionId',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   PaymentController.verifyCheckoutSession,
 )
 

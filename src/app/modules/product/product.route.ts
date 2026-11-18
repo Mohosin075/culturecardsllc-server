@@ -9,13 +9,13 @@ const router = express.Router()
 
 router.post(
   '/',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validateRequest(ProductValidations.createProductSchema),
   ProductControllers.createProduct,
 )
 router.get(
   '/my',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   ProductControllers.getMyProducts,
 )
 router.get('/', ProductControllers.getAllProducts)
@@ -38,7 +38,7 @@ router.delete(
 )
 router.post(
   '/:id/boost',
-  auth(USER_ROLES.SELLER, USER_ROLES.BUYER),
+  auth(USER_ROLES.SELLER, USER_ROLES.BUYER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   ProductControllers.boostProduct,
 )
 router.patch('/:id/share', ProductControllers.incrementShareCount)

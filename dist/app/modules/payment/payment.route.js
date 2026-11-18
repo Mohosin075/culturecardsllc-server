@@ -23,8 +23,8 @@ router.delete('/methods/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_
 // ============================================
 // 2. CHECKOUT & INTENTS
 // ============================================
-router.post('/create-checkout-session', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), (0, validateRequest_1.default)(payment_validation_1.PaymentValidations.create), payment_controller_1.PaymentController.createCheckoutSession);
-router.get('/verify-checkout/:sessionId', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), payment_controller_1.PaymentController.verifyCheckoutSession);
+router.post('/create-checkout-session', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(payment_validation_1.PaymentValidations.create), payment_controller_1.PaymentController.createCheckoutSession);
+router.get('/verify-checkout/:sessionId', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.verifyCheckoutSession);
 router.post('/create-payment-intent', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.ADMIN), (0, validateRequest_1.default)(payment_validation_1.PaymentValidations.create), payment_controller_1.PaymentController.createPaymentIntent);
 router.post('/ephemeral-key', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SUPER_ADMIN), payment_controller_1.PaymentController.createEphemeralKey);
 // ============================================

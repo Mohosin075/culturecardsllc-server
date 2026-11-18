@@ -36,7 +36,7 @@ router.post(
 // POST /offer — Create new trade offer (authenticated users)
 router.post(
   '/offer',
-  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   validateRequest(TradeValidations.createTradeOfferSchema),
   TradeControllers.createTradeOffer,
 )
@@ -58,21 +58,21 @@ router.get(
 // POST /accept/:id — Accept a trade offer (receiver only)
 router.post(
   '/accept/:id',
-  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   TradeControllers.acceptTradeOffer,
 )
 
 // POST /decline/:id — Decline a trade offer (receiver only)
 router.post(
   '/decline/:id',
-  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   TradeControllers.declineTradeOffer,
 )
 
 // POST /complete/:id — Complete an accepted trade (sender or receiver)
 router.post(
   '/complete/:id',
-  auth(USER_ROLES.BUYER, USER_ROLES.SELLER),
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   TradeControllers.completeTradeOffer,
 )
 
