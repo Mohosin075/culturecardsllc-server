@@ -106,7 +106,16 @@ const getMessageFromDB = async (
     }
   }
 
-  const messages = await Message.find({ chatId }).sort({ createdAt: -1 }).lean()
+  const messages = await Message.find({ chatId })
+    .sort({ createdAt: -1 })
+    .populate({
+      path: 'metadata.tradeOfferId',
+      populate: [
+        { path: 'senderProductId' },
+        { path: 'receiverProductId' },
+      ],
+    })
+    .lean()
   return messages as any
 }
 

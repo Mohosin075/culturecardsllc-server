@@ -80,7 +80,16 @@ const getMessageFromDB = async (chatId, user) => {
             });
         }
     }
-    const messages = await message_model_1.Message.find({ chatId }).sort({ createdAt: -1 }).lean();
+    const messages = await message_model_1.Message.find({ chatId })
+        .sort({ createdAt: -1 })
+        .populate({
+        path: 'metadata.tradeOfferId',
+        populate: [
+            { path: 'senderProductId' },
+            { path: 'receiverProductId' },
+        ],
+    })
+        .lean();
     return messages;
 };
 exports.MessageService = { sendMessageToDB, getMessageFromDB };

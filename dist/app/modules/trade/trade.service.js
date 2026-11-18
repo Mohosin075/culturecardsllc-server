@@ -93,18 +93,40 @@ const createTradeOffer = async (payload) => {
         });
     }
     if (chat) {
-        await message_model_1.Message.create({
+        const offerText = senderProduct
+            ? `Proposed a new trade swap offer: ${senderProduct.title} for ${receiverProduct.title}.`
+            : `Proposed a new cash offer of $${payload.cashSupplement} for ${receiverProduct.title}.`;
+        const createdMsg = await message_model_1.Message.create({
             chatId: chat._id,
             sender: senderId,
-            text: `Proposed a new trade swap offer: ${senderProduct.title} for ${receiverProduct.title}.`,
+            text: offerText,
             messageType: 'trade_proposal',
             seen: false,
             metadata: {
                 tradeOfferId: offer._id.toString(),
-                statusLabel: 'NEW TRADE OFFER 🎁',
+                statusLabel: senderProduct ? 'NEW TRADE OFFER 🎁' : 'NEW CASH OFFER 💵',
                 eta: '24 Hours Expire',
             },
         });
+        await chat_model_1.Chat.findByIdAndUpdate(chat._id, {
+            $set: { updatedAt: new Date() },
+        });
+        if (io) {
+            const populatedMsg = await message_model_1.Message.findById(createdMsg._id)
+                .populate({
+                path: 'metadata.tradeOfferId',
+                populate: [
+                    { path: 'senderProductId' },
+                    { path: 'receiverProductId' },
+                ],
+            })
+                .lean();
+            io.emit(`getMessage::${chat._id}`, populatedMsg || createdMsg);
+            if (senderId)
+                io.emit(`updateChatList::${senderId}`);
+            if (receiverId)
+                io.emit(`updateChatList::${receiverId}`);
+        }
     }
     return offer;
 };
