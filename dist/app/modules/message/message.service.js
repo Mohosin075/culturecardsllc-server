@@ -10,7 +10,9 @@ const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
 const user_model_1 = require("../user/user.model");
 const chat_model_1 = require("../chat/chat.model");
+const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const sendMessageToDB = async (userId, payload) => {
+    var _a;
     const chat = await chat_model_1.Chat.findById(payload.chatId).populate('participants');
     if (!chat)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Chat not found');
@@ -37,7 +39,7 @@ const sendMessageToDB = async (userId, payload) => {
     if (!mongoose_1.default.Types.ObjectId.isValid(data.receiver)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Receiver ID');
     }
-    const sender = await user_model_1.User.findById(data.sender).select('name');
+    const sender = await user_model_1.User.findById(data.sender).select('name fullName');
     // save to DB
     const response = await message_model_1.Message.create(data);
     // Update Chat's updatedAt to bring it to the top
@@ -49,14 +51,24 @@ const sendMessageToDB = async (userId, payload) => {
         io.emit(`getMessage::${data === null || data === void 0 ? void 0 : data.chatId}`, response);
         io.emit(`updateChatList::${data === null || data === void 0 ? void 0 : data.sender}`);
         io.emit(`updateChatList::${data === null || data === void 0 ? void 0 : data.receiver}`);
-        // const notificationData = {
-        //   text: `${sender?.name} send you message.`,
-        //   title: 'Received Message',
-        //   link: data?.chatId,
-        //   direction: 'message',
-        //   receiver: data.receiver,
-        // }
-        // await sendNotifications(notificationData);
+    }
+    // Send push notification to receiver (non-blocking)
+    const receiverUser = await user_model_1.User.findById(receiverId).select('deviceToken settings');
+    if ((receiverUser === null || receiverUser === void 0 ? void 0 : receiverUser.deviceToken) &&
+        ((_a = receiverUser.settings) === null || _a === void 0 ? void 0 : _a.pushNotification) !== false) {
+        const senderName = (sender === null || sender === void 0 ? void 0 : sender.fullName) || (sender === null || sender === void 0 ? void 0 : sender.name) || 'Someone';
+        const preview = typeof data.text === 'string' && data.text.trim().length > 0
+            ? data.text.trim().slice(0, 120)
+            : data.image
+                ? 'Sent a photo'
+                : 'Sent a message';
+        (0, pushnotificationHelper_1.sendPushNotification)(receiverUser.deviceToken, senderName, preview, {
+            type: 'NEW_MESSAGE',
+            chatId: String(data.chatId),
+            senderId: String(userId),
+            senderName,
+            messagePreview: preview,
+        }).catch(err => console.error('Failed to send chat push notification:', err));
     }
     return response;
 };

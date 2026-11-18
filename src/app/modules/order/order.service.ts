@@ -44,8 +44,11 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
       country: 'USA',
     }
   } else {
-    payload.shippingAddress.postalCode = payload.shippingAddress.postalCode || (payload.shippingAddress as any).zipCode || '00000'
-    payload.shippingAddress.country = payload.shippingAddress.country || 'USA'
+    payload.shippingAddress.street = payload.shippingAddress.street?.trim() || 'N/A'
+    payload.shippingAddress.city = payload.shippingAddress.city?.trim() || 'N/A'
+    payload.shippingAddress.state = payload.shippingAddress.state?.trim() || 'N/A'
+    payload.shippingAddress.postalCode = payload.shippingAddress.postalCode?.trim() || (payload.shippingAddress as any).zipCode?.trim() || '00000'
+    payload.shippingAddress.country = payload.shippingAddress.country?.trim() || 'USA'
   }
 
   // Security: seller always comes from the product, never from the client
@@ -167,6 +170,7 @@ const getOrdersForUser = async (
     .populate('buyerId', 'name fullName email image photo')
     .populate('sellerId', 'name fullName email image photo')
     .populate('productId')
+    .sort({ createdAt: -1 })
 }
 
 const getOrderById = async (id: string): Promise<IOrder> => {

@@ -6,6 +6,10 @@ export type ITip = {
   senderId: Types.ObjectId
   sellerId: Types.ObjectId
   amount: number
+  processingFee: number
+  platformFee: number
+  totalCharged: number
+  sellerNetAmount: number
   currency: string
   paymentIntentId: string
   status: 'pending' | 'succeeded' | 'failed'

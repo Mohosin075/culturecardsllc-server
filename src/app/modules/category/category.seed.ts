@@ -21,14 +21,24 @@ export const AREIS_CATEGORIES: { name: string; description: string }[] = [
   { name: 'Home & Lifestyle', description: 'Decor, Lifestyle, More' },
   { name: 'Beauty & Personal Care', description: 'Skincare, Makeup, Fragrance' },
   { name: 'Books, Music & Media', description: 'Books, Movies, Music, More' },
-  { name: 'Other / Not Listed', description: 'Miscellaneous Items' },
+  { name: 'Other', description: 'Miscellaneous Items' },
 ]
 
 /**
  * Idempotent: creates any of the 16 categories that are missing and keeps
- * their description in sync. Never deletes or edits other categories.
+ * their description in sync. Migrates legacy "Other / Not Listed" to "Other"
+ * in-place so existing product ObjectId references remain intact.
  */
 export const seedAreisCategories = async () => {
+  const legacyOther = await Category.findOne({ name: 'Other / Not Listed', parent: null })
+  const existingOther = await Category.findOne({ name: 'Other', parent: null })
+  if (legacyOther && !existingOther) {
+    legacyOther.name = 'Other'
+    legacyOther.description = 'Miscellaneous Items'
+    await legacyOther.save()
+    console.log(colors.green('🗂️  Renamed legacy "Other / Not Listed" category to "Other".'))
+  }
+
   let created = 0
   for (const cat of AREIS_CATEGORIES) {
     const existing = await Category.findOne({ name: cat.name, parent: null })

@@ -12,5 +12,7 @@ router.get('/.well-known/apple-app-site-association', DeepLinkController.getAppl
 // Social Media OG Preview & Fallback Redirection
 router.get('/trade/:productId', DeepLinkController.getTradePreview)
 router.get('/profile/:userId', DeepLinkController.getProfilePreview)
+router.get('/live/:streamId', DeepLinkController.getLivePreview)
+router.get('/signup', DeepLinkController.getSignupPreview)
 
 export const DeepLinkRoutes = router

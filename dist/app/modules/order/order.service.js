@@ -16,7 +16,7 @@ const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelpe
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
 const createOrder = async (payload) => {
-    var _a;
+    var _a, _b, _c, _d, _e, _f, _g;
     const product = await product_model_1.Product.findById(payload.productId);
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
@@ -49,8 +49,11 @@ const createOrder = async (payload) => {
         };
     }
     else {
-        payload.shippingAddress.postalCode = payload.shippingAddress.postalCode || payload.shippingAddress.zipCode || '00000';
-        payload.shippingAddress.country = payload.shippingAddress.country || 'USA';
+        payload.shippingAddress.street = ((_a = payload.shippingAddress.street) === null || _a === void 0 ? void 0 : _a.trim()) || 'N/A';
+        payload.shippingAddress.city = ((_b = payload.shippingAddress.city) === null || _b === void 0 ? void 0 : _b.trim()) || 'N/A';
+        payload.shippingAddress.state = ((_c = payload.shippingAddress.state) === null || _c === void 0 ? void 0 : _c.trim()) || 'N/A';
+        payload.shippingAddress.postalCode = ((_d = payload.shippingAddress.postalCode) === null || _d === void 0 ? void 0 : _d.trim()) || ((_e = payload.shippingAddress.zipCode) === null || _e === void 0 ? void 0 : _e.trim()) || '00000';
+        payload.shippingAddress.country = ((_f = payload.shippingAddress.country) === null || _f === void 0 ? void 0 : _f.trim()) || 'USA';
     }
     // Security: seller always comes from the product, never from the client
     payload.sellerId = product.sellerId;
@@ -70,10 +73,10 @@ const createOrder = async (payload) => {
         try {
             intent = await stripe_1.default.paymentIntents.retrieve(payload.paymentIntentId);
         }
-        catch (_b) {
+        catch (_h) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid payment reference.');
         }
-        const claimedTotal = Number(((_a = payload.amountDetails) === null || _a === void 0 ? void 0 : _a.totalPaid) || 0);
+        const claimedTotal = Number(((_g = payload.amountDetails) === null || _g === void 0 ? void 0 : _g.totalPaid) || 0);
         if (intent.status === 'succeeded' && intent.amount_received >= Math.round(claimedTotal * 100)) {
             payload.paymentStatus = 'paid';
             if (payload.amountDetails) {
@@ -145,7 +148,8 @@ const getOrdersForUser = async (userId, role) => {
     return await order_model_1.Order.find(query)
         .populate('buyerId', 'name fullName email image photo')
         .populate('sellerId', 'name fullName email image photo')
-        .populate('productId');
+        .populate('productId')
+        .sort({ createdAt: -1 });
 };
 const getOrderById = async (id) => {
     if (!mongoose_1.Types.ObjectId.isValid(id)) {

@@ -26,6 +26,26 @@ const tipSchema = new Schema<ITip, TipModel>(
       required: true,
       min: 1,
     },
+    processingFee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    platformFee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalCharged: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    sellerNetAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     currency: {
       type: String,
       default: 'USD',

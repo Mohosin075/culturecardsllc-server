@@ -11,6 +11,32 @@ import { ITip } from './tip.interface'
 import { io } from '../../../server'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 
+const STRIPE_PERCENT_FEE = 0.029
+const STRIPE_FIXED_FEE_CENTS = 30
+
+/**
+ * No platform fee on tips (0%). The tipper covers the Stripe card processing
+ * fee (2.9% + $0.30 gross-up) so the seller retains 100% of the tip amount.
+ */
+const calculateTipFees = (rawAmount: number) => {
+  const tipAmountCents = Math.round(rawAmount * 100)
+  const totalChargeCents = Math.ceil(
+    (tipAmountCents + STRIPE_FIXED_FEE_CENTS) / (1 - STRIPE_PERCENT_FEE),
+  )
+  const processingFeeCents = totalChargeCents - tipAmountCents
+
+  return {
+    tipAmount: Number((tipAmountCents / 100).toFixed(2)),
+    processingFee: Number((processingFeeCents / 100).toFixed(2)),
+    platformFee: 0,
+    totalCharged: Number((totalChargeCents / 100).toFixed(2)),
+    sellerNetAmount: Number((tipAmountCents / 100).toFixed(2)),
+    tipAmountCents,
+    processingFeeCents,
+    totalChargeCents,
+  }
+}
+
 const getOrCreateStripeCustomer = async (userData: any): Promise<string> => {
   let customerId = userData.stripeCustomerId
   if (customerId) {
@@ -69,13 +95,13 @@ const createTipIntent = async (
   const senderImage = sender.profile || (sender as any).image || (sender as any).photo || ''
 
   const customerId = await getOrCreateStripeCustomer(sender)
-  const tipAmountCents = Math.round(amount * 100)
+  const fees = calculateTipFees(amount)
 
-  // A. 1-Tap Saved Card Charge
+  // A. 1-Tap Saved Card Charge (user pays tip + Stripe processing fee; 0% platform fee)
   if (paymentMethodId) {
     try {
       const intent = await stripe.paymentIntents.create({
-        amount: tipAmountCents,
+        amount: fees.totalChargeCents,
         currency: 'usd',
         customer: customerId,
         payment_method: paymentMethodId,
@@ -88,6 +114,11 @@ const createTipIntent = async (
           senderId: user.userId,
           sellerId: sellerId.toString(),
           message: message || '',
+          tipAmount: fees.tipAmount.toFixed(2),
+          processingFee: fees.processingFee.toFixed(2),
+          platformFee: '0.00',
+          totalCharged: fees.totalCharged.toFixed(2),
+          sellerNetAmount: fees.sellerNetAmount.toFixed(2),
         },
       })
 
@@ -96,7 +127,11 @@ const createTipIntent = async (
           streamId: new Types.ObjectId(streamId),
           senderId: new Types.ObjectId(user.userId),
           sellerId: new Types.ObjectId(sellerId.toString()),
-          amount,
+          amount: fees.tipAmount,
+          processingFee: fees.processingFee,
+          platformFee: 0,
+          totalCharged: fees.totalCharged,
+          sellerNetAmount: fees.sellerNetAmount,
           currency: 'USD',
           paymentIntentId: intent.id,
           status: 'succeeded',
@@ -110,7 +145,7 @@ const createTipIntent = async (
           tip: tipRecord,
           senderName,
           senderImage,
-          amount,
+          amount: fees.tipAmount,
           message: message?.trim(),
           senderId: user.userId,
         })
@@ -118,7 +153,11 @@ const createTipIntent = async (
         return {
           status: 'succeeded',
           tipId: tipRecord._id,
-          amount,
+          amount: fees.tipAmount,
+          processingFee: fees.processingFee,
+          platformFee: 0,
+          totalCharged: fees.totalCharged,
+          sellerNetAmount: fees.sellerNetAmount,
           currency: 'USD',
         }
       } else {
@@ -126,6 +165,11 @@ const createTipIntent = async (
           status: intent.status,
           paymentIntentId: intent.id,
           clientSecret: intent.client_secret,
+          amount: fees.tipAmount,
+          processingFee: fees.processingFee,
+          platformFee: 0,
+          totalCharged: fees.totalCharged,
+          sellerNetAmount: fees.sellerNetAmount,
         }
       }
     } catch (err: any) {
@@ -140,7 +184,7 @@ const createTipIntent = async (
   )
 
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: tipAmountCents,
+    amount: fees.totalChargeCents,
     currency: 'usd',
     customer: customerId,
     payment_method_types: ['card'],
@@ -151,6 +195,11 @@ const createTipIntent = async (
       senderId: user.userId,
       sellerId: sellerId.toString(),
       message: message || '',
+      tipAmount: fees.tipAmount.toFixed(2),
+      processingFee: fees.processingFee.toFixed(2),
+      platformFee: '0.00',
+      totalCharged: fees.totalCharged.toFixed(2),
+      sellerNetAmount: fees.sellerNetAmount.toFixed(2),
     },
   })
 
@@ -160,6 +209,11 @@ const createTipIntent = async (
     paymentIntentId: paymentIntent.id,
     ephemeralKey: ephemeralKey.secret,
     customerId,
+    amount: fees.tipAmount,
+    processingFee: fees.processingFee,
+    platformFee: 0,
+    totalCharged: fees.totalCharged,
+    sellerNetAmount: fees.sellerNetAmount,
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_51NJLdJF5nDLFMGmox0iseTJZp42wfLi6Ub41OGs7hoMl0GSFe93a0My7PxdF2eKsxV1rvUf8vVw4p6jl9h9pCmEQ00WSln5w44',
   }
 }
@@ -200,13 +254,28 @@ const confirmTip = async (
   const senderName = sender?.fullName || sender?.name || 'A Supporter'
   const senderImage = sender?.profile || (sender as any)?.image || (sender as any)?.photo || ''
 
+  // Use trusted amounts from Stripe PaymentIntent metadata when present
+  const metaTipAmount = Number(intent.metadata?.tipAmount)
+  const tipAmount = Number.isFinite(metaTipAmount) && metaTipAmount > 0 ? metaTipAmount : amount
+  const computedFees = calculateTipFees(tipAmount)
+  const metaProcessingFee = Number(intent.metadata?.processingFee)
+  const processingFee =
+    Number.isFinite(metaProcessingFee) && metaProcessingFee >= 0
+      ? metaProcessingFee
+      : computedFees.processingFee
+  const totalCharged = Number((intent.amount / 100).toFixed(2))
+
   const tipRecord = await Tip.findOneAndUpdate(
     { paymentIntentId },
     {
       streamId: new Types.ObjectId(streamId),
       senderId: new Types.ObjectId(user.userId),
       sellerId: stream.sellerId,
-      amount,
+      amount: tipAmount,
+      processingFee,
+      platformFee: 0,
+      totalCharged,
+      sellerNetAmount: tipAmount,
       currency: 'USD',
       paymentIntentId,
       status: 'succeeded',
@@ -222,7 +291,7 @@ const confirmTip = async (
     tip: tipRecord,
     senderName,
     senderImage,
-    amount,
+    amount: tipAmount,
     message: message?.trim(),
     senderId: user.userId,
   })
@@ -316,7 +385,10 @@ const getMySellerTips = async (userId: string) => {
     .populate('streamId', 'title coverImage')
     .sort({ createdAt: -1 })
 
-  const totalEarnings = tips.reduce((sum, item) => sum + (item.amount || 0), 0)
+  const totalEarnings = tips.reduce(
+    (sum, item) => sum + (item.sellerNetAmount || item.amount || 0),
+    0,
+  )
 
   return {
     totalEarnings: Number(totalEarnings.toFixed(2)),

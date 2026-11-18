@@ -1,11 +1,11 @@
 import mongoose from 'mongoose'
-// import { sendNotifications } from '../../../helpers/notificationsHelper';
 import { IMessage } from './message.interface'
 import { Message } from './message.model'
 import ApiError from '../../../errors/ApiError'
 import { StatusCodes } from 'http-status-codes'
 import { User } from '../user/user.model'
 import { Chat } from '../chat/chat.model'
+import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 
 const sendMessageToDB = async (
   userId: string,
@@ -48,7 +48,7 @@ const sendMessageToDB = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Receiver ID')
   }
 
-  const sender = await User.findById(data.sender).select('name')
+  const sender = await User.findById(data.sender).select('name fullName')
 
   // save to DB
   const response = await Message.create(data)
@@ -63,15 +63,34 @@ const sendMessageToDB = async (
     io.emit(`getMessage::${data?.chatId}`, response)
     io.emit(`updateChatList::${data?.sender}`)
     io.emit(`updateChatList::${data?.receiver}`)
+  }
 
-    // const notificationData = {
-    //   text: `${sender?.name} send you message.`,
-    //   title: 'Received Message',
-    //   link: data?.chatId,
-    //   direction: 'message',
-    //   receiver: data.receiver,
-    // }
-    // await sendNotifications(notificationData);
+  // Send push notification to receiver (non-blocking)
+  const receiverUser = await User.findById(receiverId).select('deviceToken settings')
+  if (
+    receiverUser?.deviceToken &&
+    receiverUser.settings?.pushNotification !== false
+  ) {
+    const senderName = (sender as any)?.fullName || sender?.name || 'Someone'
+    const preview =
+      typeof data.text === 'string' && data.text.trim().length > 0
+        ? data.text.trim().slice(0, 120)
+        : data.image
+          ? 'Sent a photo'
+          : 'Sent a message'
+
+    sendPushNotification(
+      receiverUser.deviceToken,
+      senderName,
+      preview,
+      {
+        type: 'NEW_MESSAGE',
+        chatId: String(data.chatId),
+        senderId: String(userId),
+        senderName,
+        messagePreview: preview,
+      },
+    ).catch(err => console.error('Failed to send chat push notification:', err))
   }
 
   return response

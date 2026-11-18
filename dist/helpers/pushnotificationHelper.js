@@ -18,14 +18,21 @@ const sendPushNotification = async (deviceToken, title, body, data, icon) => {
         token: deviceToken,
         notification: { title, body },
         data,
-        ...(icon && {
-            android: {
-                notification: { icon },
+        android: {
+            priority: 'high',
+            notification: {
+                channelId: 'high_importance_channel',
+                sound: 'default',
+                ...(icon && { icon }),
             },
-        }),
+        },
         apns: {
+            headers: {
+                'apns-priority': '10',
+            },
             payload: {
                 aps: {
+                    sound: 'default',
                     'mutable-content': 1,
                 },
             },
