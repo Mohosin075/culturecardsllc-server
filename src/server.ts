@@ -8,6 +8,7 @@ import config from './config'
 import os from 'os'
 
 import { UserServices } from './app/modules/user/user.service'
+import { User } from './app/modules/user/user.model'
 import { socketHelper } from './helpers/socketHelper'
 import { seedSubscriptionPlans } from './app/modules/subscription/subscription.seed'
 import { seedAreisCategories } from './app/modules/category/category.seed'
@@ -120,6 +121,12 @@ async function main() {
 
     // Ensure the 16 AREIS marketplace categories exist
     await seedAreisCategories().catch(err => errorLogger.error('Category seed failed:', err))
+
+    // Remove legacy hardcoded default stock profile photo from existing users
+    await User.updateMany(
+      { profile: { $regex: '1767048629458-l94gk7', $options: 'i' } },
+      { $set: { profile: '' } },
+    ).catch(err => errorLogger.error('Legacy default avatar cleanup failed:', err))
 
     // Socket helper
     socketHelper.socket(io);

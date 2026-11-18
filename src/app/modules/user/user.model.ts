@@ -10,7 +10,7 @@ const UserSchema = new Schema<IUser, UserModel>(
     fullName: { type: String, trim: true },
     username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
     email: { type: String, unique: true, lowercase: true, required: true },
-    profile: { type: String, default: '/images/1767048629458-l94gk7.jpg' },
+    profile: { type: String, default: '' },
     coverPhoto: { type: String, default: '' },
     phone: { type: String },
     description: { type: String },
@@ -99,8 +99,24 @@ const UserSchema = new Schema<IUser, UserModel>(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (_doc, ret) => {
+        if (typeof ret.profile === 'string' && ret.profile.includes('1767048629458-l94gk7')) {
+          ret.profile = ''
+        }
+        return ret
+      },
+    },
+    toObject: {
+      virtuals: true,
+      transform: (_doc, ret) => {
+        if (typeof ret.profile === 'string' && ret.profile.includes('1767048629458-l94gk7')) {
+          ret.profile = ''
+        }
+        return ret
+      },
+    },
   },
 )
 

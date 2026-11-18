@@ -13,6 +13,7 @@ const app_1 = __importDefault(require("./app"));
 const config_1 = __importDefault(require("./config"));
 const os_1 = __importDefault(require("os"));
 const user_service_1 = require("./app/modules/user/user.service");
+const user_model_1 = require("./app/modules/user/user.model");
 const socketHelper_1 = require("./helpers/socketHelper");
 const subscription_seed_1 = require("./app/modules/subscription/subscription.seed");
 const category_seed_1 = require("./app/modules/category/category.seed");
@@ -87,6 +88,8 @@ async function main() {
         await (0, subscription_seed_1.seedSubscriptionPlans)();
         // Ensure the 16 AREIS marketplace categories exist
         await (0, category_seed_1.seedAreisCategories)().catch(err => logger_1.errorLogger.error('Category seed failed:', err));
+        // Remove legacy hardcoded default stock profile photo from existing users
+        await user_model_1.User.updateMany({ profile: { $regex: '1767048629458-l94gk7', $options: 'i' } }, { $set: { profile: '' } }).catch(err => logger_1.errorLogger.error('Legacy default avatar cleanup failed:', err));
         // Socket helper
         socketHelper_1.socketHelper.socket(exports.io);
         global.io = exports.io;
