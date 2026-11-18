@@ -37,6 +37,9 @@ export type IOrder = {
     country: string
   }
   deliveryStatus: IDeliveryStatus
+  /** Deadline for the seller to ship; past it the order auto-cancels. */
+  shipByDate?: Date
+  cancelReason?: string
   trackingDetails: {
     carrier?: string
     trackingNumber?: string

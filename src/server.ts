@@ -15,6 +15,7 @@ import { seedAreisCategories } from './app/modules/category/category.seed'
 import { logger, errorLogger } from './shared/logger'
 import { startTradeExpiryCron } from './task/tradeExpiryCron'
 import { startOrderAutoDeliverCron } from './task/orderAutoDeliverCron'
+import { startOrderShipDeadlineCron } from './task/orderShipDeadlineCron'
 import { initShowReminderScheduler } from './helpers/showReminderScheduler'
 import { startDataRetentionCron } from './task/dataRetentionCron'
 
@@ -135,6 +136,7 @@ async function main() {
     // Start background cron jobs & schedulers
     startTradeExpiryCron()
     startOrderAutoDeliverCron()
+    startOrderShipDeadlineCron()
     initShowReminderScheduler()
     startDataRetentionCron()
 

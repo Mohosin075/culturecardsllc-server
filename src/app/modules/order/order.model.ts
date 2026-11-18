@@ -68,6 +68,15 @@ const OrderSchema = new Schema<IOrder>(
       default: 'pending',
       index: true,
     },
+    // The seller must ship by this date. Past it, the order is cancelled and
+    // the buyer refunded automatically (see orderShipDeadlineCron).
+    shipByDate: {
+      type: Date,
+      index: true,
+    },
+    cancelReason: {
+      type: String,
+    },
     trackingDetails: {
       carrier: { type: String },
       trackingNumber: { type: String },

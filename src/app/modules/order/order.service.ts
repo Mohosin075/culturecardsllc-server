@@ -10,6 +10,58 @@ import { Types } from 'mongoose'
 import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import stripe from '../../../config/stripe'
+import { User } from '../user/user.model'
+
+/** How long a seller has to hand the parcel over before the order auto-cancels. */
+export const SHIP_WINDOW_BUSINESS_DAYS = 3
+
+/** Adds business days (skipping Sat/Sun) to a date. */
+export const addBusinessDays = (from: Date, days: number): Date => {
+  const result = new Date(from)
+  let added = 0
+  while (added < days) {
+    result.setDate(result.getDate() + 1)
+    const day = result.getDay()
+    if (day !== 0 && day !== 6) added++
+  }
+  return result
+}
+
+/** Short, human date for chat/notification copy. */
+export const formatShipByDate = (date?: Date): string =>
+  date
+    ? new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'soon'
+
+/** Push + socket ping so the seller learns about an order without polling. */
+const notifySellerOfNewOrder = async (
+  order: IOrder,
+  productTitle: string,
+): Promise<void> => {
+  const orderId = (order as any)._id.toString()
+
+  const io = (global as any).io
+  if (io) {
+    io.to(order.sellerId.toString()).emit('new-order', {
+      orderId,
+      productTitle,
+      shipByDate: order.shipByDate,
+    })
+  }
+
+  const seller = await User.findById(order.sellerId).select('deviceToken')
+  if (!seller?.deviceToken) return
+
+  await sendPushNotification(
+    seller.deviceToken,
+    'New Order Received 📦',
+    `${productTitle} — ship by ${formatShipByDate(order.shipByDate)}.`,
+    { type: 'NEW_ORDER', orderId },
+  )
+}
 
 const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   const product = await Product.findById(payload.productId)
@@ -84,6 +136,10 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   // Populate shipping weight, tracking number, and mock PDF label
   await initializeOrderShipping(payload, product)
 
+  // The seller gets a fixed window to ship. The buyer sees this date, and
+  // orderShipDeadlineCron cancels and refunds anything still unshipped past it.
+  payload.shipByDate = addBusinessDays(new Date(), SHIP_WINDOW_BUSINESS_DAYS)
+
   const session = await Order.startSession()
   session.startTransaction()
 
@@ -130,14 +186,17 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
         [
           {
             chatId: chat._id,
-            sender: order.sellerId,
-            text: `Order Confirmed: ${product.title} (#${(order as any)._id.toString().substring(0, 8).toUpperCase()})`,
+            // Sent on the buyer's behalf: with the seller as sender the
+            // message counted as their own, so it never showed as unread and
+            // the seller had no sign a new order had come in.
+            sender: order.buyerId,
+            text: `New order: ${product.title} (#${(order as any)._id.toString().substring(0, 8).toUpperCase()})`,
             messageType: 'order_update',
             seen: false,
             metadata: {
               orderId: (order as any)._id.toString(),
-              statusLabel: 'ORDER CONFIRMED 📦',
-              eta: 'Delivery Pending',
+              statusLabel: 'NEW ORDER 📦',
+              eta: `Ship by ${formatShipByDate(payload.shipByDate)}`,
             },
           },
         ],
@@ -146,6 +205,13 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     }
 
     await session.commitTransaction()
+
+    // Tell the seller there is something to pack. Non-blocking: the order is
+    // already committed and must not fail over a notification.
+    notifySellerOfNewOrder(order, product.title).catch(err =>
+      console.error('Failed to notify seller of new order:', err),
+    )
+
     return order
   } catch (error) {
     await session.abortTransaction()
@@ -217,6 +283,29 @@ const updateOrderJourney = async (
         isBuyer
           ? 'Buyers can only confirm delivery.'
           : 'You can only update your own orders.',
+      )
+    }
+  }
+
+  // A cancelled order must not keep the buyer's money, and the item goes back
+  // on sale.
+  if (deliveryStatus === 'cancelled' && order.deliveryStatus !== 'cancelled') {
+    if (order.paymentStatus === 'paid' && order.paymentIntentId) {
+      try {
+        await stripe.refunds.create({ payment_intent: order.paymentIntentId })
+        order.paymentStatus = 'refunded'
+      } catch (error: any) {
+        throw new ApiError(
+          StatusCodes.BAD_GATEWAY,
+          `Could not refund this order: ${error?.message}. It was left unchanged.`,
+        )
+      }
+    }
+    const productRef = (order.productId as any)?._id ?? order.productId
+    if (productRef) {
+      await Product.updateOne(
+        { _id: productRef },
+        { $inc: { stock: 1 }, $set: { status: 'active' } },
       )
     }
   }

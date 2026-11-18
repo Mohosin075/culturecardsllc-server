@@ -110,19 +110,27 @@ export const initializeOrderShipping = async (orderData: any, product: any): Pro
   // Set label URL
   orderData.shippingLabelUrl = `/uploads/labels/label-${orderData.trackingDetails.trackingNumber}.pdf`
 
-  // Calculate rate
-  const shippingCost = calculateShippingRate(orderData.shippingWeight)
+  // Fill in the shipping rate only when the order carries no figure of its
+  // own. The buyer has already been charged by this point, so overwriting
+  // what they paid would leave the order — and the seller's earnings — out of
+  // step with the actual Stripe charge.
   if (orderData.amountDetails) {
-    orderData.amountDetails.shipping = shippingCost
-    orderData.amountDetails.totalPaid = Number(
-      (
-        (orderData.amountDetails.itemSubtotal || 0) +
-        shippingCost +
-        (orderData.amountDetails.taxes || 0) +
-        (orderData.amountDetails.processingFee || 0) +
-        (orderData.amountDetails.charityContribution || 0)
-      ).toFixed(2)
-    )
+    if (!orderData.amountDetails.shipping) {
+      orderData.amountDetails.shipping = calculateShippingRate(
+        orderData.shippingWeight,
+      )
+    }
+    if (!orderData.amountDetails.totalPaid) {
+      orderData.amountDetails.totalPaid = Number(
+        (
+          (orderData.amountDetails.itemSubtotal || 0) +
+          (orderData.amountDetails.shipping || 0) +
+          (orderData.amountDetails.taxes || 0) +
+          (orderData.amountDetails.processingFee || 0) +
+          (orderData.amountDetails.charityContribution || 0)
+        ).toFixed(2),
+      )
+    }
   }
 
   // Generate label PDF file
