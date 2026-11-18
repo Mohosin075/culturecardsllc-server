@@ -56,7 +56,7 @@ const notifySellerOfNewOrder = async (order, productTitle) => {
     await (0, pushnotificationHelper_1.sendPushNotification)(seller.deviceToken, 'New Order Received 📦', `${productTitle} — ship by ${(0, exports.formatShipByDate)(order.shipByDate)}.`, { type: 'NEW_ORDER', orderId });
 };
 const createOrder = async (payload) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const product = await product_model_1.Product.findById(payload.productId);
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
@@ -113,7 +113,7 @@ const createOrder = async (payload) => {
         try {
             intent = await stripe_1.default.paymentIntents.retrieve(payload.paymentIntentId);
         }
-        catch (_h) {
+        catch (_j) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid payment reference.');
         }
         const claimedTotal = Number(((_g = payload.amountDetails) === null || _g === void 0 ? void 0 : _g.totalPaid) || 0);
@@ -129,6 +129,23 @@ const createOrder = async (payload) => {
     // The seller gets a fixed window to ship. The buyer sees this date, and
     // orderShipDeadlineCron cancels and refunds anything still unshipped past it.
     payload.shipByDate = (0, exports.addBusinessDays)(new Date(), exports.SHIP_WINDOW_BUSINESS_DAYS);
+    // Seed the opening checkpoint so the journey always starts at "Order Placed".
+    // Without it the timeline stayed empty until the seller shipped, and then
+    // jumped straight to "Shipped" with no record of the order being placed.
+    if (!payload.trackingDetails) {
+        payload.trackingDetails = { journeyUpdates: [] };
+    }
+    if (!((_h = payload.trackingDetails.journeyUpdates) === null || _h === void 0 ? void 0 : _h.length)) {
+        payload.trackingDetails.journeyUpdates = [
+            {
+                status: 'Order Placed',
+                description: payload.paymentStatus === 'paid'
+                    ? 'Payment confirmed and sent to the seller.'
+                    : 'Order created, awaiting payment confirmation.',
+                timestamp: new Date(),
+            },
+        ];
+    }
     const session = await order_model_1.Order.startSession();
     session.startTransaction();
     try {

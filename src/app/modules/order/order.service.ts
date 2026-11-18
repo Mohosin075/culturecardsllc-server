@@ -140,6 +140,25 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   // orderShipDeadlineCron cancels and refunds anything still unshipped past it.
   payload.shipByDate = addBusinessDays(new Date(), SHIP_WINDOW_BUSINESS_DAYS)
 
+  // Seed the opening checkpoint so the journey always starts at "Order Placed".
+  // Without it the timeline stayed empty until the seller shipped, and then
+  // jumped straight to "Shipped" with no record of the order being placed.
+  if (!payload.trackingDetails) {
+    payload.trackingDetails = { journeyUpdates: [] }
+  }
+  if (!payload.trackingDetails.journeyUpdates?.length) {
+    payload.trackingDetails.journeyUpdates = [
+      {
+        status: 'Order Placed',
+        description:
+          payload.paymentStatus === 'paid'
+            ? 'Payment confirmed and sent to the seller.'
+            : 'Order created, awaiting payment confirmation.',
+        timestamp: new Date(),
+      },
+    ]
+  }
+
   const session = await Order.startSession()
   session.startTransaction()
 
