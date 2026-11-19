@@ -292,7 +292,10 @@ export const chargeSavedCardDirect = async (params: {
   if (!buyer?.stripeCustomerId) return null
 
   const fees = await getFeeSettings()
-  const connectedAccountId = await requireConnectedAccount(params.sellerId)
+  // Not onboarded yet → no direct charge. The caller falls back to a normal
+  // checkout session rather than failing the auction.
+  const connectedAccountId = await findPayableConnectedAccount(params.sellerId)
+  if (!connectedAccountId) return null
 
   const methods = await stripe.paymentMethods.list({
     customer: buyer.stripeCustomerId,
@@ -359,6 +362,24 @@ export const findSellerAccountId = async (
   if (!sellerId) return null
   const application = await SellerApplication.findOne({ userId: sellerId })
   return application?.stripe?.accountId || null
+}
+
+/**
+ * The seller's account only if Stripe will actually let it take money.
+ *
+ * Returns null rather than throwing, so a caller can fall back to a platform
+ * charge for a seller who has not onboarded yet. That fallback is what keeps
+ * the marketplace working while existing sellers are migrated onto Connect —
+ * without it, shipping Connect would fail every purchase on the platform.
+ */
+export const findPayableConnectedAccount = async (
+  sellerId?: string,
+): Promise<string | null> => {
+  if (!sellerId) return null
+  const application = await SellerApplication.findOne({ userId: sellerId })
+  if (!application?.stripe?.accountId) return null
+  if (!application.stripe.chargesEnabled) return null
+  return application.stripe.accountId
 }
 
 /**
@@ -431,6 +452,7 @@ export const refundMarketplacePayment = async (params: {
 
 export const MarketplaceCharge = {
   findSellerAccountId,
+  findPayableConnectedAccount,
   retrievePaymentIntentAnywhere,
   refundMarketplacePayment,
   getFeeSettings,

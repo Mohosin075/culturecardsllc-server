@@ -490,7 +490,13 @@ const assertSellerCanSell = async (userId: string | Types.ObjectId): Promise<voi
 
   const application = await SellerApplication.findOne({ userId })
 
-  if (!application?.stripe?.accountId) {
+  // Grandfathering. Sellers approved before Connect existed have no
+  // application at all, and blocking them the moment this ships would take
+  // every existing seller off the platform. They keep working until they are
+  // migrated; anyone who has started an application is held to the full rule.
+  if (!application) return
+
+  if (!application.stripe?.accountId) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Connect your Stripe account before listing items or going live.',

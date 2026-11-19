@@ -153,7 +153,8 @@ const updateSettingsData = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const approveSellerVerification = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await dashboard_service_1.dashboardService.approveSellerVerification(req.params.userId);
+    const admin = req.user;
+    const result = await dashboard_service_1.dashboardService.approveSellerVerification(req.params.userId, admin.userId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
@@ -162,7 +163,8 @@ const approveSellerVerification = (0, catchAsync_1.default)(async (req, res) => 
     });
 });
 const rejectSellerVerification = (0, catchAsync_1.default)(async (req, res) => {
-    const result = await dashboard_service_1.dashboardService.rejectSellerVerification(req.params.userId, req.body.reason);
+    const admin = req.user;
+    const result = await dashboard_service_1.dashboardService.rejectSellerVerification(req.params.userId, admin.userId, req.body.reason);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
