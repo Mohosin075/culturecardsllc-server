@@ -267,6 +267,21 @@ export type IPlatformSettings = {
     purchaseCommission: number
     tradeCommission: number
   }
+  /**
+   * Marketplace fee rates, as percentages. Defaults come from the client's
+   * Areis/Stripe spec; they are settings rather than constants so the rates
+   * can be changed without a deploy.
+   */
+  marketplaceFees: {
+    /** ARIES fee on a completed livestream / buy-now sale. Spec: 6.5%. */
+    saleFeePercent: number
+    /** ARIES fee each side pays on a trade. Spec: 4%. */
+    tradeFeePercentPerSide: number
+    /** Stripe's percentage for standard domestic cards. Spec: 2.9%. */
+    stripePercent: number
+    /** Stripe's flat per-transaction fee, in dollars. Spec: $0.30. */
+    stripeFlatFee: number
+  }
   paymentGateway: {
     primaryProcessor: string
     apiKey: string

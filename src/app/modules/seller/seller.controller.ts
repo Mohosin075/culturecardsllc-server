@@ -68,6 +68,18 @@ const createDashboardLink = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const getMyEarnings = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as any
+  const result = await SellerServices.getMyEarnings(user)
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Seller earnings retrieved successfully.',
+    data: result,
+  })
+})
+
 /**
  * Stripe redirects the seller's browser here, so there is no JWT on the
  * request. Bounce them back into the app via the deep link; the app then
@@ -131,6 +143,7 @@ export const SellerControllers = {
   getMyApplication,
   createOnboardingLink,
   createDashboardLink,
+  getMyEarnings,
   stripeReturn,
   stripeRefresh,
 }

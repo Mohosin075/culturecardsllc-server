@@ -55,5 +55,12 @@ router.get(
   SellerControllers.createDashboardLink,
 )
 
+// ── Seller earnings, read from their Stripe balance ────────────────────────
+router.get(
+  '/earnings',
+  auth(USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  SellerControllers.getMyEarnings,
+)
+
 export const SellerRoutes = router
 export default SellerRoutes

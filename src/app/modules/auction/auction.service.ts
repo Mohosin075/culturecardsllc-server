@@ -14,6 +14,7 @@ import { io } from '../../../server'
 import { Order } from '../order/order.model'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import { SellerServices } from '../seller/seller.service'
+import { MarketplaceCharge } from '../payment/marketplaceCharge'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
 import { NotificationIntegration } from '../notification/notification.integration'
@@ -667,37 +668,35 @@ const completeAuction = async (
   let isAutoPaid = false
   let paymentIntentId: string | undefined
 
-  // 1. Try automatic off-session charge if the winner has saved card details on Stripe
-  if (winner.stripeCustomerId) {
+  // 1. Try automatic off-session charge if the winner has saved card details.
+  //
+  // This is a direct charge on the seller's connected account: Stripe's fee
+  // comes out of the seller's proceeds and ARIES's cut is taken as the
+  // application fee, so the money is already split by the time the order
+  // exists. If the seller is not payout-ready the charge is refused, and the
+  // winner falls through to the checkout session below.
+  const auctionSellerId = stream?.sellerId?.toString() || ''
+  if (winner.stripeCustomerId && auctionSellerId) {
     try {
-      const paymentMethods = await stripe.paymentMethods.list({
-        customer: winner.stripeCustomerId,
-        type: 'card',
+      const charge = await MarketplaceCharge.chargeSavedCardDirect({
+        buyerId: auctionItem.highestBidderId.toString(),
+        sellerId: auctionSellerId,
+        totalAmount: auctionItem.currentBid,
+        itemSubtotal: auctionItem.currentBid,
+        metadata: {
+          purchaseType: 'auction_win',
+          productId: product._id.toString(),
+          winnerId: auctionItem.highestBidderId.toString(),
+          auctionItemId: auctionItemId,
+        },
       })
 
-      if (paymentMethods.data.length > 0) {
-        const paymentMethodId = paymentMethods.data[0].id
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(auctionItem.currentBid * 100),
-          currency: 'usd',
-          customer: winner.stripeCustomerId,
-          payment_method: paymentMethodId,
-          off_session: true,
-          confirm: true,
-          metadata: {
-            purchaseType: 'auction_win',
-            productId: product._id.toString(),
-            sellerId: stream?.sellerId?.toString() || '',
-            winnerId: auctionItem.highestBidderId.toString(),
-            auctionItemId: auctionItemId,
-          },
-        })
-
-        if (paymentIntent.status === 'succeeded') {
-          isAutoPaid = true
-          paymentIntentId = paymentIntent.id
-          console.log(`[AUTO-PAY] Instant card charge succeeded for Auction:${auctionItemId}`)
-        }
+      if (charge) {
+        isAutoPaid = true
+        paymentIntentId = charge.paymentIntentId
+        console.log(
+          `[AUTO-PAY] Direct charge succeeded for Auction:${auctionItemId} on ${charge.stripeAccountId} (platform fee ${charge.applicationFeeAmount}¢)`,
+        )
       }
     } catch (autoPayError) {
       console.error('[AUTO-PAY] Automatic charge failed. Falling back to checkout session:', autoPayError)

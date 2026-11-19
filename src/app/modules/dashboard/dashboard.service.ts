@@ -1154,6 +1154,7 @@ class DashboardService {
       }
       return {
         commissionSettings: settings.commissionSettings,
+        marketplaceFees: settings.marketplaceFees,
         paymentGateway: settings.paymentGateway,
         notificationSettings: settings.notificationSettings,
         securitySettings: settings.securitySettings,
@@ -1203,6 +1204,7 @@ class DashboardService {
 
       return {
         commissionSettings: settings.commissionSettings,
+        marketplaceFees: settings.marketplaceFees,
         paymentGateway: settings.paymentGateway,
         notificationSettings: settings.notificationSettings,
         securitySettings: settings.securitySettings,

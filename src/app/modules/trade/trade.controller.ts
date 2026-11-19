@@ -62,11 +62,33 @@ const declineTradeOffer = catchAsync(async (req: Request, res: Response) => {
 
 const completeTradeOffer = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
-  const result = await TradeServices.completeTradeOffer(req.params.id, user.userId)
+  const result: any = await TradeServices.completeTradeOffer(
+    req.params.id,
+    user.userId,
+  )
+
+  // Three shapes come back: a payment this user still owes, a note that the
+  // other side has not paid yet, or the completed trade itself.
+  const message = result?.clientSecret
+    ? 'Pay your marketplace fee to complete this trade.'
+    : result?.awaitingCounterparty
+      ? 'Your payment is settled. Waiting for the other trader to pay their fee.'
+      : 'Trade completed successfully. Ownership transferred.'
+
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'Trade completed successfully. Ownership transferred.',
+    message,
+    data: result,
+  })
+})
+
+const getTradeSettlement = catchAsync(async (req: Request, res: Response) => {
+  const result = await TradeServices.getSettlement(req.params.id)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Trade settlement status retrieved successfully.',
     data: result,
   })
 })
@@ -77,4 +99,5 @@ export const TradeControllers = {
   acceptTradeOffer,
   declineTradeOffer,
   completeTradeOffer,
+  getTradeSettlement,
 }

@@ -304,6 +304,32 @@ const syncByAccountId = async (accountId: string): Promise<void> => {
   await syncApplicationWithStripe(application as any)
 }
 
+/**
+ * The seller's own earnings, straight from their Stripe balance. ARIES's 6.5%
+ * has already been removed as the application fee and Stripe's processing fee
+ * has already been deducted, so these are the figures the seller will
+ * actually be paid.
+ */
+const getMyEarnings = async (user: JwtPayload): Promise<any> => {
+  const application = await SellerApplication.findOne({ userId: user.userId })
+
+  if (!application?.stripe?.accountId) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Connect your Stripe account to see your earnings.',
+    )
+  }
+
+  const earnings = await StripeConnectService.getAccountEarnings(
+    application.stripe.accountId,
+  )
+
+  return {
+    ...earnings,
+    payoutsEnabled: Boolean(application.stripe.payoutsEnabled),
+  }
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // 4. Admin review
 // ────────────────────────────────────────────────────────────────────────────
@@ -500,6 +526,7 @@ export const SellerServices = {
   getOnboardingLink,
   getStripeDashboardLink,
   getMyOnboardingState,
+  getMyEarnings,
   syncByAccountId,
   listApplicationsForAdmin,
   approveApplication,

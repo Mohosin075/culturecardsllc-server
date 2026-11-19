@@ -113,7 +113,50 @@ export const createLoginLink = async (accountId: string): Promise<string> => {
   return loginLink.url
 }
 
+/**
+ * A seller's real money, read from their connected account rather than
+ * recomputed from orders — Stripe is the ledger, not the Order collection.
+ */
+export const getAccountEarnings = async (
+  accountId: string,
+): Promise<{
+  available: number
+  pending: number
+  currency: string
+  recentPayouts: {
+    id: string
+    amount: number
+    status: string
+    arrivalDate: Date | null
+  }[]
+}> => {
+  requireStripe()
+
+  const [balance, payouts] = await Promise.all([
+    stripe.balance.retrieve({ stripeAccount: accountId }),
+    stripe.payouts.list({ limit: 10 }, { stripeAccount: accountId }),
+  ])
+
+  const sum = (entries: { amount: number }[]): number =>
+    entries.reduce((total, entry) => total + entry.amount, 0) / 100
+
+  return {
+    available: sum(balance.available || []),
+    pending: sum(balance.pending || []),
+    currency: balance.available?.[0]?.currency?.toUpperCase() || 'USD',
+    recentPayouts: payouts.data.map(payout => ({
+      id: payout.id,
+      amount: payout.amount / 100,
+      status: payout.status,
+      arrivalDate: payout.arrival_date
+        ? new Date(payout.arrival_date * 1000)
+        : null,
+    })),
+  }
+}
+
 export const StripeConnectService = {
+  getAccountEarnings,
   mapAccountToState,
   createConnectedAccount,
   retrieveAccount,

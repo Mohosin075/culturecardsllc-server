@@ -4,6 +4,8 @@ import stripe from './config/stripe'
 import { WebhookService } from './app/modules/payment/webhook.service'
 import { webhookService as subscriptionWebhookService } from './app/modules/subscription/webhook.service'
 import { SellerServices } from './app/modules/seller/seller.service'
+import { TradeSettlementServices } from './app/modules/trade/tradeSettlement.service'
+import { TradeServices } from './app/modules/trade/trade.service'
 
 const webhookApp = express()
 
@@ -52,6 +54,24 @@ webhookApp.post(
           await SellerServices.syncByAccountId(account.id).catch(err =>
             console.error('[SellerConnect] account.updated sync failed:', err),
           )
+        }
+      }
+
+      // Trade settlement: a trade only swaps once both sides have paid, and
+      // the second payment can land long after the first, so the swap is
+      // driven from here rather than from the request that started it.
+      if (event.type === 'payment_intent.succeeded') {
+        const intent = event.data.object as { id?: string; metadata?: any }
+        if (intent?.metadata?.purchaseType === 'trade_settlement' && intent.id) {
+          try {
+            const outcome =
+              await TradeSettlementServices.markPartyPaidByIntent(intent.id)
+            if (outcome?.settled) {
+              await TradeServices.finalizeTradeSwap(outcome.tradeOfferId)
+            }
+          } catch (err) {
+            console.error('[TradeSettlement] webhook handling failed:', err)
+          }
         }
       }
 
