@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { LegalDocType } from './legalView'
 import { PublicServices } from './public.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
@@ -18,7 +19,7 @@ const createPublic = catchAsync(async (req: Request, res: Response) => {
 
 const getAllPublics = catchAsync(async (req: Request, res: Response) => {
   const result = await PublicServices.getAllPublics(
-    req.params.type as 'privacy-policy' | 'terms-and-condition',
+    req.params.type as LegalDocType,
   )
 
   sendResponse(res, {
