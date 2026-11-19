@@ -628,9 +628,16 @@ const refundPayment = async (
       }
     }
 
-    const refund = await stripe.refunds.create({
-      payment_intent: refundPaymentIntentId,
-      amount: Math.round(payment.amount * 100),
+    // Marketplace charges live on the seller's connected account; the
+    // reversal has to be issued there, against the seller's balance.
+    const refund = await MarketplaceCharge.refundMarketplacePayment({
+      paymentIntentId: refundPaymentIntentId,
+      stripeAccountId:
+        (payment.metadata?.stripeAccountId as string | undefined) ||
+        (await MarketplaceCharge.findSellerAccountId(
+          payment.metadata?.sellerId as string | undefined,
+        )),
+      amount: payment.amount,
       reason: reason ? 'requested_by_customer' : 'duplicate',
     })
 

@@ -11,6 +11,14 @@ import { sendPushNotification } from '../../../helpers/pushnotificationHelper'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import stripe from '../../../config/stripe'
 import { User } from '../user/user.model'
+import { Notification } from '../notification/notification.model'
+import {
+  NotificationChannel,
+  NotificationPriority,
+  NotificationStatus,
+  NotificationType,
+} from '../notification/notification.interface'
+import { MarketplaceCharge } from '../payment/marketplaceCharge'
 
 /** How long a seller has to hand the parcel over before the order auto-cancels. */
 export const SHIP_WINDOW_BUSINESS_DAYS = 3
@@ -36,31 +44,102 @@ export const formatShipByDate = (date?: Date): string =>
       })
     : 'soon'
 
-/** Push + socket ping so the seller learns about an order without polling. */
+/** DB notification + socket ping + FCM push so the seller is alerted immediately. */
 const notifySellerOfNewOrder = async (
   order: IOrder,
   productTitle: string,
+  productImage?: string,
+  chatId?: string,
 ): Promise<void> => {
   const orderId = (order as any)._id.toString()
+  const sellerId = order.sellerId.toString()
+  const buyerId = order.buyerId.toString()
+  const totalPaid = Number(order.amountDetails?.totalPaid || 0)
+  const amountText = totalPaid > 0 ? `$${totalPaid.toFixed(2)}` : ''
+  const shipByText = formatShipByDate(order.shipByDate)
 
+  const [seller, buyer] = await Promise.all([
+    User.findById(sellerId).select('deviceToken'),
+    User.findById(buyerId).select('fullName name username'),
+  ])
+
+  const buyerName =
+    (buyer as any)?.fullName ||
+    (buyer as any)?.name ||
+    (buyer as any)?.username ||
+    'A buyer'
+
+  const title = 'New Order Received'
+  const body = amountText
+    ? `${buyerName} purchased ${productTitle} for ${amountText} — ship by ${shipByText}.`
+    : `${buyerName} purchased ${productTitle} — ship by ${shipByText}.`
+
+  // 1. Persist in-app notification in MongoDB so it appears in Notifications & Messages -> Updates
+  let savedNotification: any = null
+  try {
+    savedNotification = await Notification.create({
+      userId: order.sellerId,
+      title,
+      content: body,
+      type: NotificationType.NEW_ORDER,
+      channel: NotificationChannel.BOTH,
+      status: NotificationStatus.SENT,
+      priority: NotificationPriority.HIGH,
+      sentAt: new Date(),
+      isRead: false,
+      metadata: {
+        orderId,
+        productTitle,
+        image: productImage || '',
+        amount: totalPaid,
+        buyerId,
+        buyerName,
+        chatId: chatId || '',
+        shipByDate: order.shipByDate,
+      },
+    })
+  } catch (err) {
+    console.error('Failed to persist NEW_ORDER notification:', err)
+  }
+
+  // 2. Real-time Socket.IO events to the seller's room
   const io = (global as any).io
   if (io) {
-    io.to(order.sellerId.toString()).emit('new-order', {
+    io.to(sellerId).emit('new-order', {
       orderId,
       productTitle,
+      productImage: productImage || '',
+      totalPaid,
+      buyerName,
       shipByDate: order.shipByDate,
+      title,
+      message: body,
+      chatId: chatId || '',
+    })
+    io.to(sellerId).emit('notification', savedNotification || {
+      type: NotificationType.NEW_ORDER,
+      title,
+      content: body,
+      orderId,
+    })
+    io.to(sellerId).emit(`updateChatList::${sellerId}`, {
+      chatId: chatId || '',
+      orderId,
+      type: 'NEW_ORDER',
     })
   }
 
-  const seller = await User.findById(order.sellerId).select('deviceToken')
+  // 3. Push notification (FCM / APNs)
   if (!seller?.deviceToken) return
 
-  await sendPushNotification(
-    seller.deviceToken,
-    'New Order Received 📦',
-    `${productTitle} — ship by ${formatShipByDate(order.shipByDate)}.`,
-    { type: 'NEW_ORDER', orderId },
-  )
+  await sendPushNotification(seller.deviceToken, title, body, {
+    type: 'NEW_ORDER',
+    orderId,
+    productTitle,
+    amount: String(totalPaid),
+    buyerName,
+    chatId: chatId || '',
+  })
 }
 
 const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
@@ -118,12 +197,18 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     if (alreadyUsed) {
       throw new ApiError(StatusCodes.CONFLICT, 'This payment has already been used for another order.')
     }
-    let intent
-    try {
-      intent = await stripe.paymentIntents.retrieve(payload.paymentIntentId)
-    } catch {
+    // A marketplace charge lives on the seller's connected account, not the
+    // platform, so the intent has to be looked up on both.
+    const located = await MarketplaceCharge.retrievePaymentIntentAnywhere(
+      payload.paymentIntentId,
+      payload.sellerId?.toString(),
+    )
+    if (!located) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid payment reference.')
     }
+    const intent = located.intent
+    // Remembered so the refund path knows where to send the reversal.
+    payload.stripeAccountId = located.stripeAccountId || undefined
     const claimedTotal = Number(payload.amountDetails?.totalPaid || 0)
     if (intent.status === 'succeeded' && intent.amount_received >= Math.round(claimedTotal * 100)) {
       payload.paymentStatus = 'paid'
@@ -227,7 +312,16 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
 
     // Tell the seller there is something to pack. Non-blocking: the order is
     // already committed and must not fail over a notification.
-    notifySellerOfNewOrder(order, product.title).catch(err =>
+    const productImage =
+      Array.isArray((product as any).images) && (product as any).images.length > 0
+        ? String((product as any).images[0])
+        : ''
+    notifySellerOfNewOrder(
+      order,
+      product.title,
+      productImage,
+      chat?._id?.toString(),
+    ).catch(err =>
       console.error('Failed to notify seller of new order:', err),
     )
 
@@ -311,7 +405,14 @@ const updateOrderJourney = async (
   if (deliveryStatus === 'cancelled' && order.deliveryStatus !== 'cancelled') {
     if (order.paymentStatus === 'paid' && order.paymentIntentId) {
       try {
-        await stripe.refunds.create({ payment_intent: order.paymentIntentId })
+        await MarketplaceCharge.refundMarketplacePayment({
+          paymentIntentId: order.paymentIntentId,
+          stripeAccountId:
+            order.stripeAccountId ||
+            (await MarketplaceCharge.findSellerAccountId(
+              order.sellerId?.toString(),
+            )),
+        })
         order.paymentStatus = 'refunded'
       } catch (error: any) {
         throw new ApiError(

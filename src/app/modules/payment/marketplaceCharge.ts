@@ -347,7 +347,92 @@ export const chargeSavedCardDirect = async (params: {
   }
 }
 
+/**
+ * The connected account a seller's charges live on, or null when they have
+ * none. Unlike `requireConnectedAccount` this never throws — it is used on
+ * read paths (looking a charge up, refunding it) where the account may
+ * legitimately be absent on older, platform-side payments.
+ */
+export const findSellerAccountId = async (
+  sellerId?: string,
+): Promise<string | null> => {
+  if (!sellerId) return null
+  const application = await SellerApplication.findOne({ userId: sellerId })
+  return application?.stripe?.accountId || null
+}
+
+/**
+ * Retrieve a PaymentIntent without knowing which account it lives on.
+ *
+ * Marketplace charges sit on the seller's connected account, while tips,
+ * subscriptions and pre-Connect orders sit on the platform. Callers that only
+ * have an id need both looked up.
+ */
+export const retrievePaymentIntentAnywhere = async (
+  paymentIntentId: string,
+  sellerId?: string,
+): Promise<{
+  intent: Stripe.PaymentIntent
+  stripeAccountId: string | null
+} | null> => {
+  const connectedAccountId = await findSellerAccountId(sellerId)
+
+  if (connectedAccountId) {
+    try {
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+        stripeAccount: connectedAccountId,
+      })
+      return { intent, stripeAccountId: connectedAccountId }
+    } catch {
+      // Not on the seller's account — fall through to the platform.
+    }
+  }
+
+  try {
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    return { intent, stripeAccountId: null }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Refund a marketplace payment on whichever account it was charged on.
+ *
+ * On a connected-account charge the money comes out of the seller's balance,
+ * which is what the client's spec asks for. `refund_application_fee` also
+ * hands ARIES's cut back, so a refunded sale earns the platform nothing —
+ * pass false to keep the fee on a partial or fault-based refund.
+ */
+export const refundMarketplacePayment = async (params: {
+  paymentIntentId: string
+  /** Null for a platform charge. */
+  stripeAccountId?: string | null
+  /** Dollars. Omit to refund the full charge. */
+  amount?: number
+  reason?: Stripe.RefundCreateParams.Reason
+  refundApplicationFee?: boolean
+}): Promise<Stripe.Refund> => {
+  const body: Stripe.RefundCreateParams = {
+    payment_intent: params.paymentIntentId,
+    ...(params.amount !== undefined && { amount: toCents(params.amount) }),
+    ...(params.reason && { reason: params.reason }),
+  }
+
+  if (params.stripeAccountId) {
+    body.refund_application_fee = params.refundApplicationFee !== false
+    return stripe.refunds.create(body, {
+      stripeAccount: params.stripeAccountId,
+    })
+  }
+
+  return stripe.refunds.create(body)
+}
+
 export const MarketplaceCharge = {
+  findSellerAccountId,
+  retrievePaymentIntentAnywhere,
+  refundMarketplacePayment,
   getFeeSettings,
   calculateSaleFee,
   grossUpForStripe,

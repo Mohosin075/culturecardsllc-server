@@ -23,6 +23,7 @@ import { GiveawayRoutes } from '../app/modules/giveaway/giveaway.route'
 import { PartnerRoutes } from '../app/modules/partner/partner.route'
 import { TipRoutes } from '../app/modules/tip/tip.route'
 import { SellerRoutes } from '../app/modules/seller/seller.route'
+import { RefundRoutes } from '../app/modules/refund/refund.route'
 import { LiveStream } from '../app/modules/auction/auction.model'
 import catchAsync from '../shared/catchAsync'
 import sendResponse from '../shared/sendResponse'
@@ -93,6 +94,7 @@ const apiRoutes: { path: string; route: Router }[] = [
   { path: '/partner', route: PartnerRoutes },
   { path: '/tip', route: TipRoutes },
   { path: '/seller', route: SellerRoutes },
+  { path: '/refunds', route: RefundRoutes },
 ]
 
 apiRoutes.forEach(route => {

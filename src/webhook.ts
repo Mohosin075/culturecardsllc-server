@@ -6,6 +6,7 @@ import { webhookService as subscriptionWebhookService } from './app/modules/subs
 import { SellerServices } from './app/modules/seller/seller.service'
 import { TradeSettlementServices } from './app/modules/trade/tradeSettlement.service'
 import { TradeServices } from './app/modules/trade/trade.service'
+import { RefundServices } from './app/modules/refund/refund.service'
 
 const webhookApp = express()
 
@@ -54,6 +55,21 @@ webhookApp.post(
           await SellerServices.syncByAccountId(account.id).catch(err =>
             console.error('[SellerConnect] account.updated sync failed:', err),
           )
+        }
+      }
+
+      // Chargebacks. On direct charges the dispute belongs to the seller's
+      // connected account and Stripe takes the money from their balance, so
+      // ARIES is recording what happened rather than paying for it.
+      // `event.account` is the connected account the dispute was raised on.
+      if (event.type.startsWith('charge.dispute.')) {
+        try {
+          await RefundServices.recordDisputeFromWebhook(
+            event.data.object as any,
+            (event as any).account,
+          )
+        } catch (err) {
+          console.error('[Dispute] Failed to record dispute:', err)
         }
       }
 
