@@ -14,9 +14,9 @@ const mongoose_1 = require("mongoose");
 const server_1 = require("../../../server");
 const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const user_model_1 = require("../user/user.model");
-const stripe_1 = __importDefault(require("../../../config/stripe"));
 const tradeVote_service_1 = require("./tradeVote.service");
 const partner_service_1 = require("../partner/partner.service");
+const tradeSettlement_service_1 = require("./tradeSettlement.service");
 const createTradeOffer = async (payload) => {
     const { senderProductId, receiverProductId, senderId, receiverId } = payload;
     // Check if either user has blocked the other
@@ -263,7 +263,6 @@ const declineTradeOffer = async (offerId) => {
 };
 // ─── Trade Complete: ownership swap + escrow release ───────────────────────
 const completeTradeOffer = async (offerId, userId) => {
-    var _a, _b;
     if (!mongoose_1.Types.ObjectId.isValid(offerId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Offer ID');
     }
@@ -282,40 +281,43 @@ const completeTradeOffer = async (offerId, userId) => {
     if (!isSender && !isReceiver) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You are not authorized to complete this trade.');
     }
-    if (offer.cashSupplement && offer.cashSupplement !== 0) {
-        const payerId = offer.cashSupplement > 0 ? offer.senderId : offer.receiverId;
-        const payerUser = await user_model_1.User.findById(payerId).select('email stripeCustomerId');
-        if (!(payerUser === null || payerUser === void 0 ? void 0 : payerUser.email)) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Payer user email not found');
+    // Both sides owe ARIES 4% of their own item's value, and one side may owe
+    // a cash difference on top. Nothing is swapped until every side has paid,
+    // so hand this caller the payment they personally owe and let the Stripe
+    // webhook finalize the swap once the other side settles too.
+    const settlement = await tradeSettlement_service_1.TradeSettlementServices.getOrCreateSettlement(offer);
+    if (settlement.status !== 'settled') {
+        const intent = await tradeSettlement_service_1.TradeSettlementServices.createPartyPaymentIntent(offerId, userId);
+        if (!('alreadyPaid' in intent)) {
+            return intent;
         }
-        let customerId = payerUser.stripeCustomerId;
-        if (!customerId) {
-            const customer = await stripe_1.default.customers.create({ email: payerUser.email });
-            customerId = customer.id;
-            payerUser.stripeCustomerId = customerId;
-            await payerUser.save();
+        // This caller is square; the other side still owes.
+        const stillOwed = await tradeSettlement_service_1.TradeSettlementServices.getSettlementStatus(offerId);
+        if (stillOwed && stillOwed.status !== 'settled') {
+            return {
+                awaitingCounterparty: true,
+                settlement: stillOwed,
+            };
         }
-        const ephemeralKey = await stripe_1.default.ephemeralKeys.create({ customer: customerId }, { apiVersion: '2023-10-16' });
-        const paymentIntent = await stripe_1.default.paymentIntents.create({
-            amount: Math.round(Math.abs(offer.cashSupplement) * 100),
-            currency: 'usd',
-            customer: customerId,
-            metadata: {
-                purchaseType: 'trade_supplement',
-                tradeOfferId: offer._id.toString(),
-                senderId: offer.senderId.toString(),
-                receiverId: offer.receiverId.toString(),
-                senderProductId: offer.senderProductId._id.toString(),
-                receiverProductId: offer.receiverProductId._id.toString(),
-            },
-        });
-        return {
-            clientSecret: paymentIntent.client_secret,
-            ephemeralKey: ephemeralKey.secret,
-            customer: customerId,
-        };
     }
-    // ── No cash supplement: complete immediately ────────────────────────────
+    return finalizeTradeSwap(offerId, userId);
+};
+/**
+ * Swap the items and close the offer. Safe to call from the trade endpoint
+ * once both sides are square, and from the Stripe webhook when the second
+ * payment lands.
+ */
+const finalizeTradeSwap = async (offerId, actorId) => {
+    var _a, _b;
+    const offer = (await trade_model_1.TradeOffer.findById(offerId)
+        .populate('senderProductId')
+        .populate('receiverProductId'));
+    if (!offer) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Trade offer not found');
+    }
+    if (offer.status === 'completed')
+        return offer;
+    const userId = actorId || offer.senderId.toString();
     const session = await trade_model_1.TradeOffer.startSession();
     session.startTransaction();
     try {
@@ -381,6 +383,9 @@ const completeTradeOffer = async (offerId, userId) => {
 };
 exports.TradeServices = {
     createTradeOffer,
+    finalizeTradeSwap,
+    getSettlement: tradeSettlement_service_1.TradeSettlementServices.getSettlementStatus,
+    createSettlementIntent: tradeSettlement_service_1.TradeSettlementServices.createPartyPaymentIntent,
     getTradeOffers,
     acceptTradeOffer,
     declineTradeOffer,

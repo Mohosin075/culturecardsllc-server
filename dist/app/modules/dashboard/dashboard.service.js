@@ -16,6 +16,7 @@ const notification_model_1 = require("../notification/notification.model");
 const chat_model_1 = require("../chat/chat.model");
 const message_model_1 = require("../message/message.model");
 const settings_model_1 = require("./settings.model");
+const seller_service_1 = require("../seller/seller.service");
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const user_1 = require("../../../enum/user");
@@ -266,37 +267,13 @@ class DashboardService {
         }
     }
     // 3. GET /seller-verifications
+    //
+    // Real seller applications with their live Stripe Connect state — section 4
+    // of the client's spec (application info, Stripe connection, identity
+    // verification, payout eligibility, approval status).
     async getSellerVerificationsData(query) {
         try {
-            const pendingSellers = await user_model_1.User.find({
-                roles: user_1.USER_ROLES.SELLER,
-                sellerVerified: false,
-                status: user_1.USER_STATUS.ACTIVE,
-            }).limit(20);
-            const result = pendingSellers.map((u, idx) => {
-                const categories = [
-                    'Sneakers',
-                    'Cards',
-                    'Watches',
-                    'Fine Art',
-                    'Streetwear',
-                    'TCG',
-                ];
-                return {
-                    id: u._id.toString(),
-                    name: u.fullName || u.name || 'Anonymous Professional',
-                    email: u.email || 'seller@example.com',
-                    requestId: `VER-${(idx + 1).toString().padStart(3, '0')}`,
-                    category: categories[idx % categories.length],
-                    submitted: u.createdAt
-                        ? new Date(u.createdAt).toISOString().split('T')[0]
-                        : '2026-05-01',
-                    submittedDocuments: ['ID Card', 'Business License'],
-                    documents: ['ID Card', 'Business License'],
-                    status: 'Pending',
-                };
-            });
-            return result;
+            return (await seller_service_1.SellerServices.listApplicationsForAdmin(query));
         }
         catch (error) {
             console.error('Error fetching verifications data:', error);
@@ -1037,6 +1014,7 @@ class DashboardService {
             }
             return {
                 commissionSettings: settings.commissionSettings,
+                marketplaceFees: settings.marketplaceFees,
                 paymentGateway: settings.paymentGateway,
                 notificationSettings: settings.notificationSettings,
                 securitySettings: settings.securitySettings,
@@ -1081,6 +1059,7 @@ class DashboardService {
             await settings.save();
             return {
                 commissionSettings: settings.commissionSettings,
+                marketplaceFees: settings.marketplaceFees,
                 paymentGateway: settings.paymentGateway,
                 notificationSettings: settings.notificationSettings,
                 securitySettings: settings.securitySettings,
@@ -1091,31 +1070,17 @@ class DashboardService {
             throw error;
         }
     }
-    // Approve a user as a verified seller
-    async approveSellerVerification(userId) {
-        const user = await user_model_1.User.findById(userId);
-        if (!user) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
-        }
-        if (!user.roles.includes(user_1.USER_ROLES.SELLER)) {
-            user.roles.push(user_1.USER_ROLES.SELLER);
-        }
-        user.verified = true;
-        user.sellerVerified = true;
-        await user.save();
-        return user;
+    // Approve a user as a verified seller.
+    //
+    // Delegates to the seller module so the decision is recorded on the
+    // application (who reviewed it, when) and is checked against fresh Stripe
+    // data first — an admin cannot approve someone Stripe has not verified.
+    async approveSellerVerification(userId, adminId) {
+        return seller_service_1.SellerServices.approveApplication(userId, adminId);
     }
     // Reject seller verification request
-    async rejectSellerVerification(userId, reason) {
-        const user = await user_model_1.User.findById(userId);
-        if (!user) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
-        }
-        user.sellerVerified = false;
-        // Remove seller role if they aren't verified anymore
-        user.roles = user.roles.filter(role => role !== user_1.USER_ROLES.SELLER);
-        await user.save();
-        return user;
+    async rejectSellerVerification(userId, adminId, reason) {
+        return seller_service_1.SellerServices.rejectApplication(userId, adminId, reason);
     }
     // Resolve a dispute/support ticket
     async resolveDispute(supportId) {

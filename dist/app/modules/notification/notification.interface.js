@@ -15,6 +15,8 @@ var NotificationType;
     NotificationType["NEW_FOLLOW"] = "NEW_FOLLOW";
     NotificationType["STREAM_LIVE"] = "STREAM_LIVE";
     NotificationType["NEW_REVIEW"] = "NEW_REVIEW";
+    NotificationType["NEW_ORDER"] = "NEW_ORDER";
+    NotificationType["ORDER_UPDATE"] = "ORDER_UPDATE";
 })(NotificationType || (exports.NotificationType = NotificationType = {}));
 var NotificationChannel;
 (function (NotificationChannel) {

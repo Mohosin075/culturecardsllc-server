@@ -12,7 +12,7 @@ const RefundRequestSchema = new Schema<IRefundRequest>(
       type: Schema.Types.ObjectId,
       ref: 'Order',
       required: true,
-      index: true,
+      // Indexed by the partial unique index below, not here.
     },
     buyerId: {
       type: Schema.Types.ObjectId,
