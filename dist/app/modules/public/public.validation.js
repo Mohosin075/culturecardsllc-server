@@ -30,6 +30,8 @@ exports.PublicValidation = {
             type: zod_1.z.enum([
                 'privacy-policy',
                 'terms-and-condition',
+                'seller-policy',
+                'marketplace-rules',
                 'contact',
                 'about',
             ]),
@@ -41,6 +43,8 @@ exports.PublicValidation = {
             type: zod_1.z.enum([
                 'privacy-policy',
                 'terms-and-condition',
+                'seller-policy',
+                'marketplace-rules',
                 'contact',
                 'about',
             ]),

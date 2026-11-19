@@ -29,6 +29,8 @@ export const PublicValidation = {
       type: z.enum([
         'privacy-policy',
         'terms-and-condition',
+        'seller-policy',
+        'marketplace-rules',
         'contact',
         'about',
       ]),
@@ -41,6 +43,8 @@ export const PublicValidation = {
       type: z.enum([
         'privacy-policy',
         'terms-and-condition',
+        'seller-policy',
+        'marketplace-rules',
         'contact',
         'about',
       ]),
