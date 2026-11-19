@@ -73,6 +73,33 @@ export default {
   },
   application_fee: process.env.APPLICATION_FEE,
   instant_transfer_fee: process.env.INSTANT_TRANSFER_FEE,
+  seller: {
+    /** Country the Express connected accounts are opened in. */
+    connectCountry: process.env.STRIPE_CONNECT_COUNTRY || 'US',
+    /** 5945 = Hobby, Toy and Game Shops — closest fit for a card marketplace. */
+    connectMcc: process.env.STRIPE_CONNECT_MCC || '5945',
+    /** Stripe sends the seller here when the onboarding link has expired. */
+    stripeRefreshUrl:
+      process.env.STRIPE_CONNECT_REFRESH_URL ||
+      `${process.env.SERVER_URL || 'http://localhost:5000'}/api/v1/seller/stripe/refresh`,
+    /** Stripe sends the seller here once they finish the hosted form. */
+    stripeReturnUrl:
+      process.env.STRIPE_CONNECT_RETURN_URL ||
+      `${process.env.SERVER_URL || 'http://localhost:5000'}/api/v1/seller/stripe/return`,
+    /** Deep link used to bounce the seller back into the mobile app. */
+    appReturnDeepLink:
+      process.env.SELLER_ONBOARDING_DEEP_LINK ||
+      'culturecards://seller/onboarding',
+    /**
+     * Section 5 of the client's spec: a seller must clear BOTH the ARIES
+     * approval and Stripe's payout requirements before they can list or go
+     * live. Set to 'false' only as a migration escape hatch for sellers who
+     * were approved before Connect existed.
+     */
+    requireStripeOnboarding:
+      (process.env.REQUIRE_STRIPE_ONBOARDING || 'true').toLowerCase() !==
+      'false',
+  },
   email: {
     from: process.env.EMAIL_FROM,
     resend_api_key: process.env.RESEND_API_KEY,

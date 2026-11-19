@@ -10,6 +10,7 @@ import { Notification } from '../notification/notification.model'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
 import { SystemSettings } from './settings.model'
+import { SellerServices } from '../seller/seller.service'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import {
@@ -319,41 +320,17 @@ class DashboardService {
   }
 
   // 3. GET /seller-verifications
+  //
+  // Real seller applications with their live Stripe Connect state — section 4
+  // of the client's spec (application info, Stripe connection, identity
+  // verification, payout eligibility, approval status).
   async getSellerVerificationsData(
     query: Record<string, any>,
   ): Promise<ISellerVerificationRequest[]> {
     try {
-      const pendingSellers = await User.find({
-        roles: USER_ROLES.SELLER,
-        sellerVerified: false,
-        status: USER_STATUS.ACTIVE,
-      }).limit(20)
-
-      const result = pendingSellers.map((u: any, idx) => {
-        const categories: any[] = [
-          'Sneakers',
-          'Cards',
-          'Watches',
-          'Fine Art',
-          'Streetwear',
-          'TCG',
-        ]
-        return {
-          id: u._id.toString(),
-          name: u.fullName || u.name || 'Anonymous Professional',
-          email: u.email || 'seller@example.com',
-          requestId: `VER-${(idx + 1).toString().padStart(3, '0')}`,
-          category: categories[idx % categories.length],
-          submitted: u.createdAt
-            ? new Date(u.createdAt).toISOString().split('T')[0]
-            : '2026-05-01',
-          submittedDocuments: ['ID Card', 'Business License'],
-          documents: ['ID Card', 'Business License'],
-          status: 'Pending' as any,
-        }
-      })
-
-      return result
+      return (await SellerServices.listApplicationsForAdmin(
+        query,
+      )) as ISellerVerificationRequest[]
     } catch (error) {
       console.error('Error fetching verifications data:', error)
       return []
@@ -1177,6 +1154,7 @@ class DashboardService {
       }
       return {
         commissionSettings: settings.commissionSettings,
+        marketplaceFees: settings.marketplaceFees,
         paymentGateway: settings.paymentGateway,
         notificationSettings: settings.notificationSettings,
         securitySettings: settings.securitySettings,
@@ -1226,6 +1204,7 @@ class DashboardService {
 
       return {
         commissionSettings: settings.commissionSettings,
+        marketplaceFees: settings.marketplaceFees,
         paymentGateway: settings.paymentGateway,
         notificationSettings: settings.notificationSettings,
         securitySettings: settings.securitySettings,
@@ -1236,36 +1215,25 @@ class DashboardService {
     }
   }
 
-  // Approve a user as a verified seller
-  async approveSellerVerification(userId: string): Promise<any> {
-    const user = await User.findById(userId)
-    if (!user) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
-    }
-
-    if (!user.roles.includes(USER_ROLES.SELLER)) {
-      user.roles.push(USER_ROLES.SELLER)
-    }
-    user.verified = true
-    user.sellerVerified = true
-    await user.save()
-
-    return user
+  // Approve a user as a verified seller.
+  //
+  // Delegates to the seller module so the decision is recorded on the
+  // application (who reviewed it, when) and is checked against fresh Stripe
+  // data first — an admin cannot approve someone Stripe has not verified.
+  async approveSellerVerification(
+    userId: string,
+    adminId: string,
+  ): Promise<any> {
+    return SellerServices.approveApplication(userId, adminId)
   }
 
   // Reject seller verification request
-  async rejectSellerVerification(userId: string, reason?: string): Promise<any> {
-    const user = await User.findById(userId)
-    if (!user) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
-    }
-
-    user.sellerVerified = false
-    // Remove seller role if they aren't verified anymore
-    user.roles = user.roles.filter(role => role !== USER_ROLES.SELLER)
-    await user.save()
-
-    return user
+  async rejectSellerVerification(
+    userId: string,
+    adminId: string,
+    reason?: string,
+  ): Promise<any> {
+    return SellerServices.rejectApplication(userId, adminId, reason)
   }
 
   // Resolve a dispute/support ticket

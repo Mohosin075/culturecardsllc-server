@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { Public } from './public.model'
-import { renderLegalHtml } from './legalView'
+import { renderLegalHtml, LegalDocType } from './legalView'
 
 const router = Router()
 
@@ -35,5 +35,43 @@ const renderTermsHandler = async (req: Request, res: Response): Promise<void> =>
 router.get('/terms-and-conditions', renderTermsHandler)
 router.get('/terms', renderTermsHandler)
 router.get('/terms-of-service', renderTermsHandler)
+
+/**
+ * Seller-facing policies. The seller application asks applicants to accept
+ * these by name, so each one needs a page of its own. Content is managed from
+ * the admin dashboard (`POST /api/v1/public` with the matching `type`); until
+ * a document is published the page explains that rather than 404-ing on a
+ * seller who is mid-application.
+ */
+const renderPolicyHandler =
+  (type: LegalDocType, heading: string) =>
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const doc = await Public.findOne({ type }).lean()
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      if (doc?.content) {
+        res.send(renderLegalHtml(heading, doc.content, type))
+        return
+      }
+      res.send(
+        renderLegalHtml(
+          heading,
+          `<p>The ${heading} have not been published yet. Please check back before completing your seller application.</p>`,
+          type,
+        ),
+      )
+    } catch (err) {
+      res.status(500).send(`Error loading ${heading}.`)
+    }
+  }
+
+router.get(
+  '/seller-policy',
+  renderPolicyHandler('seller-policy', 'Seller Policy'),
+)
+router.get(
+  '/marketplace-rules',
+  renderPolicyHandler('marketplace-rules', 'Marketplace Rules'),
+)
 
 export const LegalRoutes = router

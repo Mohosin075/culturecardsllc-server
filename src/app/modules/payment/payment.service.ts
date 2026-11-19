@@ -15,6 +15,8 @@ import { Types } from 'mongoose'
 import { User } from '../user/user.model'
 import stripe from '../../../config/stripe'
 
+import { Product } from '../product/product.model'
+import { MarketplaceCharge } from './marketplaceCharge'
 import { WebhookService } from './webhook.service'
 import { emailHelper } from '../../../helpers/emailHelper'
 import { generatePDFInvoice } from '../../../helpers/invoiceHelper'
@@ -51,13 +53,97 @@ const getOrCreateStripeCustomer = async (userData: any): Promise<string> => {
 const createCheckoutSession = async (
   user: JwtPayload,
   payload: IPaymentPayload,
-): Promise<{ clientSecret: string; ephemeralKey: string; customer: string; paymentIntentId: string }> => {
+): Promise<{
+  clientSecret: string
+  ephemeralKey: string
+  customer: string
+  paymentIntentId: string
+  stripeAccountId?: string
+  platformFee?: number
+}> => {
   try {
     const userData = await User.findById(user.userId)
     if (!userData) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
     }
 
+    // ── Marketplace sale → direct charge on the seller's account ──────────
+    //
+    // The seller is resolved from the product, never taken from the request,
+    // and the item price comes from the product record so the marketplace fee
+    // cannot be dialled down by the client.
+    const productId = (payload.metadata as any)?.productId
+    if (productId && Types.ObjectId.isValid(String(productId))) {
+      const product = await Product.findById(productId).select(
+        'sellerId buyNowPrice estValue title',
+      )
+
+      // Only route through Connect when the seller can actually be paid.
+      // A seller who has not onboarded yet falls through to the platform
+      // charge below — the old behaviour — so purchases keep working while
+      // existing sellers are migrated.
+      const payableAccount =
+        await MarketplaceCharge.findPayableConnectedAccount(
+          product?.sellerId?.toString(),
+        )
+
+      if (product?.sellerId && payableAccount) {
+        const itemSubtotal = Number(
+          product.buyNowPrice || product.estValue || 0,
+        )
+        const totalAmount = Number(payload.amount || 0)
+
+        if (totalAmount + 0.005 < itemSubtotal) {
+          throw new ApiError(
+            StatusCodes.BAD_REQUEST,
+            'Payment amount is lower than the item price.',
+          )
+        }
+
+        const charge = await MarketplaceCharge.createDirectChargeIntent({
+          buyerId: user.userId.toString(),
+          sellerId: product.sellerId.toString(),
+          totalAmount,
+          itemSubtotal,
+          currency: payload.currency || 'usd',
+          metadata: {
+            productId: String(productId),
+            ...(payload.orderId && { orderId: payload.orderId.toString() }),
+            ...(payload.metadata as Record<string, string>),
+          },
+        })
+
+        await Payment.create({
+          userId: user.userId,
+          orderId: payload.orderId,
+          userEmail: userData.email,
+          amount: totalAmount,
+          currency: payload.currency || 'usd',
+          paymentMethod: 'stripe',
+          paymentIntentId: charge.paymentIntentId,
+          status: 'pending',
+          metadata: {
+            productId: String(productId),
+            sellerId: product.sellerId.toString(),
+            stripeAccountId: charge.stripeAccountId,
+            platformFeeCents: charge.applicationFeeAmount,
+            ...payload.metadata,
+          },
+        })
+
+        return {
+          clientSecret: charge.clientSecret,
+          ephemeralKey: charge.ephemeralKey,
+          customer: charge.customer,
+          paymentIntentId: charge.paymentIntentId,
+          stripeAccountId: charge.stripeAccountId,
+          platformFee: charge.applicationFeeAmount / 100,
+        }
+      }
+    }
+
+    // ── Everything else (tips, trade fees, subscriptions) stays on the
+    //    platform account: there is no seller to pay out.
     const customerId = await getOrCreateStripeCustomer(userData)
 
     const ephemeralKey = await stripe.ephemeralKeys.create(
@@ -551,9 +637,16 @@ const refundPayment = async (
       }
     }
 
-    const refund = await stripe.refunds.create({
-      payment_intent: refundPaymentIntentId,
-      amount: Math.round(payment.amount * 100),
+    // Marketplace charges live on the seller's connected account; the
+    // reversal has to be issued there, against the seller's balance.
+    const refund = await MarketplaceCharge.refundMarketplacePayment({
+      paymentIntentId: refundPaymentIntentId,
+      stripeAccountId:
+        (payment.metadata?.stripeAccountId as string | undefined) ||
+        (await MarketplaceCharge.findSellerAccountId(
+          payment.metadata?.sellerId as string | undefined,
+        )),
+      amount: payment.amount,
       reason: reason ? 'requested_by_customer' : 'duplicate',
     })
 

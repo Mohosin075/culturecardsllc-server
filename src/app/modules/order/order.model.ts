@@ -55,6 +55,11 @@ const OrderSchema = new Schema<IOrder>(
     paymentIntentId: {
       type: String,
     },
+    // Which Stripe account the charge lives on; refunds go back to the same
+    // place. Unset for platform-side payments.
+    stripeAccountId: {
+      type: String,
+    },
     shippingAddress: {
       street: { type: String, required: true },
       city: { type: String, required: true },

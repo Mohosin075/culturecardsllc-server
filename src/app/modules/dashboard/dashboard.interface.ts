@@ -65,16 +65,42 @@ export type IUserManagementItem = {
   status: 'Active' | 'Suspended'
 }
 
+/** The Stripe Connect state an admin needs to judge a seller application. */
+export type ISellerVerificationStripeState = {
+  connected: boolean
+  accountId?: string
+  detailsSubmitted: boolean
+  chargesEnabled: boolean
+  payoutsEnabled: boolean
+  disabledReason?: string
+  outstandingRequirements: string[]
+  lastSyncedAt?: Date
+}
+
 export type ISellerVerificationRequest = {
+  /** The applicant's user id — approve/reject are keyed on this. */
   id?: string
+  applicationId?: string
   name: string
   email: string
+  profile?: string
   requestId: string
-  category: 'Sneakers' | 'Cards' | 'Watches' | 'Fine Art' | 'Streetwear' | 'TCG'
+  /** Free text from the application: what the seller intends to sell. */
+  whatTheySell?: string
+  businessName?: string
+  category: string
   submitted: string
-  submittedDocuments: string[]
-  documents?: string[]
-  status: 'Pending' | 'Approved' | 'Rejected'
+  policyAcceptance?: {
+    sellerPolicy: boolean
+    termsAndConditions: boolean
+    marketplaceRules: boolean
+    acceptedAt?: Date
+  }
+  stripe?: ISellerVerificationStripeState
+  payoutEligible?: boolean
+  rejectionReason?: string
+  reviewedAt?: Date
+  status: 'stripe_pending' | 'pending_approval' | 'approved' | 'rejected'
 }
 
 export type IListingManagementItem = {
@@ -240,6 +266,21 @@ export type IPlatformSettings = {
   commissionSettings: {
     purchaseCommission: number
     tradeCommission: number
+  }
+  /**
+   * Marketplace fee rates, as percentages. Defaults come from the client's
+   * Areis/Stripe spec; they are settings rather than constants so the rates
+   * can be changed without a deploy.
+   */
+  marketplaceFees: {
+    /** ARIES fee on a completed livestream / buy-now sale. Spec: 6.5%. */
+    saleFeePercent: number
+    /** ARIES fee each side pays on a trade. Spec: 4%. */
+    tradeFeePercentPerSide: number
+    /** Stripe's percentage for standard domestic cards. Spec: 2.9%. */
+    stripePercent: number
+    /** Stripe's flat per-transaction fee, in dollars. Spec: $0.30. */
+    stripeFlatFee: number
   }
   paymentGateway: {
     primaryProcessor: string

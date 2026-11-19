@@ -35,6 +35,8 @@ export enum NotificationType {
   NEW_FOLLOW = 'NEW_FOLLOW',
   STREAM_LIVE = 'STREAM_LIVE',
   NEW_REVIEW = 'NEW_REVIEW',
+  NEW_ORDER = 'NEW_ORDER',
+  ORDER_UPDATE = 'ORDER_UPDATE',
 }
 
 export enum NotificationChannel {

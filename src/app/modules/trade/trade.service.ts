@@ -12,6 +12,7 @@ import { User } from '../user/user.model'
 import stripe from '../../../config/stripe'
 import { TradeVoteServices } from './tradeVote.service'
 import { PartnerService } from '../partner/partner.service'
+import { TradeSettlementServices } from './tradeSettlement.service'
 
 const createTradeOffer = async (
   payload: Partial<ITradeOffer>,
@@ -380,50 +381,56 @@ const completeTradeOffer = async (
     )
   }
 
-  if (offer.cashSupplement && offer.cashSupplement !== 0) {
-    const payerId = offer.cashSupplement > 0 ? offer.senderId : offer.receiverId
-    const payerUser = await User.findById(payerId).select('email stripeCustomerId')
+  // Both sides owe ARIES 4% of their own item's value, and one side may owe
+  // a cash difference on top. Nothing is swapped until every side has paid,
+  // so hand this caller the payment they personally owe and let the Stripe
+  // webhook finalize the swap once the other side settles too.
+  const settlement = await TradeSettlementServices.getOrCreateSettlement(offer)
 
-    if (!payerUser?.email) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Payer user email not found')
-    }
-
-    let customerId = payerUser.stripeCustomerId
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({ email: payerUser.email })
-      customerId = customer.id
-      payerUser.stripeCustomerId = customerId
-      await payerUser.save()
-    }
-
-    const ephemeralKey = await stripe.ephemeralKeys.create(
-      { customer: customerId },
-      { apiVersion: '2023-10-16' }
+  if (settlement.status !== 'settled') {
+    const intent = await TradeSettlementServices.createPartyPaymentIntent(
+      offerId,
+      userId,
     )
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(Math.abs(offer.cashSupplement) * 100),
-      currency: 'usd',
-      customer: customerId,
-      metadata: {
-        purchaseType: 'trade_supplement',
-        tradeOfferId: offer._id.toString(),
-        senderId: offer.senderId.toString(),
-        receiverId: offer.receiverId.toString(),
-        senderProductId: offer.senderProductId._id.toString(),
-        receiverProductId: offer.receiverProductId._id.toString(),
-      },
-    })
+    if (!('alreadyPaid' in intent)) {
+      return intent as any
+    }
 
-    return { 
-      clientSecret: paymentIntent.client_secret as string,
-      ephemeralKey: ephemeralKey.secret as string,
-      customer: customerId,
+    // This caller is square; the other side still owes.
+    const stillOwed = await TradeSettlementServices.getSettlementStatus(offerId)
+    if (stillOwed && stillOwed.status !== 'settled') {
+      return {
+        awaitingCounterparty: true,
+        settlement: stillOwed,
+      } as any
     }
   }
 
-  // ── No cash supplement: complete immediately ────────────────────────────
+  return finalizeTradeSwap(offerId, userId)
+}
+
+/**
+ * Swap the items and close the offer. Safe to call from the trade endpoint
+ * once both sides are square, and from the Stripe webhook when the second
+ * payment lands.
+ */
+const finalizeTradeSwap = async (
+  offerId: string,
+  actorId?: string,
+): Promise<ITradeOffer> => {
+  const offer = (await TradeOffer.findById(offerId)
+    .populate('senderProductId')
+    .populate('receiverProductId')) as any
+
+  if (!offer) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Trade offer not found')
+  }
+
+  if (offer.status === 'completed') return offer
+
+  const userId = actorId || offer.senderId.toString()
+
   const session = await TradeOffer.startSession()
   session.startTransaction()
 
@@ -509,6 +516,9 @@ const completeTradeOffer = async (
 
 export const TradeServices = {
   createTradeOffer,
+  finalizeTradeSwap,
+  getSettlement: TradeSettlementServices.getSettlementStatus,
+  createSettlementIntent: TradeSettlementServices.createPartyPaymentIntent,
   getTradeOffers,
   acceptTradeOffer,
   declineTradeOffer,

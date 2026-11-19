@@ -171,7 +171,11 @@ const updateSettingsData = catchAsync(async (req: Request, res: Response) => {
 })
 
 const approveSellerVerification = catchAsync(async (req: Request, res: Response) => {
-  const result = await dashboardService.approveSellerVerification(req.params.userId)
+  const admin = req.user as any
+  const result = await dashboardService.approveSellerVerification(
+    req.params.userId,
+    admin.userId,
+  )
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
@@ -181,7 +185,12 @@ const approveSellerVerification = catchAsync(async (req: Request, res: Response)
 })
 
 const rejectSellerVerification = catchAsync(async (req: Request, res: Response) => {
-  const result = await dashboardService.rejectSellerVerification(req.params.userId, req.body.reason)
+  const admin = req.user as any
+  const result = await dashboardService.rejectSellerVerification(
+    req.params.userId,
+    admin.userId,
+    req.body.reason,
+  )
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,

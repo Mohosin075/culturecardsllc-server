@@ -67,6 +67,11 @@ export type IUser = {
   stripeCustomerId?: string
   stripeConnectedAccountId?: string
   isStripeConnected?: boolean
+  /**
+   * acct_xxx -> cus_xxx, for direct charges on each seller's account.
+   * A Mongoose Map on a hydrated document, a plain object after `.lean()`.
+   */
+  stripeConnectedCustomerIds?: Map<string, string> | Record<string, string>
   subscriptionStatus?: string
   subscriptionTier?: string
   trialUsed?: boolean

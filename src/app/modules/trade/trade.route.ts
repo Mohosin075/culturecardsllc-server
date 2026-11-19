@@ -69,11 +69,20 @@ router.post(
   TradeControllers.declineTradeOffer,
 )
 
-// POST /complete/:id — Complete an accepted trade (sender or receiver)
+// POST /complete/:id — Complete an accepted trade (sender or receiver).
+// Returns the payment this caller owes (their 4% fee, plus any cash
+// difference) until both sides have settled; then it swaps the items.
 router.post(
   '/complete/:id',
   auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   TradeControllers.completeTradeOffer,
+)
+
+// GET /settlement/:id — what each side of the trade still owes
+router.get(
+  '/settlement/:id',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  TradeControllers.getTradeSettlement,
 )
 
 export const TradeRoutes = router

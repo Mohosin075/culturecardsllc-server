@@ -7,6 +7,13 @@ const systemSettingsSchema = new mongoose_1.Schema({
         purchaseCommission: { type: Number, default: 5 },
         tradeCommission: { type: Number, default: 2.5 },
     },
+    // Defaults from the client's Areis/Stripe spec.
+    marketplaceFees: {
+        saleFeePercent: { type: Number, default: 6.5 },
+        tradeFeePercentPerSide: { type: Number, default: 4 },
+        stripePercent: { type: Number, default: 2.9 },
+        stripeFlatFee: { type: Number, default: 0.3 },
+    },
     paymentGateway: {
         primaryProcessor: { type: String, default: 'Stripe' },
         apiKey: { type: String, default: 'sk_live_*******************' },

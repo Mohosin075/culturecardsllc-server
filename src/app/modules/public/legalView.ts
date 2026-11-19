@@ -1,7 +1,13 @@
+export type LegalDocType =
+  | 'privacy-policy'
+  | 'terms-and-condition'
+  | 'seller-policy'
+  | 'marketplace-rules'
+
 export const renderLegalHtml = (
   title: string,
   content: string,
-  type: 'privacy-policy' | 'terms-and-condition',
+  type: LegalDocType,
 ) => {
   if (content.includes('<html') || content.includes('<!doctype')) {
     return content

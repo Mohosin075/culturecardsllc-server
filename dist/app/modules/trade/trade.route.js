@@ -66,7 +66,11 @@ router.get('/my', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES
 router.post('/accept/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), trade_controller_1.TradeControllers.acceptTradeOffer);
 // POST /decline/:id — Decline a trade offer (receiver only)
 router.post('/decline/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), trade_controller_1.TradeControllers.declineTradeOffer);
-// POST /complete/:id — Complete an accepted trade (sender or receiver)
+// POST /complete/:id — Complete an accepted trade (sender or receiver).
+// Returns the payment this caller owes (their 4% fee, plus any cash
+// difference) until both sides have settled; then it swaps the items.
 router.post('/complete/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), trade_controller_1.TradeControllers.completeTradeOffer);
+// GET /settlement/:id — what each side of the trade still owes
+router.get('/settlement/:id', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), trade_controller_1.TradeControllers.getTradeSettlement);
 exports.TradeRoutes = router;
 exports.default = exports.TradeRoutes;

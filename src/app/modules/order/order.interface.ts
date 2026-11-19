@@ -29,6 +29,12 @@ export type IOrder = {
   }
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
   paymentIntentId?: string
+  /**
+   * The connected account the charge was made on. Absent for platform-side
+   * payments (pre-Connect orders, giveaways). Refunds must be issued on the
+   * same account the charge lives on.
+   */
+  stripeAccountId?: string
   shippingAddress: {
     street: string
     city: string
