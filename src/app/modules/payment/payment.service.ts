@@ -78,7 +78,16 @@ const createCheckoutSession = async (
         'sellerId buyNowPrice estValue title',
       )
 
-      if (product?.sellerId) {
+      // Only route through Connect when the seller can actually be paid.
+      // A seller who has not onboarded yet falls through to the platform
+      // charge below — the old behaviour — so purchases keep working while
+      // existing sellers are migrated.
+      const payableAccount =
+        await MarketplaceCharge.findPayableConnectedAccount(
+          product?.sellerId?.toString(),
+        )
+
+      if (product?.sellerId && payableAccount) {
         const itemSubtotal = Number(
           product.buyNowPrice || product.estValue || 0,
         )

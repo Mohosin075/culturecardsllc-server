@@ -13,6 +13,8 @@ const payment_constants_1 = require("./payment.constants");
 const mongoose_1 = require("mongoose");
 const user_model_1 = require("../user/user.model");
 const stripe_1 = __importDefault(require("../../../config/stripe"));
+const product_model_1 = require("../product/product.model");
+const marketplaceCharge_1 = require("./marketplaceCharge");
 const webhook_service_1 = require("./webhook.service");
 const emailHelper_1 = require("../../../helpers/emailHelper");
 const invoiceHelper_1 = require("../../../helpers/invoiceHelper");
@@ -45,11 +47,72 @@ const getOrCreateStripeCustomer = async (userData) => {
     return customerId;
 };
 const createCheckoutSession = async (user, payload) => {
+    var _a, _b;
     try {
         const userData = await user_model_1.User.findById(user.userId);
         if (!userData) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
         }
+        // ── Marketplace sale → direct charge on the seller's account ──────────
+        //
+        // The seller is resolved from the product, never taken from the request,
+        // and the item price comes from the product record so the marketplace fee
+        // cannot be dialled down by the client.
+        const productId = (_a = payload.metadata) === null || _a === void 0 ? void 0 : _a.productId;
+        if (productId && mongoose_1.Types.ObjectId.isValid(String(productId))) {
+            const product = await product_model_1.Product.findById(productId).select('sellerId buyNowPrice estValue title');
+            // Only route through Connect when the seller can actually be paid.
+            // A seller who has not onboarded yet falls through to the platform
+            // charge below — the old behaviour — so purchases keep working while
+            // existing sellers are migrated.
+            const payableAccount = await marketplaceCharge_1.MarketplaceCharge.findPayableConnectedAccount((_b = product === null || product === void 0 ? void 0 : product.sellerId) === null || _b === void 0 ? void 0 : _b.toString());
+            if ((product === null || product === void 0 ? void 0 : product.sellerId) && payableAccount) {
+                const itemSubtotal = Number(product.buyNowPrice || product.estValue || 0);
+                const totalAmount = Number(payload.amount || 0);
+                if (totalAmount + 0.005 < itemSubtotal) {
+                    throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Payment amount is lower than the item price.');
+                }
+                const charge = await marketplaceCharge_1.MarketplaceCharge.createDirectChargeIntent({
+                    buyerId: user.userId.toString(),
+                    sellerId: product.sellerId.toString(),
+                    totalAmount,
+                    itemSubtotal,
+                    currency: payload.currency || 'usd',
+                    metadata: {
+                        productId: String(productId),
+                        ...(payload.orderId && { orderId: payload.orderId.toString() }),
+                        ...payload.metadata,
+                    },
+                });
+                await payment_model_1.Payment.create({
+                    userId: user.userId,
+                    orderId: payload.orderId,
+                    userEmail: userData.email,
+                    amount: totalAmount,
+                    currency: payload.currency || 'usd',
+                    paymentMethod: 'stripe',
+                    paymentIntentId: charge.paymentIntentId,
+                    status: 'pending',
+                    metadata: {
+                        productId: String(productId),
+                        sellerId: product.sellerId.toString(),
+                        stripeAccountId: charge.stripeAccountId,
+                        platformFeeCents: charge.applicationFeeAmount,
+                        ...payload.metadata,
+                    },
+                });
+                return {
+                    clientSecret: charge.clientSecret,
+                    ephemeralKey: charge.ephemeralKey,
+                    customer: charge.customer,
+                    paymentIntentId: charge.paymentIntentId,
+                    stripeAccountId: charge.stripeAccountId,
+                    platformFee: charge.applicationFeeAmount / 100,
+                };
+            }
+        }
+        // ── Everything else (tips, trade fees, subscriptions) stays on the
+        //    platform account: there is no seller to pay out.
         const customerId = await getOrCreateStripeCustomer(userData);
         const ephemeralKey = await stripe_1.default.ephemeralKeys.create({ customer: customerId }, { apiVersion: '2023-10-16' });
         const paymentIntent = await stripe_1.default.paymentIntents.create({
@@ -403,7 +466,7 @@ const updatePayment = async (id, payload) => {
     return result;
 };
 const refundPayment = async (id, reason) => {
-    var _a;
+    var _a, _b, _c;
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Payment ID');
     }
@@ -425,9 +488,13 @@ const refundPayment = async (id, reason) => {
                 refundPaymentIntentId = checkoutSession.payment_intent;
             }
         }
-        const refund = await stripe_1.default.refunds.create({
-            payment_intent: refundPaymentIntentId,
-            amount: Math.round(payment.amount * 100),
+        // Marketplace charges live on the seller's connected account; the
+        // reversal has to be issued there, against the seller's balance.
+        const refund = await marketplaceCharge_1.MarketplaceCharge.refundMarketplacePayment({
+            paymentIntentId: refundPaymentIntentId,
+            stripeAccountId: ((_b = payment.metadata) === null || _b === void 0 ? void 0 : _b.stripeAccountId) ||
+                (await marketplaceCharge_1.MarketplaceCharge.findSellerAccountId((_c = payment.metadata) === null || _c === void 0 ? void 0 : _c.sellerId)),
+            amount: payment.amount,
             reason: reason ? 'requested_by_customer' : 'duplicate',
         });
         const dbSession = await payment_model_1.Payment.startSession();

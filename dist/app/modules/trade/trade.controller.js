@@ -57,10 +57,26 @@ const declineTradeOffer = (0, catchAsync_1.default)(async (req, res) => {
 const completeTradeOffer = (0, catchAsync_1.default)(async (req, res) => {
     const user = req.user;
     const result = await trade_service_1.TradeServices.completeTradeOffer(req.params.id, user.userId);
+    // Three shapes come back: a payment this user still owes, a note that the
+    // other side has not paid yet, or the completed trade itself.
+    const message = (result === null || result === void 0 ? void 0 : result.clientSecret)
+        ? 'Pay your marketplace fee to complete this trade.'
+        : (result === null || result === void 0 ? void 0 : result.awaitingCounterparty)
+            ? 'Your payment is settled. Waiting for the other trader to pay their fee.'
+            : 'Trade completed successfully. Ownership transferred.';
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,
-        message: 'Trade completed successfully. Ownership transferred.',
+        message,
+        data: result,
+    });
+});
+const getTradeSettlement = (0, catchAsync_1.default)(async (req, res) => {
+    const result = await trade_service_1.TradeServices.getSettlement(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Trade settlement status retrieved successfully.',
         data: result,
     });
 });
@@ -70,4 +86,5 @@ exports.TradeControllers = {
     acceptTradeOffer,
     declineTradeOffer,
     completeTradeOffer,
+    getTradeSettlement,
 };

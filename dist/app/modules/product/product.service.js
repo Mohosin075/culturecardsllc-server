@@ -15,14 +15,15 @@ const payment_model_1 = require("../payment/payment.model");
 const category_model_1 = require("../category/category.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
 const user_1 = require("../../../enum/user");
+const seller_service_1 = require("../seller/seller.service");
 const createProduct = async (payload) => {
     const seller = await user_model_1.User.findById(payload.sellerId);
     if (!seller) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Seller not found');
     }
-    if (!seller.sellerVerified) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your seller account is not verified yet. Please wait for admin approval.');
-    }
+    // Seller activation (client spec, section 5): ARIES approval *and* Stripe
+    // payout eligibility are both required before anything can be listed.
+    await seller_service_1.SellerServices.assertSellerCanSell(seller._id);
     const result = await product_model_1.Product.create(payload);
     return result;
 };

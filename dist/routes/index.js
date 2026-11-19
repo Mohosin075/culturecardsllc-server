@@ -27,6 +27,8 @@ const follow_route_1 = require("../app/modules/follow/follow.route");
 const giveaway_route_1 = require("../app/modules/giveaway/giveaway.route");
 const partner_route_1 = require("../app/modules/partner/partner.route");
 const tip_route_1 = require("../app/modules/tip/tip.route");
+const seller_route_1 = require("../app/modules/seller/seller.route");
+const refund_route_1 = require("../app/modules/refund/refund.route");
 const auction_model_1 = require("../app/modules/auction/auction.model");
 const catchAsync_1 = __importDefault(require("../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../shared/sendResponse"));
@@ -90,6 +92,8 @@ const apiRoutes = [
     { path: '/giveaway', route: giveaway_route_1.GiveawayRoutes },
     { path: '/partner', route: partner_route_1.PartnerRoutes },
     { path: '/tip', route: tip_route_1.TipRoutes },
+    { path: '/seller', route: seller_route_1.SellerRoutes },
+    { path: '/refunds', route: refund_route_1.RefundRoutes },
 ];
 apiRoutes.forEach(route => {
     router.use(route.path, route.route);

@@ -48,6 +48,14 @@ const UserSchema = new mongoose_1.Schema({
     stripeCustomerId: { type: String },
     stripeConnectedAccountId: { type: String },
     isStripeConnected: { type: Boolean, default: false },
+    // Direct charges run on the seller's connected account, where the
+    // platform's Customer objects do not exist. One Customer is created per
+    // connected account this user has bought from: acct_xxx -> cus_xxx.
+    stripeConnectedCustomerIds: {
+        type: Map,
+        of: String,
+        default: undefined,
+    },
     subscriptionStatus: { type: String },
     subscriptionTier: { type: String },
     trialUsed: { type: Boolean, default: false },

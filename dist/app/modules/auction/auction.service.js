@@ -18,6 +18,8 @@ const user_model_1 = require("../user/user.model");
 const server_1 = require("../../../server");
 const order_model_1 = require("../order/order.model");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
+const seller_service_1 = require("../seller/seller.service");
+const marketplaceCharge_1 = require("../payment/marketplaceCharge");
 const chat_model_1 = require("../chat/chat.model");
 const message_model_1 = require("../message/message.model");
 const notification_integration_1 = require("../notification/notification.integration");
@@ -68,9 +70,9 @@ const createLiveStream = async (payload) => {
     if (!seller) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Seller not found');
     }
-    if (!seller.sellerVerified) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your seller account is not verified yet. Please wait for admin approval.');
-    }
+    // Seller activation (client spec, section 5): a seller cannot livestream
+    // until ARIES approved them and Stripe cleared them for payouts.
+    await seller_service_1.SellerServices.assertSellerCanSell(seller._id);
     if (!payload.agoraChannelName) {
         payload.agoraChannelName = `channel_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     }
@@ -451,35 +453,32 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
     }
     let isAutoPaid = false;
     let paymentIntentId;
-    // 1. Try automatic off-session charge if the winner has saved card details on Stripe
-    if (winner.stripeCustomerId) {
+    // 1. Try automatic off-session charge if the winner has saved card details.
+    //
+    // This is a direct charge on the seller's connected account: Stripe's fee
+    // comes out of the seller's proceeds and ARIES's cut is taken as the
+    // application fee, so the money is already split by the time the order
+    // exists. If the seller is not payout-ready the charge is refused, and the
+    // winner falls through to the checkout session below.
+    const auctionSellerId = ((_a = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _a === void 0 ? void 0 : _a.toString()) || '';
+    if (winner.stripeCustomerId && auctionSellerId) {
         try {
-            const paymentMethods = await stripe_1.default.paymentMethods.list({
-                customer: winner.stripeCustomerId,
-                type: 'card',
+            const charge = await marketplaceCharge_1.MarketplaceCharge.chargeSavedCardDirect({
+                buyerId: auctionItem.highestBidderId.toString(),
+                sellerId: auctionSellerId,
+                totalAmount: auctionItem.currentBid,
+                itemSubtotal: auctionItem.currentBid,
+                metadata: {
+                    purchaseType: 'auction_win',
+                    productId: product._id.toString(),
+                    winnerId: auctionItem.highestBidderId.toString(),
+                    auctionItemId: auctionItemId,
+                },
             });
-            if (paymentMethods.data.length > 0) {
-                const paymentMethodId = paymentMethods.data[0].id;
-                const paymentIntent = await stripe_1.default.paymentIntents.create({
-                    amount: Math.round(auctionItem.currentBid * 100),
-                    currency: 'usd',
-                    customer: winner.stripeCustomerId,
-                    payment_method: paymentMethodId,
-                    off_session: true,
-                    confirm: true,
-                    metadata: {
-                        purchaseType: 'auction_win',
-                        productId: product._id.toString(),
-                        sellerId: ((_a = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _a === void 0 ? void 0 : _a.toString()) || '',
-                        winnerId: auctionItem.highestBidderId.toString(),
-                        auctionItemId: auctionItemId,
-                    },
-                });
-                if (paymentIntent.status === 'succeeded') {
-                    isAutoPaid = true;
-                    paymentIntentId = paymentIntent.id;
-                    console.log(`[AUTO-PAY] Instant card charge succeeded for Auction:${auctionItemId}`);
-                }
+            if (charge) {
+                isAutoPaid = true;
+                paymentIntentId = charge.paymentIntentId;
+                console.log(`[AUTO-PAY] Direct charge succeeded for Auction:${auctionItemId} on ${charge.stripeAccountId} (platform fee ${charge.applicationFeeAmount}¢)`);
             }
         }
         catch (autoPayError) {

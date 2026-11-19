@@ -14,8 +14,10 @@ const message_model_1 = require("../message/message.model");
 const mongoose_1 = require("mongoose");
 const pushnotificationHelper_1 = require("../../../helpers/pushnotificationHelper");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
-const stripe_1 = __importDefault(require("../../../config/stripe"));
 const user_model_1 = require("../user/user.model");
+const notification_model_1 = require("../notification/notification.model");
+const notification_interface_1 = require("../notification/notification.interface");
+const marketplaceCharge_1 = require("../payment/marketplaceCharge");
 /** How long a seller has to hand the parcel over before the order auto-cancels. */
 exports.SHIP_WINDOW_BUSINESS_DAYS = 3;
 /** Adds business days (skipping Sat/Sun) to a date. */
@@ -39,24 +41,95 @@ const formatShipByDate = (date) => date
     })
     : 'soon';
 exports.formatShipByDate = formatShipByDate;
-/** Push + socket ping so the seller learns about an order without polling. */
-const notifySellerOfNewOrder = async (order, productTitle) => {
+/** DB notification + socket ping + FCM push so the seller is alerted immediately. */
+const notifySellerOfNewOrder = async (order, productTitle, productImage, chatId) => {
+    var _a;
     const orderId = order._id.toString();
-    const io = global.io;
-    if (io) {
-        io.to(order.sellerId.toString()).emit('new-order', {
-            orderId,
-            productTitle,
-            shipByDate: order.shipByDate,
+    const sellerId = order.sellerId.toString();
+    const buyerId = order.buyerId.toString();
+    const totalPaid = Number(((_a = order.amountDetails) === null || _a === void 0 ? void 0 : _a.totalPaid) || 0);
+    const amountText = totalPaid > 0 ? `$${totalPaid.toFixed(2)}` : '';
+    const shipByText = (0, exports.formatShipByDate)(order.shipByDate);
+    const [seller, buyer] = await Promise.all([
+        user_model_1.User.findById(sellerId).select('deviceToken'),
+        user_model_1.User.findById(buyerId).select('fullName name username'),
+    ]);
+    const buyerName = (buyer === null || buyer === void 0 ? void 0 : buyer.fullName) ||
+        (buyer === null || buyer === void 0 ? void 0 : buyer.name) ||
+        (buyer === null || buyer === void 0 ? void 0 : buyer.username) ||
+        'A buyer';
+    const title = 'New Order Received';
+    const body = amountText
+        ? `${buyerName} purchased ${productTitle} for ${amountText} — ship by ${shipByText}.`
+        : `${buyerName} purchased ${productTitle} — ship by ${shipByText}.`;
+    // 1. Persist in-app notification in MongoDB so it appears in Notifications & Messages -> Updates
+    let savedNotification = null;
+    try {
+        savedNotification = await notification_model_1.Notification.create({
+            userId: order.sellerId,
+            title,
+            content: body,
+            type: notification_interface_1.NotificationType.NEW_ORDER,
+            channel: notification_interface_1.NotificationChannel.BOTH,
+            status: notification_interface_1.NotificationStatus.SENT,
+            priority: notification_interface_1.NotificationPriority.HIGH,
+            sentAt: new Date(),
+            isRead: false,
+            metadata: {
+                orderId,
+                productTitle,
+                image: productImage || '',
+                amount: totalPaid,
+                buyerId,
+                buyerName,
+                chatId: chatId || '',
+                shipByDate: order.shipByDate,
+            },
         });
     }
-    const seller = await user_model_1.User.findById(order.sellerId).select('deviceToken');
+    catch (err) {
+        console.error('Failed to persist NEW_ORDER notification:', err);
+    }
+    // 2. Real-time Socket.IO events to the seller's room
+    const io = global.io;
+    if (io) {
+        io.to(sellerId).emit('new-order', {
+            orderId,
+            productTitle,
+            productImage: productImage || '',
+            totalPaid,
+            buyerName,
+            shipByDate: order.shipByDate,
+            title,
+            message: body,
+            chatId: chatId || '',
+        });
+        io.to(sellerId).emit('notification', savedNotification || {
+            type: notification_interface_1.NotificationType.NEW_ORDER,
+            title,
+            content: body,
+            orderId,
+        });
+        io.to(sellerId).emit(`updateChatList::${sellerId}`, {
+            chatId: chatId || '',
+            orderId,
+            type: 'NEW_ORDER',
+        });
+    }
+    // 3. Push notification (FCM / APNs)
     if (!(seller === null || seller === void 0 ? void 0 : seller.deviceToken))
         return;
-    await (0, pushnotificationHelper_1.sendPushNotification)(seller.deviceToken, 'New Order Received 📦', `${productTitle} — ship by ${(0, exports.formatShipByDate)(order.shipByDate)}.`, { type: 'NEW_ORDER', orderId });
+    await (0, pushnotificationHelper_1.sendPushNotification)(seller.deviceToken, title, body, {
+        type: 'NEW_ORDER',
+        orderId,
+        productTitle,
+        amount: String(totalPaid),
+        buyerName,
+        chatId: chatId || '',
+    });
 };
 const createOrder = async (payload) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     const product = await product_model_1.Product.findById(payload.productId);
     if (!product) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Product not found');
@@ -109,14 +182,16 @@ const createOrder = async (payload) => {
         if (alreadyUsed) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'This payment has already been used for another order.');
         }
-        let intent;
-        try {
-            intent = await stripe_1.default.paymentIntents.retrieve(payload.paymentIntentId);
-        }
-        catch (_j) {
+        // A marketplace charge lives on the seller's connected account, not the
+        // platform, so the intent has to be looked up on both.
+        const located = await marketplaceCharge_1.MarketplaceCharge.retrievePaymentIntentAnywhere(payload.paymentIntentId, (_g = payload.sellerId) === null || _g === void 0 ? void 0 : _g.toString());
+        if (!located) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid payment reference.');
         }
-        const claimedTotal = Number(((_g = payload.amountDetails) === null || _g === void 0 ? void 0 : _g.totalPaid) || 0);
+        const intent = located.intent;
+        // Remembered so the refund path knows where to send the reversal.
+        payload.stripeAccountId = located.stripeAccountId || undefined;
+        const claimedTotal = Number(((_h = payload.amountDetails) === null || _h === void 0 ? void 0 : _h.totalPaid) || 0);
         if (intent.status === 'succeeded' && intent.amount_received >= Math.round(claimedTotal * 100)) {
             payload.paymentStatus = 'paid';
             if (payload.amountDetails) {
@@ -135,7 +210,7 @@ const createOrder = async (payload) => {
     if (!payload.trackingDetails) {
         payload.trackingDetails = { journeyUpdates: [] };
     }
-    if (!((_h = payload.trackingDetails.journeyUpdates) === null || _h === void 0 ? void 0 : _h.length)) {
+    if (!((_j = payload.trackingDetails.journeyUpdates) === null || _j === void 0 ? void 0 : _j.length)) {
         payload.trackingDetails.journeyUpdates = [
             {
                 status: 'Order Placed',
@@ -192,7 +267,10 @@ const createOrder = async (payload) => {
         await session.commitTransaction();
         // Tell the seller there is something to pack. Non-blocking: the order is
         // already committed and must not fail over a notification.
-        notifySellerOfNewOrder(order, product.title).catch(err => console.error('Failed to notify seller of new order:', err));
+        const productImage = Array.isArray(product.images) && product.images.length > 0
+            ? String(product.images[0])
+            : '';
+        notifySellerOfNewOrder(order, product.title, productImage, (_k = chat === null || chat === void 0 ? void 0 : chat._id) === null || _k === void 0 ? void 0 : _k.toString()).catch(err => console.error('Failed to notify seller of new order:', err));
         return order;
     }
     catch (error) {
@@ -231,7 +309,7 @@ const getOrderById = async (id) => {
     return order;
 };
 const updateOrderJourney = async (orderId, journeyUpdate, deliveryStatus, requester) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     if (!mongoose_1.Types.ObjectId.isValid(orderId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Order ID');
     }
@@ -256,14 +334,18 @@ const updateOrderJourney = async (orderId, journeyUpdate, deliveryStatus, reques
     if (deliveryStatus === 'cancelled' && order.deliveryStatus !== 'cancelled') {
         if (order.paymentStatus === 'paid' && order.paymentIntentId) {
             try {
-                await stripe_1.default.refunds.create({ payment_intent: order.paymentIntentId });
+                await marketplaceCharge_1.MarketplaceCharge.refundMarketplacePayment({
+                    paymentIntentId: order.paymentIntentId,
+                    stripeAccountId: order.stripeAccountId ||
+                        (await marketplaceCharge_1.MarketplaceCharge.findSellerAccountId((_c = order.sellerId) === null || _c === void 0 ? void 0 : _c.toString())),
+                });
                 order.paymentStatus = 'refunded';
             }
             catch (error) {
                 throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_GATEWAY, `Could not refund this order: ${error === null || error === void 0 ? void 0 : error.message}. It was left unchanged.`);
             }
         }
-        const productRef = (_d = (_c = order.productId) === null || _c === void 0 ? void 0 : _c._id) !== null && _d !== void 0 ? _d : order.productId;
+        const productRef = (_e = (_d = order.productId) === null || _d === void 0 ? void 0 : _d._id) !== null && _e !== void 0 ? _e : order.productId;
         if (productRef) {
             await product_model_1.Product.updateOne({ _id: productRef }, { $inc: { stock: 1 }, $set: { status: 'active' } });
         }
