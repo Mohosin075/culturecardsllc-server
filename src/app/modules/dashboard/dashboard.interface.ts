@@ -65,16 +65,42 @@ export type IUserManagementItem = {
   status: 'Active' | 'Suspended'
 }
 
+/** The Stripe Connect state an admin needs to judge a seller application. */
+export type ISellerVerificationStripeState = {
+  connected: boolean
+  accountId?: string
+  detailsSubmitted: boolean
+  chargesEnabled: boolean
+  payoutsEnabled: boolean
+  disabledReason?: string
+  outstandingRequirements: string[]
+  lastSyncedAt?: Date
+}
+
 export type ISellerVerificationRequest = {
+  /** The applicant's user id — approve/reject are keyed on this. */
   id?: string
+  applicationId?: string
   name: string
   email: string
+  profile?: string
   requestId: string
-  category: 'Sneakers' | 'Cards' | 'Watches' | 'Fine Art' | 'Streetwear' | 'TCG'
+  /** Free text from the application: what the seller intends to sell. */
+  whatTheySell?: string
+  businessName?: string
+  category: string
   submitted: string
-  submittedDocuments: string[]
-  documents?: string[]
-  status: 'Pending' | 'Approved' | 'Rejected'
+  policyAcceptance?: {
+    sellerPolicy: boolean
+    termsAndConditions: boolean
+    marketplaceRules: boolean
+    acceptedAt?: Date
+  }
+  stripe?: ISellerVerificationStripeState
+  payoutEligible?: boolean
+  rejectionReason?: string
+  reviewedAt?: Date
+  status: 'stripe_pending' | 'pending_approval' | 'approved' | 'rejected'
 }
 
 export type IListingManagementItem = {

@@ -13,6 +13,7 @@ import { User } from '../user/user.model'
 import { io } from '../../../server'
 import { Order } from '../order/order.model'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
+import { SellerServices } from '../seller/seller.service'
 import { Chat } from '../chat/chat.model'
 import { Message } from '../message/message.model'
 import { NotificationIntegration } from '../notification/notification.integration'
@@ -102,12 +103,9 @@ const createLiveStream = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Seller not found')
   }
 
-  if (!seller.sellerVerified) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Your seller account is not verified yet. Please wait for admin approval.',
-    )
-  }
+  // Seller activation (client spec, section 5): a seller cannot livestream
+  // until ARIES approved them and Stripe cleared them for payouts.
+  await SellerServices.assertSellerCanSell(seller._id)
 
   if (!payload.agoraChannelName) {
     payload.agoraChannelName = `channel_${Date.now()}_${Math.floor(Math.random() * 1000)}`

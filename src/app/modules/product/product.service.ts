@@ -12,6 +12,7 @@ import { Category } from '../category/category.model'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { paginationHelper } from '../../../helpers/paginationHelper'
 import { USER_ROLES } from '../../../enum/user'
+import { SellerServices } from '../seller/seller.service'
 
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   const seller = await User.findById(payload.sellerId)
@@ -19,12 +20,9 @@ const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Seller not found')
   }
 
-  if (!seller.sellerVerified) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Your seller account is not verified yet. Please wait for admin approval.',
-    )
-  }
+  // Seller activation (client spec, section 5): ARIES approval *and* Stripe
+  // payout eligibility are both required before anything can be listed.
+  await SellerServices.assertSellerCanSell(seller._id)
 
   const result = await Product.create(payload)
   return result

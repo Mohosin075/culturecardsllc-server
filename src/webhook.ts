@@ -3,6 +3,7 @@ import config from './config'
 import stripe from './config/stripe'
 import { WebhookService } from './app/modules/payment/webhook.service'
 import { webhookService as subscriptionWebhookService } from './app/modules/subscription/webhook.service'
+import { SellerServices } from './app/modules/seller/seller.service'
 
 const webhookApp = express()
 
@@ -38,6 +39,20 @@ webhookApp.post(
         console.error('❌ Webhook Construction Error:', err.message)
         res.status(400).json({ error: `Webhook Error: ${err.message}` })
         return
+      }
+
+      // Connect account lifecycle — keeps each seller's verification and
+      // payout eligibility in step with Stripe without the app having to poll.
+      if (
+        event.type === 'account.updated' ||
+        event.type === 'account.application.deauthorized'
+      ) {
+        const account = event.data.object as { id?: string }
+        if (account?.id) {
+          await SellerServices.syncByAccountId(account.id).catch(err =>
+            console.error('[SellerConnect] account.updated sync failed:', err),
+          )
+        }
       }
 
       await Promise.allSettled([
