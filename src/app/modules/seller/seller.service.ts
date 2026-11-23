@@ -172,6 +172,21 @@ const applyAsSeller = async (
     )
   }
 
+  // Talk to Stripe before touching the database. If Stripe refuses (outage,
+  // platform not set up for Connect, a bad field) nothing is saved, so the
+  // admin queue never shows an application with no Stripe account behind it.
+  // On a re-apply the existing connected account is reused.
+  let stripeState = application?.stripe
+  if (!stripeState?.accountId) {
+    const account = await StripeConnectService.createConnectedAccount({
+      userId: user.userId.toString(),
+      email: userData.email,
+      businessName: payload.businessName,
+      whatTheySell: payload.whatTheySell,
+    })
+    stripeState = StripeConnectService.mapAccountToState(account)
+  }
+
   const acceptance = {
     sellerPolicy: true,
     termsAndConditions: true,
@@ -188,7 +203,7 @@ const applyAsSeller = async (
       businessName: payload.businessName,
       policyAcceptance: acceptance,
       status: 'stripe_pending',
-      stripe: { ...EMPTY_STRIPE_STATE },
+      stripe: stripeState,
       submittedAt: new Date(),
     })
   } else {
@@ -199,6 +214,7 @@ const applyAsSeller = async (
     )
     application.businessName = payload.businessName
     application.policyAcceptance = acceptance
+    application.stripe = stripeState
     application.submittedAt = new Date()
     if (application.status === 'rejected') {
       application.status = 'stripe_pending'
@@ -209,18 +225,8 @@ const applyAsSeller = async (
     await application.save()
   }
 
-  // Create the connected account on first apply, reuse it afterwards.
-  if (!application.stripe?.accountId) {
-    const account = await StripeConnectService.createConnectedAccount({
-      userId: user.userId.toString(),
-      email: userData.email,
-      businessName: payload.businessName,
-      whatTheySell: payload.whatTheySell,
-    })
-    application.stripe = StripeConnectService.mapAccountToState(account)
-    await application.save()
-
-    userData.stripeConnectedAccountId = account.id
+  if (userData.stripeConnectedAccountId !== stripeState.accountId) {
+    userData.stripeConnectedAccountId = stripeState.accountId
     await userData.save()
   }
 

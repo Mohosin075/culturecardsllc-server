@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import stripe from '../../../config/stripe'
 import config from '../../../config'
 import ApiError from '../../../errors/ApiError'
+import { errorLogger } from '../../../shared/logger'
 import { ISellerStripeState } from './seller.interface'
 
 /**
@@ -23,6 +24,63 @@ const requireStripe = (): void => {
       StatusCodes.SERVICE_UNAVAILABLE,
       'Stripe is not configured on this server.',
     )
+  }
+}
+
+const ONBOARDING_UNAVAILABLE =
+  'Seller onboarding is temporarily unavailable. Please try again later.'
+
+/**
+ * Run a Stripe call and turn any Stripe failure into an ApiError a seller can
+ * read. Stripe's own message often describes *our* platform setup (for example
+ * "You can only create new accounts if you've signed up for Connect"), which
+ * means nothing to a seller, so the raw details go to the log only.
+ */
+const callStripe = async <T>(
+  action: string,
+  request: () => Promise<T>,
+): Promise<T> => {
+  try {
+    return await request()
+  } catch (error) {
+    if (!(error instanceof Stripe.errors.StripeError)) throw error
+
+    errorLogger.error(
+      `[SellerConnect] Stripe ${action} failed: ${error.type} ` +
+        `code=${error.code ?? '-'} param=${error.param ?? '-'} ` +
+        `requestId=${error.requestId ?? '-'} message=${error.message}`,
+    )
+
+    switch (error.type) {
+      // Stripe could not be reached or is struggling: worth a retry.
+      case 'StripeRateLimitError':
+      case 'StripeConnectionError':
+      case 'StripeAPIError':
+        throw new ApiError(
+          StatusCodes.SERVICE_UNAVAILABLE,
+          'Stripe is not responding right now. Please try again in a minute.',
+        )
+
+      // A specific field was rejected (e.g. a malformed email). Stripe words
+      // these for end users, so the seller can act on it.
+      case 'StripeInvalidRequestError':
+        if (error.param) {
+          throw new ApiError(StatusCodes.BAD_REQUEST, error.message)
+        }
+        // No field means the request itself is wrong for this platform —
+        // Connect not enabled, wrong country, etc. Not the seller's fault.
+        throw new ApiError(
+          StatusCodes.SERVICE_UNAVAILABLE,
+          ONBOARDING_UNAVAILABLE,
+        )
+
+      // Bad key, missing permission, and anything else: platform setup.
+      default:
+        throw new ApiError(
+          StatusCodes.SERVICE_UNAVAILABLE,
+          ONBOARDING_UNAVAILABLE,
+        )
+    }
   }
 }
 
@@ -51,32 +109,36 @@ export const createConnectedAccount = async (params: {
 }): Promise<Stripe.Account> => {
   requireStripe()
 
-  return stripe.accounts.create({
-    type: 'express',
-    country: config.seller.connectCountry,
-    email: params.email,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-    business_profile: {
-      // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
-      mcc: config.seller.connectMcc,
-      name: params.businessName || undefined,
-      product_description: params.whatTheySell || undefined,
-    },
-    metadata: {
-      areisUserId: params.userId,
-      platform: 'ARIES',
-    },
-  })
+  return callStripe('account create', () =>
+    stripe.accounts.create({
+      type: 'express',
+      country: config.seller.connectCountry,
+      email: params.email,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+      business_profile: {
+        // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
+        mcc: config.seller.connectMcc,
+        name: params.businessName || undefined,
+        product_description: params.whatTheySell || undefined,
+      },
+      metadata: {
+        areisUserId: params.userId,
+        platform: 'ARIES',
+      },
+    }),
+  )
 }
 
 export const retrieveAccount = async (
   accountId: string,
 ): Promise<Stripe.Account> => {
   requireStripe()
-  return stripe.accounts.retrieve(accountId)
+  return callStripe('account retrieve', () =>
+    stripe.accounts.retrieve(accountId),
+  )
 }
 
 /**
@@ -88,17 +150,19 @@ export const createOnboardingLink = async (
 ): Promise<string> => {
   requireStripe()
 
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: config.seller.stripeRefreshUrl,
-    return_url: config.seller.stripeReturnUrl,
-    type: 'account_onboarding',
-    collection_options: {
-      // Collect everything Stripe will eventually need, so the seller is not
-      // interrupted again the first time they hit a payout threshold.
-      fields: 'eventually_due',
-    },
-  })
+  const accountLink = await callStripe('onboarding link', () =>
+    stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: config.seller.stripeRefreshUrl,
+      return_url: config.seller.stripeReturnUrl,
+      type: 'account_onboarding',
+      collection_options: {
+        // Collect everything Stripe will eventually need, so the seller is not
+        // interrupted again the first time they hit a payout threshold.
+        fields: 'eventually_due',
+      },
+    }),
+  )
 
   return accountLink.url
 }
@@ -109,7 +173,9 @@ export const createOnboardingLink = async (
  */
 export const createLoginLink = async (accountId: string): Promise<string> => {
   requireStripe()
-  const loginLink = await stripe.accounts.createLoginLink(accountId)
+  const loginLink = await callStripe('dashboard link', () =>
+    stripe.accounts.createLoginLink(accountId),
+  )
   return loginLink.url
 }
 
@@ -132,10 +198,12 @@ export const getAccountEarnings = async (
 }> => {
   requireStripe()
 
-  const [balance, payouts] = await Promise.all([
-    stripe.balance.retrieve({ stripeAccount: accountId }),
-    stripe.payouts.list({ limit: 10 }, { stripeAccount: accountId }),
-  ])
+  const [balance, payouts] = await callStripe('earnings', () =>
+    Promise.all([
+      stripe.balance.retrieve({ stripeAccount: accountId }),
+      stripe.payouts.list({ limit: 10 }, { stripeAccount: accountId }),
+    ]),
+  )
 
   const sum = (entries: { amount: number }[]): number =>
     entries.reduce((total, entry) => total + entry.amount, 0) / 100
