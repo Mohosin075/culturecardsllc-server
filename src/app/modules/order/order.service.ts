@@ -407,11 +407,11 @@ const updateOrderJourney = async (
       try {
         await MarketplaceCharge.refundMarketplacePayment({
           paymentIntentId: order.paymentIntentId,
-          stripeAccountId:
-            order.stripeAccountId ||
-            (await MarketplaceCharge.findSellerAccountId(
-              order.sellerId?.toString(),
-            )),
+          stripeAccountId: await MarketplaceCharge.findChargeAccount({
+            paymentIntentId: order.paymentIntentId,
+            recordedAccountId: order.stripeAccountId,
+            sellerId: order.sellerId?.toString(),
+          }),
         })
         order.paymentStatus = 'refunded'
       } catch (error: any) {

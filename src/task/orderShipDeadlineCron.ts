@@ -5,7 +5,7 @@ import { Chat } from '../app/modules/chat/chat.model'
 import { Message } from '../app/modules/message/message.model'
 import { User } from '../app/modules/user/user.model'
 import { sendPushNotification } from '../helpers/pushnotificationHelper'
-import stripe from '../config/stripe'
+import { MarketplaceCharge } from '../app/modules/payment/marketplaceCharge'
 
 /**
  * Order Ship-Deadline Cron Job
@@ -57,7 +57,22 @@ const cancelAndRefund = async (order: any): Promise<void> => {
   let refunded = false
   if (order.paymentIntentId) {
     try {
-      await stripe.refunds.create({ payment_intent: order.paymentIntentId })
+      // Marketplace sales are direct charges on the seller's connected
+      // account, so a platform-level refund cannot see them. Refund on
+      // whichever account the charge actually lives on.
+      const stripeAccountId = await MarketplaceCharge.findChargeAccount({
+        paymentIntentId: order.paymentIntentId,
+        recordedAccountId: order.stripeAccountId,
+        sellerId: order.sellerId?.toString(),
+      })
+
+      // Full refund out of the seller's balance; ARIES's fee goes back too,
+      // since the sale never happened.
+      await MarketplaceCharge.refundMarketplacePayment({
+        paymentIntentId: order.paymentIntentId,
+        stripeAccountId,
+        reason: 'requested_by_customer',
+      })
       refunded = true
     } catch (error: any) {
       console.error(

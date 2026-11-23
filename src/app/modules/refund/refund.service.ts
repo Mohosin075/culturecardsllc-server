@@ -198,13 +198,15 @@ const approveRefundRequest = async (
     )
   }
 
-  const stripeAccountId =
-    order.stripeAccountId ||
-    (await MarketplaceCharge.findSellerAccountId(order.sellerId?.toString()))
-
   const isFullRefund = amount >= orderTotal - 0.005
 
+  let stripeAccountId: string | null = null
   try {
+    stripeAccountId = await MarketplaceCharge.findChargeAccount({
+      paymentIntentId: order.paymentIntentId,
+      recordedAccountId: order.stripeAccountId,
+      sellerId: order.sellerId?.toString(),
+    })
     const refund = await MarketplaceCharge.refundMarketplacePayment({
       paymentIntentId: order.paymentIntentId,
       stripeAccountId,

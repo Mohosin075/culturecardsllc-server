@@ -418,6 +418,35 @@ export const retrievePaymentIntentAnywhere = async (
 }
 
 /**
+ * The account a charge actually lives on, for refunding it.
+ *
+ * Use the account recorded when the charge was made. Without one (orders from
+ * before Connect), do NOT assume the seller's current account: a charge taken
+ * on the platform before the seller onboarded is still on the platform. Ask
+ * Stripe instead — seller account first, then the platform.
+ *
+ * Returns null for a platform charge; throws if Stripe has no such intent.
+ */
+export const findChargeAccount = async (params: {
+  paymentIntentId: string
+  recordedAccountId?: string | null
+  sellerId?: string
+}): Promise<string | null> => {
+  if (params.recordedAccountId) return params.recordedAccountId
+
+  const located = await retrievePaymentIntentAnywhere(
+    params.paymentIntentId,
+    params.sellerId,
+  )
+  if (!located) {
+    throw new Error(
+      `PaymentIntent ${params.paymentIntentId} was not found on the seller's account or the platform`,
+    )
+  }
+  return located.stripeAccountId
+}
+
+/**
  * Refund a marketplace payment on whichever account it was charged on.
  *
  * On a connected-account charge the money comes out of the seller's balance,
@@ -454,6 +483,7 @@ export const MarketplaceCharge = {
   findSellerAccountId,
   findPayableConnectedAccount,
   retrievePaymentIntentAnywhere,
+  findChargeAccount,
   refundMarketplacePayment,
   getFeeSettings,
   calculateSaleFee,

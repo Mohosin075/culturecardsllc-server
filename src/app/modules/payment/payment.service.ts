@@ -641,11 +641,13 @@ const refundPayment = async (
     // reversal has to be issued there, against the seller's balance.
     const refund = await MarketplaceCharge.refundMarketplacePayment({
       paymentIntentId: refundPaymentIntentId,
-      stripeAccountId:
-        (payment.metadata?.stripeAccountId as string | undefined) ||
-        (await MarketplaceCharge.findSellerAccountId(
-          payment.metadata?.sellerId as string | undefined,
-        )),
+      stripeAccountId: await MarketplaceCharge.findChargeAccount({
+        paymentIntentId: refundPaymentIntentId,
+        recordedAccountId: payment.metadata?.stripeAccountId as
+          | string
+          | undefined,
+        sellerId: payment.metadata?.sellerId as string | undefined,
+      }),
       amount: payment.amount,
       reason: reason ? 'requested_by_customer' : 'duplicate',
     })
