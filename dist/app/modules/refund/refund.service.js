@@ -142,10 +142,14 @@ const approveRefundRequest = async (requestId, adminId, options = {}) => {
     if (amount <= 0 || amount > orderTotal + 0.005) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `Refund amount must be between $0 and the order total of $${orderTotal.toFixed(2)}.`);
     }
-    const stripeAccountId = order.stripeAccountId ||
-        (await marketplaceCharge_1.MarketplaceCharge.findSellerAccountId((_c = order.sellerId) === null || _c === void 0 ? void 0 : _c.toString()));
     const isFullRefund = amount >= orderTotal - 0.005;
+    let stripeAccountId = null;
     try {
+        stripeAccountId = await marketplaceCharge_1.MarketplaceCharge.findChargeAccount({
+            paymentIntentId: order.paymentIntentId,
+            recordedAccountId: order.stripeAccountId,
+            sellerId: (_c = order.sellerId) === null || _c === void 0 ? void 0 : _c.toString(),
+        });
         const refund = await marketplaceCharge_1.MarketplaceCharge.refundMarketplacePayment({
             paymentIntentId: order.paymentIntentId,
             stripeAccountId,

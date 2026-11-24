@@ -29,6 +29,7 @@ const partner_route_1 = require("../app/modules/partner/partner.route");
 const tip_route_1 = require("../app/modules/tip/tip.route");
 const seller_route_1 = require("../app/modules/seller/seller.route");
 const refund_route_1 = require("../app/modules/refund/refund.route");
+const shipping_route_1 = require("../app/modules/shipping/shipping.route");
 const auction_model_1 = require("../app/modules/auction/auction.model");
 const catchAsync_1 = __importDefault(require("../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../shared/sendResponse"));
@@ -94,6 +95,7 @@ const apiRoutes = [
     { path: '/tip', route: tip_route_1.TipRoutes },
     { path: '/seller', route: seller_route_1.SellerRoutes },
     { path: '/refunds', route: refund_route_1.RefundRoutes },
+    { path: '/shipping', route: shipping_route_1.ShippingRoutes },
 ];
 apiRoutes.forEach(route => {
     router.use(route.path, route.route);

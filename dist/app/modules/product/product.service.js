@@ -16,14 +16,38 @@ const category_model_1 = require("../category/category.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
 const user_1 = require("../../../enum/user");
 const seller_service_1 = require("../seller/seller.service");
+/** A trade-only listing that is not a giveaway — no money changes hands. */
+const isTradeOnlyListing = (p) => p.isTradeOnly === true && p.isGiveaway !== true;
+const SALE_FIELDS = [
+    'buyNowPrice',
+    'startingBid',
+    'reservePrice',
+    'allowOffers',
+    'minOfferAmount',
+];
+const stripSaleFields = (p) => {
+    for (const field of SALE_FIELDS)
+        delete p[field];
+    p.allowTrade = true;
+};
 const createProduct = async (payload) => {
     const seller = await user_model_1.User.findById(payload.sellerId);
     if (!seller) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Seller not found');
     }
-    // Seller activation (client spec, section 5): ARIES approval *and* Stripe
-    // payout eligibility are both required before anything can be listed.
-    await seller_service_1.SellerServices.assertSellerCanSell(seller._id);
+    if (isTradeOnlyListing(payload)) {
+        // Client spec, section 6: anyone can list an item for trade without
+        // seller approval. A trade-only item is never for sale, so any price
+        // fields are dropped — otherwise it could be bought outright by someone
+        // who was never approved to take money.
+        stripSaleFields(payload);
+    }
+    else {
+        // Seller activation (client spec, section 5): ARIES approval *and*
+        // Stripe payout eligibility are both required before anything is listed
+        // for sale.
+        await seller_service_1.SellerServices.assertSellerCanSell(seller._id);
+    }
     const result = await product_model_1.Product.create(payload);
     return result;
 };
@@ -156,6 +180,7 @@ const getProductById = async (id) => {
     return result;
 };
 const updateProduct = async (id, payload, userId, userRole) => {
+    var _a, _b;
     if (!mongoose_1.Types.ObjectId.isValid(id)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Product ID');
     }
@@ -179,6 +204,19 @@ const updateProduct = async (id, payload, userId, userRole) => {
             if (locked || !['active', 'unsold'].includes(p.status)) {
                 delete p.status;
             }
+        }
+        // Trade-only listings skip seller approval, so they must stay unsellable:
+        // a trade item keeps no price, and turning one into a sale needs the
+        // same approval as listing a sale item in the first place.
+        const after = {
+            isTradeOnly: (_a = p.isTradeOnly) !== null && _a !== void 0 ? _a : product.isTradeOnly,
+            isGiveaway: (_b = p.isGiveaway) !== null && _b !== void 0 ? _b : product.isGiveaway,
+        };
+        if (isTradeOnlyListing(after)) {
+            stripSaleFields(p);
+        }
+        else if (product.isTradeOnly) {
+            await seller_service_1.SellerServices.assertSellerCanSell(product.sellerId.toString());
         }
     }
     const result = await product_model_1.Product.findByIdAndUpdate(id, payload, {

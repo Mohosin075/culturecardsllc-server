@@ -84,7 +84,7 @@ const OrderSchema = new mongoose_1.Schema({
     },
     trackingDetails: {
         carrier: { type: String },
-        trackingNumber: { type: String },
+        trackingNumber: { type: String, index: true },
         estimatedDelivery: { type: Date },
         journeyUpdates: [
             {
@@ -101,6 +101,26 @@ const OrderSchema = new mongoose_1.Schema({
     },
     shippingLabelUrl: {
         type: String,
+    },
+    shippingService: {
+        type: String,
+    },
+    bundledWithOrderId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Order',
+        index: true,
+    },
+    shipment: {
+        provider: { type: String, enum: ['mock', 'easypost'] },
+        shipmentId: { type: String },
+        rateId: { type: String },
+        carrier: { type: String },
+        service: { type: String },
+        labelCost: { type: Number },
+        trackerId: { type: String },
+        trackingStatus: { type: String },
+        purchasedAt: { type: Date },
+        refundedAt: { type: Date },
     },
     spinWheelPrize: {
         type: String,

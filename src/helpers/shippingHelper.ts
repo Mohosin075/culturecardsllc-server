@@ -86,29 +86,23 @@ export const calculateShippingRate = (weight: number): number => {
   return Number((baseRate + (itemWeight * ratePerLb)).toFixed(2))
 }
 
-import fs from 'fs'
-import path from 'path'
-
 /**
- * Initializes shipping weight, rates, tracking, and generates PDF label on disk.
+ * Sets up the shipping side of a new order: weight and, when the order
+ * carries none, a fallback shipping figure.
+ *
+ * It no longer invents a tracking number or draws a label. The seller buys a
+ * real label from the order screen (ShippingServices.buyLabelForOrder), and
+ * the tracking number comes from the carrier with it.
  */
 export const initializeOrderShipping = async (orderData: any, product: any): Promise<void> => {
-  // Set weight
   orderData.shippingWeight = product.shippingWeight || 1
 
-  // Set tracking info if missing
   if (!orderData.trackingDetails) {
     orderData.trackingDetails = { journeyUpdates: [] }
   }
   if (!orderData.trackingDetails.carrier) {
     orderData.trackingDetails.carrier = 'USPS'
   }
-  if (!orderData.trackingDetails.trackingNumber) {
-    orderData.trackingDetails.trackingNumber = `USPS-CC-${Math.floor(1000000000 + Math.random() * 9000000000)}`
-  }
-
-  // Set label URL
-  orderData.shippingLabelUrl = `/uploads/labels/label-${orderData.trackingDetails.trackingNumber}.pdf`
 
   // Fill in the shipping rate only when the order carries no figure of its
   // own. The buyer has already been charged by this point, so overwriting
@@ -131,31 +125,6 @@ export const initializeOrderShipping = async (orderData: any, product: any): Pro
         ).toFixed(2),
       )
     }
-  }
-
-  // Generate label PDF file
-  try {
-    const toAddressStr = orderData.shippingAddress
-      ? `${orderData.shippingAddress.street}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.state} ${orderData.shippingAddress.postalCode}`
-      : 'Address Pending'
-
-    const labelBuffer = await generateMockShippingLabel({
-      carrier: orderData.trackingDetails.carrier,
-      trackingNumber: orderData.trackingDetails.trackingNumber,
-      fromName: 'CultureCards LLC (Shipping Hub)',
-      fromAddress: '215 W Washington St, Apt A, Mansfield, MO 65704',
-      toName: 'Valued Customer',
-      toAddress: toAddressStr,
-      weight: orderData.shippingWeight
-    })
-
-    const labelsDir = path.join(process.cwd(), 'uploads', 'labels')
-    if (!fs.existsSync(labelsDir)) {
-      fs.mkdirSync(labelsDir, { recursive: true })
-    }
-    fs.writeFileSync(path.join(labelsDir, `label-${orderData.trackingDetails.trackingNumber}.pdf`), labelBuffer)
-  } catch (error) {
-    console.error('Failed to generate shipping label PDF:', error)
   }
 }
 

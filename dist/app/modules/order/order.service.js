@@ -137,6 +137,12 @@ const createOrder = async (payload) => {
     if (product.stock <= 0 || product.status === 'sold') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Product is out of stock.');
     }
+    // Trade-only listings can be posted without seller approval, so they must
+    // never be bought for cash.
+    if (product.isTradeOnly &&
+        (payload.purchaseType || 'buy_now') !== 'trade_swap') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This item is listed for trade only and cannot be bought.');
+    }
     payload.purchaseType = payload.purchaseType || 'buy_now';
     if (!payload.amountDetails) {
         payload.amountDetails = {
@@ -336,8 +342,11 @@ const updateOrderJourney = async (orderId, journeyUpdate, deliveryStatus, reques
             try {
                 await marketplaceCharge_1.MarketplaceCharge.refundMarketplacePayment({
                     paymentIntentId: order.paymentIntentId,
-                    stripeAccountId: order.stripeAccountId ||
-                        (await marketplaceCharge_1.MarketplaceCharge.findSellerAccountId((_c = order.sellerId) === null || _c === void 0 ? void 0 : _c.toString())),
+                    stripeAccountId: await marketplaceCharge_1.MarketplaceCharge.findChargeAccount({
+                        paymentIntentId: order.paymentIntentId,
+                        recordedAccountId: order.stripeAccountId,
+                        sellerId: (_c = order.sellerId) === null || _c === void 0 ? void 0 : _c.toString(),
+                    }),
                 });
                 order.paymentStatus = 'refunded';
             }

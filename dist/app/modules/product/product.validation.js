@@ -2,6 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductValidations = void 0;
 const zod_1 = require("zod");
+const shipping_constants_1 = require("../shipping/shipping.constants");
+/** Inches. Required when packageType is "custom". */
+const packageDimensionsSchema = zod_1.z.object({
+    lengthIn: zod_1.z.number().positive().max(108),
+    widthIn: zod_1.z.number().positive().max(108),
+    heightIn: zod_1.z.number().positive().max(108),
+});
 const createProductSchema = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z
@@ -37,6 +44,8 @@ const createProductSchema = zod_1.z.object({
         minValue: zod_1.z.number().nonnegative().optional(),
         maxValue: zod_1.z.number().nonnegative().optional(),
         shippingWeight: zod_1.z.number().nonnegative().optional(),
+        packageType: zod_1.z.enum(shipping_constants_1.PACKAGE_TYPES).optional(),
+        packageDimensions: packageDimensionsSchema.optional(),
         allowOffers: zod_1.z.boolean().optional(),
         minOfferAmount: zod_1.z.number().nonnegative().optional(),
         // Ignored: the server always uses the authenticated user as seller
@@ -68,6 +77,8 @@ const updateProductSchema = zod_1.z.object({
         minValue: zod_1.z.number().nonnegative().optional(),
         maxValue: zod_1.z.number().nonnegative().optional(),
         shippingWeight: zod_1.z.number().nonnegative().optional(),
+        packageType: zod_1.z.enum(shipping_constants_1.PACKAGE_TYPES).optional(),
+        packageDimensions: packageDimensionsSchema.optional(),
         allowOffers: zod_1.z.boolean().optional(),
         minOfferAmount: zod_1.z.number().nonnegative().optional(),
         status: zod_1.z.enum(['active', 'sold', 'unsold', 'pending']).optional(),

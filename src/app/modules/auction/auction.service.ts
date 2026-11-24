@@ -765,6 +765,9 @@ const completeAuction = async (
       orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl
       orderPayload.shippingWeight = 0
       orderPayload.amountDetails.shipping = 0
+      // Ships in the same package: one label, bought on the main order.
+      ;(orderPayload as any).bundledWithOrderId =
+        existingOrder.bundledWithOrderId ?? existingOrder._id
     } else {
       await initializeOrderShipping(orderPayload, product)
     }

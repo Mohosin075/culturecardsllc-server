@@ -15,6 +15,8 @@ const createOrderSchema = zod_1.z.object({
             .optional()
             .default('buy_now'),
         totalPaid: zod_1.z.number().nonnegative().optional(),
+        /** USPS service chosen at checkout; the label is bought with it. */
+        shippingService: zod_1.z.string().trim().max(50).optional(),
         amountDetails: zod_1.z
             .object({
             itemSubtotal: zod_1.z.number().nonnegative().optional().default(0),

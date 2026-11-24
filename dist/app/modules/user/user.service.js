@@ -300,15 +300,12 @@ const switchRole = async (user, role) => {
     if (!isUserExist) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
     }
-    // Special case: User wants to become seller but doesn't have the role yet
+    // The seller role is granted only by an admin approving a seller
+    // application (SellerServices.approveApplication). Switching cannot hand
+    // it out, or anyone could put themselves in seller mode unreviewed.
     if (role === user_1.USER_ROLES.SELLER &&
         !isUserExist.roles.includes(user_1.USER_ROLES.SELLER)) {
-        // ProfessionalProfile logic removed
-        // Add the seller role to the user and request verification
-        await user_model_1.User.findByIdAndUpdate(user.userId, {
-            $addToSet: { roles: user_1.USER_ROLES.SELLER },
-            $set: { sellerVerified: false },
-        });
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Apply to become a seller first. You can switch to seller mode once ARIES approves your application.');
     }
     else if (!isUserExist.roles.includes(role)) {
         // For other roles, they must already have it

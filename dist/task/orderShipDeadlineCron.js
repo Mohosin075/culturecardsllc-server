@@ -11,7 +11,7 @@ const chat_model_1 = require("../app/modules/chat/chat.model");
 const message_model_1 = require("../app/modules/message/message.model");
 const user_model_1 = require("../app/modules/user/user.model");
 const pushnotificationHelper_1 = require("../helpers/pushnotificationHelper");
-const stripe_1 = __importDefault(require("../config/stripe"));
+const marketplaceCharge_1 = require("../app/modules/payment/marketplaceCharge");
 /**
  * Order Ship-Deadline Cron Job
  * Runs hourly.
@@ -49,14 +49,28 @@ const startOrderShipDeadlineCron = () => {
 };
 exports.startOrderShipDeadlineCron = startOrderShipDeadlineCron;
 const cancelAndRefund = async (order) => {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     const productTitle = ((_a = order.productId) === null || _a === void 0 ? void 0 : _a.title) || 'your item';
     const amount = ((_b = order.amountDetails) === null || _b === void 0 ? void 0 : _b.totalPaid) || 0;
     // 1. Refund first — never cancel an order while still holding the money.
     let refunded = false;
     if (order.paymentIntentId) {
         try {
-            await stripe_1.default.refunds.create({ payment_intent: order.paymentIntentId });
+            // Marketplace sales are direct charges on the seller's connected
+            // account, so a platform-level refund cannot see them. Refund on
+            // whichever account the charge actually lives on.
+            const stripeAccountId = await marketplaceCharge_1.MarketplaceCharge.findChargeAccount({
+                paymentIntentId: order.paymentIntentId,
+                recordedAccountId: order.stripeAccountId,
+                sellerId: (_c = order.sellerId) === null || _c === void 0 ? void 0 : _c.toString(),
+            });
+            // Full refund out of the seller's balance; ARIES's fee goes back too,
+            // since the sale never happened.
+            await marketplaceCharge_1.MarketplaceCharge.refundMarketplacePayment({
+                paymentIntentId: order.paymentIntentId,
+                stripeAccountId,
+                reason: 'requested_by_customer',
+            });
             refunded = true;
         }
         catch (error) {
@@ -78,7 +92,7 @@ const cancelAndRefund = async (order) => {
     });
     await order.save();
     // 3. Put the item back on sale.
-    if ((_c = order.productId) === null || _c === void 0 ? void 0 : _c._id) {
+    if ((_d = order.productId) === null || _d === void 0 ? void 0 : _d._id) {
         await product_model_1.Product.updateOne({ _id: order.productId._id }, { $inc: { stock: 1 }, $set: { status: 'active' } });
     }
     // 4. Tell both sides, in chat and by push.

@@ -406,7 +406,7 @@ const updateLiveStreamStatus = async (streamId, userId, userRole, status) => {
 };
 // ── Complete auction + trigger winner Stripe checkout ────────────────────────────
 const completeAuction = async (auctionItemId, requestingUserId) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     if (!mongoose_1.Types.ObjectId.isValid(auctionItemId)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid Auction Item ID');
     }
@@ -542,6 +542,8 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
             orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl;
             orderPayload.shippingWeight = 0;
             orderPayload.amountDetails.shipping = 0;
+            orderPayload.bundledWithOrderId =
+                (_f = existingOrder.bundledWithOrderId) !== null && _f !== void 0 ? _f : existingOrder._id;
         }
         else {
             await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
@@ -634,7 +636,7 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
         metadata: {
             purchaseType: 'auction_win',
             productId: product._id.toString(),
-            sellerId: ((_f = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _f === void 0 ? void 0 : _f.toString()) || '',
+            sellerId: ((_g = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _g === void 0 ? void 0 : _g.toString()) || '',
             winnerId: auctionItem.highestBidderId.toString(),
             auctionItemId: auctionItemId,
         },
@@ -651,7 +653,7 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
         metadata: {
             purchaseType: 'auction_win',
             productId: product._id.toString(),
-            sellerId: ((_g = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _g === void 0 ? void 0 : _g.toString()) || '',
+            sellerId: ((_h = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _h === void 0 ? void 0 : _h.toString()) || '',
             winnerId: auctionItem.highestBidderId.toString(),
             auctionItemId: auctionItemId,
             checkoutSessionId: stripeSession.id,
@@ -676,7 +678,7 @@ const completeAuction = async (auctionItemId, requestingUserId) => {
         channel: notification_interface_1.NotificationChannel.PUSH,
         priority: notification_interface_1.NotificationPriority.HIGH,
         metadata: {
-            sellerId: ((_h = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _h === void 0 ? void 0 : _h.toString()) || '',
+            sellerId: ((_j = stream === null || stream === void 0 ? void 0 : stream.sellerId) === null || _j === void 0 ? void 0 : _j.toString()) || '',
             auctionItemId,
             bidAmount: auctionItem.currentBid.toString(),
         },

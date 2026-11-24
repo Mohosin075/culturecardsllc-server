@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Product = void 0;
+const shipping_constants_1 = require("../shipping/shipping.constants");
 const mongoose_1 = require("mongoose");
 const ProductSchema = new mongoose_1.Schema({
     sellerId: {
@@ -107,6 +108,15 @@ const ProductSchema = new mongoose_1.Schema({
     shippingWeight: {
         type: Number,
         default: 0,
+    },
+    packageType: {
+        type: String,
+        enum: shipping_constants_1.PACKAGE_TYPES,
+    },
+    packageDimensions: {
+        lengthIn: Number,
+        widthIn: Number,
+        heightIn: Number,
     },
     allowOffers: {
         type: Boolean,

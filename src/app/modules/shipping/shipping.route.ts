@@ -17,9 +17,10 @@ const ANY_USER = [
 // Package sizes for the listing and trade forms.
 router.get('/presets', ShippingControllers.getPackagePresets)
 
-// The address this user ships from (printed on their labels).
+// The address this user ships from (printed on their labels). PATCH, because
+// the app's API client has no PUT.
 router.get('/ship-from', auth(...ANY_USER), ShippingControllers.getShipFromAddress)
-router.put(
+router.patch(
   '/ship-from',
   auth(...ANY_USER),
   validateRequest(ShippingValidations.setShipFromZodSchema),

@@ -4,10 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StripeConnectService = exports.getAccountEarnings = exports.createLoginLink = exports.createOnboardingLink = exports.retrieveAccount = exports.createConnectedAccount = exports.mapAccountToState = void 0;
+const stripe_1 = __importDefault(require("stripe"));
 const http_status_codes_1 = require("http-status-codes");
-const stripe_1 = __importDefault(require("../../../config/stripe"));
+const stripe_2 = __importDefault(require("../../../config/stripe"));
 const config_1 = __importDefault(require("../../../config"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const logger_1 = require("../../../shared/logger");
 /**
  * Everything that talks to Stripe Connect lives here.
  *
@@ -22,6 +24,45 @@ const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const requireStripe = () => {
     if (!config_1.default.stripe.stripeSecretKey) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.SERVICE_UNAVAILABLE, 'Stripe is not configured on this server.');
+    }
+};
+const ONBOARDING_UNAVAILABLE = 'Seller onboarding is temporarily unavailable. Please try again later.';
+/**
+ * Run a Stripe call and turn any Stripe failure into an ApiError a seller can
+ * read. Stripe's own message often describes *our* platform setup (for example
+ * "You can only create new accounts if you've signed up for Connect"), which
+ * means nothing to a seller, so the raw details go to the log only.
+ */
+const callStripe = async (action, request) => {
+    var _a, _b, _c;
+    try {
+        return await request();
+    }
+    catch (error) {
+        if (!(error instanceof stripe_1.default.errors.StripeError))
+            throw error;
+        logger_1.errorLogger.error(`[SellerConnect] Stripe ${action} failed: ${error.type} ` +
+            `code=${(_a = error.code) !== null && _a !== void 0 ? _a : '-'} param=${(_b = error.param) !== null && _b !== void 0 ? _b : '-'} ` +
+            `requestId=${(_c = error.requestId) !== null && _c !== void 0 ? _c : '-'} message=${error.message}`);
+        switch (error.type) {
+            // Stripe could not be reached or is struggling: worth a retry.
+            case 'StripeRateLimitError':
+            case 'StripeConnectionError':
+            case 'StripeAPIError':
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.SERVICE_UNAVAILABLE, 'Stripe is not responding right now. Please try again in a minute.');
+            // A specific field was rejected (e.g. a malformed email). Stripe words
+            // these for end users, so the seller can act on it.
+            case 'StripeInvalidRequestError':
+                if (error.param) {
+                    throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, error.message);
+                }
+                // No field means the request itself is wrong for this platform —
+                // Connect not enabled, wrong country, etc. Not the seller's fault.
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.SERVICE_UNAVAILABLE, ONBOARDING_UNAVAILABLE);
+            // Bad key, missing permission, and anything else: platform setup.
+            default:
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.SERVICE_UNAVAILABLE, ONBOARDING_UNAVAILABLE);
+        }
     }
 };
 /** Shape Stripe's account object into the subset we persist. */
@@ -42,7 +83,7 @@ const mapAccountToState = (account) => {
 exports.mapAccountToState = mapAccountToState;
 const createConnectedAccount = async (params) => {
     requireStripe();
-    return stripe_1.default.accounts.create({
+    return callStripe('account create', () => stripe_2.default.accounts.create({
         type: 'express',
         country: config_1.default.seller.connectCountry,
         email: params.email,
@@ -60,12 +101,12 @@ const createConnectedAccount = async (params) => {
             areisUserId: params.userId,
             platform: 'ARIES',
         },
-    });
+    }));
 };
 exports.createConnectedAccount = createConnectedAccount;
 const retrieveAccount = async (accountId) => {
     requireStripe();
-    return stripe_1.default.accounts.retrieve(accountId);
+    return callStripe('account retrieve', () => stripe_2.default.accounts.retrieve(accountId));
 };
 exports.retrieveAccount = retrieveAccount;
 /**
@@ -74,7 +115,7 @@ exports.retrieveAccount = retrieveAccount;
  */
 const createOnboardingLink = async (accountId) => {
     requireStripe();
-    const accountLink = await stripe_1.default.accountLinks.create({
+    const accountLink = await callStripe('onboarding link', () => stripe_2.default.accountLinks.create({
         account: accountId,
         refresh_url: config_1.default.seller.stripeRefreshUrl,
         return_url: config_1.default.seller.stripeReturnUrl,
@@ -84,7 +125,7 @@ const createOnboardingLink = async (accountId) => {
             // interrupted again the first time they hit a payout threshold.
             fields: 'eventually_due',
         },
-    });
+    }));
     return accountLink.url;
 };
 exports.createOnboardingLink = createOnboardingLink;
@@ -94,7 +135,7 @@ exports.createOnboardingLink = createOnboardingLink;
  */
 const createLoginLink = async (accountId) => {
     requireStripe();
-    const loginLink = await stripe_1.default.accounts.createLoginLink(accountId);
+    const loginLink = await callStripe('dashboard link', () => stripe_2.default.accounts.createLoginLink(accountId));
     return loginLink.url;
 };
 exports.createLoginLink = createLoginLink;
@@ -105,10 +146,10 @@ exports.createLoginLink = createLoginLink;
 const getAccountEarnings = async (accountId) => {
     var _a, _b, _c;
     requireStripe();
-    const [balance, payouts] = await Promise.all([
-        stripe_1.default.balance.retrieve({ stripeAccount: accountId }),
-        stripe_1.default.payouts.list({ limit: 10 }, { stripeAccount: accountId }),
-    ]);
+    const [balance, payouts] = await callStripe('earnings', () => Promise.all([
+        stripe_2.default.balance.retrieve({ stripeAccount: accountId }),
+        stripe_2.default.payouts.list({ limit: 10 }, { stripeAccount: accountId }),
+    ]));
     const sum = (entries) => entries.reduce((total, entry) => total + entry.amount, 0) / 100;
     return {
         available: sum(balance.available || []),

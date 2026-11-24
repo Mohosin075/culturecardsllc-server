@@ -20,7 +20,7 @@ const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const tradeVote_service_1 = require("../trade/tradeVote.service");
 const partner_service_1 = require("../partner/partner.service");
 const handleCheckoutSessionCompleted = async (sessionData) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     try {
         console.log('🔔 Processing Checkout Session Completed:', sessionData.id);
         const sessionWithDetails = await stripe_1.default.checkout.sessions.retrieve(sessionData.id, {
@@ -122,6 +122,8 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                         orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl;
                         orderPayload.shippingWeight = 0;
                         orderPayload.amountDetails.shipping = 0;
+                        orderPayload.bundledWithOrderId =
+                            (_j = existingOrder.bundledWithOrderId) !== null && _j !== void 0 ? _j : existingOrder._id;
                         orderPayload.amountDetails.totalPaid = totalPaid;
                     }
                     else {

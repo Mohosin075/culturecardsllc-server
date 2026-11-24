@@ -60,7 +60,10 @@ const createCheckoutSession = async (user, payload) => {
         // cannot be dialled down by the client.
         const productId = (_a = payload.metadata) === null || _a === void 0 ? void 0 : _a.productId;
         if (productId && mongoose_1.Types.ObjectId.isValid(String(productId))) {
-            const product = await product_model_1.Product.findById(productId).select('sellerId buyNowPrice estValue title');
+            const product = await product_model_1.Product.findById(productId).select('sellerId buyNowPrice estValue title isTradeOnly');
+            if (product === null || product === void 0 ? void 0 : product.isTradeOnly) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This item is listed for trade only and cannot be bought.');
+            }
             // Only route through Connect when the seller can actually be paid.
             // A seller who has not onboarded yet falls through to the platform
             // charge below — the old behaviour — so purchases keep working while
@@ -154,6 +157,10 @@ const createCheckoutSession = async (user, payload) => {
         };
     }
     catch (error) {
+        // Deliberate refusals (trade-only item, price too low, ...) keep their
+        // own status and message; only unexpected failures become a 500.
+        if (error instanceof ApiError_1.default)
+            throw error;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, `Checkout session creation failed: ${errorMessage}`);
     }
@@ -248,11 +255,30 @@ const verifyCheckoutSession = async (sessionId) => {
  * 2. SAVED CARD: paymentMethodId provided → attaches saved card & auto-confirms off-session
  */
 const createPaymentIntent = async (user, payload) => {
+    var _a;
     try {
         // Determine payable amount from payload (as Booking is missing)
         const payableAmount = typeof payload.amount === 'number' ? Number(payload.amount.toFixed(2)) : 0;
         if (payableAmount <= 0) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'No payable amount found for this payment');
+        }
+        // Trade-only listings are posted without seller approval, so they must
+        // never be paid for. The app's 1-tap checkout sends the product id as
+        // `orderId`, so check both places a product id can arrive.
+        const candidateProductIds = [
+            (_a = payload.metadata) === null || _a === void 0 ? void 0 : _a.productId,
+            payload.orderId,
+        ]
+            .map(id => (id ? String(id) : ''))
+            .filter(id => mongoose_1.Types.ObjectId.isValid(id));
+        if (candidateProductIds.length) {
+            const tradeOnly = await product_model_1.Product.exists({
+                _id: { $in: candidateProductIds },
+                isTradeOnly: true,
+            });
+            if (tradeOnly) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This item is listed for trade only and cannot be bought.');
+            }
         }
         // Get or create Stripe customer (needed for saved card payments)
         const userData = await user_model_1.User.findById(user.userId);
@@ -492,8 +518,11 @@ const refundPayment = async (id, reason) => {
         // reversal has to be issued there, against the seller's balance.
         const refund = await marketplaceCharge_1.MarketplaceCharge.refundMarketplacePayment({
             paymentIntentId: refundPaymentIntentId,
-            stripeAccountId: ((_b = payment.metadata) === null || _b === void 0 ? void 0 : _b.stripeAccountId) ||
-                (await marketplaceCharge_1.MarketplaceCharge.findSellerAccountId((_c = payment.metadata) === null || _c === void 0 ? void 0 : _c.sellerId)),
+            stripeAccountId: await marketplaceCharge_1.MarketplaceCharge.findChargeAccount({
+                paymentIntentId: refundPaymentIntentId,
+                recordedAccountId: (_b = payment.metadata) === null || _b === void 0 ? void 0 : _b.stripeAccountId,
+                sellerId: (_c = payment.metadata) === null || _c === void 0 ? void 0 : _c.sellerId,
+            }),
             amount: payment.amount,
             reason: reason ? 'requested_by_customer' : 'duplicate',
         });

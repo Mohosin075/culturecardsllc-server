@@ -70,6 +70,14 @@ export type IOrder = {
   }
   shippingWeight?: number
   shippingLabelUrl?: string
+  /** USPS service the buyer paid for at checkout, e.g. "GroundAdvantage". */
+  shippingService?: string
+  /**
+   * Set on auction wins that ship in the same package as an earlier order
+   * (same buyer, same seller, within 12 hours). The label is bought on that
+   * main order and shared with every order bundled into it.
+   */
+  bundledWithOrderId?: Schema.Types.ObjectId
   /**
    * The carrier shipment behind the label. Absent until the seller buys a
    * label through the shipping provider; older orders only ever had the mock

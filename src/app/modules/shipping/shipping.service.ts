@@ -208,6 +208,13 @@ const buyLabelForOrder = async (
     return order
   }
 
+  // A bundled auction win ships in its main order's package: buy (or reuse)
+  // that one label, which is then shared with this order.
+  if (order.bundledWithOrderId) {
+    await buyLabelForOrder(user, String(order.bundledWithOrderId), options)
+    return Order.findById(orderId)
+  }
+
   if (labelsInFlight.has(orderId)) {
     throw new ApiError(
       StatusCodes.CONFLICT,
@@ -247,9 +254,10 @@ const buyLabelForOrder = async (
     const fromAddress = shipFromToAddress(from)
     const quote = await provider.getRates(fromAddress, to, parcel)
     const sorted = [...quote.rates].sort((a, b) => a.amount - b.amount)
+    // Default to the service the buyer paid for at checkout.
+    const wanted = options.service || order.shippingService
     const rate =
-      (options.service && sorted.find(r => r.service === options.service)) ||
-      sorted[0]
+      (wanted && sorted.find(r => r.service === wanted)) || sorted[0]
 
     const label = await provider.buyLabel({
       shipmentId: quote.shipmentId,
@@ -277,13 +285,28 @@ const buyLabelForOrder = async (
     }
     order.trackingDetails.carrier = label.carrier
     order.trackingDetails.trackingNumber = label.trackingCode
-    order.trackingDetails.journeyUpdates.push({
+    const labelCreated = {
       status: 'Label Created',
       description: `${label.carrier} ${label.service} label created. Waiting for the seller to drop it off.`,
       location: `${from.city}, ${from.state}`,
       timestamp: new Date(),
-    })
+    }
+    order.trackingDetails.journeyUpdates.push(labelCreated)
     await order.save()
+
+    // Orders bundled into this one travel in the same package.
+    await Order.updateMany(
+      { bundledWithOrderId: order._id },
+      {
+        $set: {
+          shipment: order.shipment,
+          shippingLabelUrl: order.shippingLabelUrl,
+          'trackingDetails.carrier': label.carrier,
+          'trackingDetails.trackingNumber': label.trackingCode,
+        },
+        $push: { 'trackingDetails.journeyUpdates': labelCreated },
+      },
+    )
     return order
   } finally {
     labelsInFlight.delete(orderId)
@@ -331,14 +354,27 @@ const deliveryStatusFor = (
  * journey; when the package moves to a new stage (shipped, delivered) the
  * last event goes through OrderServices.updateOrderJourney so the buyer gets
  * the usual chat message and push notification.
+ *
+ * Every order with this tracking number is updated, so orders bundled into
+ * one package all follow it. Returns the main (first) order.
  */
 const applyTrackingUpdate = async (update: TrackingUpdate) => {
   if (!update.trackingCode) return null
-  const order = await Order.findOne({
+  const orders = await Order.find({
     'trackingDetails.trackingNumber': update.trackingCode,
-  })
-  if (!order) return null
+  }).sort({ createdAt: 1 })
+  if (!orders.length) return null
 
+  for (const order of orders) {
+    await applyTrackingToOrder(order, update)
+  }
+  return Order.findById(orders[0]._id)
+}
+
+const applyTrackingToOrder = async (
+  order: InstanceType<typeof Order>,
+  update: TrackingUpdate,
+) => {
   const seen = new Set(
     (order.trackingDetails?.journeyUpdates || []).map(
       j => `${new Date(j.timestamp).getTime()}|${j.description}`,
@@ -382,7 +418,6 @@ const applyTrackingUpdate = async (update: TrackingUpdate) => {
       nextDelivery,
     )
   }
-  return Order.findById(order._id)
 }
 
 const handleEasyPostWebhook = async (

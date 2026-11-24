@@ -12,6 +12,7 @@ const seller_service_1 = require("./app/modules/seller/seller.service");
 const tradeSettlement_service_1 = require("./app/modules/trade/tradeSettlement.service");
 const trade_service_1 = require("./app/modules/trade/trade.service");
 const refund_service_1 = require("./app/modules/refund/refund.service");
+const shipping_service_1 = require("./app/modules/shipping/shipping.service");
 const webhookApp = (0, express_1.default)();
 webhookApp.post('/webhook', express_1.default.raw({ type: 'application/json' }), async (req, res) => {
     var _a;
@@ -98,6 +99,22 @@ webhookApp.post('/webhook', express_1.default.raw({ type: 'application/json' }),
             error: error.message,
             event: 'unknown',
         });
+    }
+});
+// EasyPost tracking updates. Needs the raw body to check the HMAC signature,
+// so it lives here with the Stripe webhook, before the JSON body parser.
+webhookApp.post('/webhook/easypost', express_1.default.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+        const rawBody = Buffer.isBuffer(req.body)
+            ? req.body
+            : Buffer.from(req.body || '', 'utf8');
+        await shipping_service_1.ShippingServices.handleEasyPostWebhook(rawBody, req.headers);
+        res.status(200).json({ received: true });
+    }
+    catch (error) {
+        const status = (error === null || error === void 0 ? void 0 : error.statusCode) || 500;
+        console.error('[EasyPost webhook]', status, error === null || error === void 0 ? void 0 : error.message);
+        res.status(status).json({ error: (error === null || error === void 0 ? void 0 : error.message) || 'Webhook failed' });
     }
 });
 exports.default = webhookApp;

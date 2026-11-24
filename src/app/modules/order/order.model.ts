@@ -102,6 +102,14 @@ const OrderSchema = new Schema<IOrder>(
     shippingLabelUrl: {
       type: String,
     },
+    shippingService: {
+      type: String,
+    },
+    bundledWithOrderId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Order',
+      index: true,
+    },
     shipment: {
       provider: { type: String, enum: ['mock', 'easypost'] },
       shipmentId: { type: String },

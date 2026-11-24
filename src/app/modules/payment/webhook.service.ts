@@ -140,6 +140,9 @@ const handleCheckoutSessionCompleted = async (
             orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl
             orderPayload.shippingWeight = 0
             orderPayload.amountDetails.shipping = 0
+            // Ships in the same package: one label, bought on the main order.
+            ;(orderPayload as any).bundledWithOrderId =
+              existingOrder.bundledWithOrderId ?? existingOrder._id
             orderPayload.amountDetails.totalPaid = totalPaid
           } else {
             // New order: Initialize full shipping weight, rate, tracking, and PDF label on disk

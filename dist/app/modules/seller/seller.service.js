@@ -128,7 +128,7 @@ const syncApplicationWithStripe = async (application) => {
 // 1. Seller application  +  2. Stripe onboarding
 // ────────────────────────────────────────────────────────────────────────────
 const applyAsSeller = async (user, payload, ipAddress) => {
-    var _a, _b, _c;
+    var _a, _b;
     const userData = await user_model_1.User.findById(user.userId);
     if (!userData) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
@@ -136,6 +136,20 @@ const applyAsSeller = async (user, payload, ipAddress) => {
     let application = await seller_model_1.SellerApplication.findOne({ userId: user.userId });
     if ((application === null || application === void 0 ? void 0 : application.status) === 'approved') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You are already an approved seller.');
+    }
+    // Talk to Stripe before touching the database. If Stripe refuses (outage,
+    // platform not set up for Connect, a bad field) nothing is saved, so the
+    // admin queue never shows an application with no Stripe account behind it.
+    // On a re-apply the existing connected account is reused.
+    let stripeState = application === null || application === void 0 ? void 0 : application.stripe;
+    if (!(stripeState === null || stripeState === void 0 ? void 0 : stripeState.accountId)) {
+        const account = await stripeConnect_service_1.StripeConnectService.createConnectedAccount({
+            userId: user.userId.toString(),
+            email: userData.email,
+            businessName: payload.businessName,
+            whatTheySell: payload.whatTheySell,
+        });
+        stripeState = stripeConnect_service_1.StripeConnectService.mapAccountToState(account);
     }
     const acceptance = {
         sellerPolicy: true,
@@ -152,7 +166,7 @@ const applyAsSeller = async (user, payload, ipAddress) => {
             businessName: payload.businessName,
             policyAcceptance: acceptance,
             status: 'stripe_pending',
-            stripe: { ...EMPTY_STRIPE_STATE },
+            stripe: stripeState,
             submittedAt: new Date(),
         });
     }
@@ -162,6 +176,7 @@ const applyAsSeller = async (user, payload, ipAddress) => {
         application.categories = (_b = payload.categories) === null || _b === void 0 ? void 0 : _b.map(id => new mongoose_1.Types.ObjectId(id));
         application.businessName = payload.businessName;
         application.policyAcceptance = acceptance;
+        application.stripe = stripeState;
         application.submittedAt = new Date();
         if (application.status === 'rejected') {
             application.status = 'stripe_pending';
@@ -171,17 +186,8 @@ const applyAsSeller = async (user, payload, ipAddress) => {
         }
         await application.save();
     }
-    // Create the connected account on first apply, reuse it afterwards.
-    if (!((_c = application.stripe) === null || _c === void 0 ? void 0 : _c.accountId)) {
-        const account = await stripeConnect_service_1.StripeConnectService.createConnectedAccount({
-            userId: user.userId.toString(),
-            email: userData.email,
-            businessName: payload.businessName,
-            whatTheySell: payload.whatTheySell,
-        });
-        application.stripe = stripeConnect_service_1.StripeConnectService.mapAccountToState(account);
-        await application.save();
-        userData.stripeConnectedAccountId = account.id;
+    if (userData.stripeConnectedAccountId !== stripeState.accountId) {
+        userData.stripeConnectedAccountId = stripeState.accountId;
         await userData.save();
     }
     const onboardingUrl = await stripeConnect_service_1.StripeConnectService.createOnboardingLink(application.stripe.accountId);
