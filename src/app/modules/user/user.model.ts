@@ -33,6 +33,18 @@ const UserSchema = new Schema<IUser, UserModel>(
       presentAddress: String,
     },
 
+    shipFromAddress: {
+      name: String,
+      street1: String,
+      street2: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String,
+      phone: String,
+      verifiedAt: Date,
+    },
+
     location: {
       type: {
         type: String,

@@ -7,6 +7,7 @@ import { SellerServices } from './app/modules/seller/seller.service'
 import { TradeSettlementServices } from './app/modules/trade/tradeSettlement.service'
 import { TradeServices } from './app/modules/trade/trade.service'
 import { RefundServices } from './app/modules/refund/refund.service'
+import { ShippingServices } from './app/modules/shipping/shipping.service'
 
 const webhookApp = express()
 
@@ -111,6 +112,26 @@ webhookApp.post(
         error: error.message,
         event: 'unknown',
       })
+    }
+  },
+)
+
+// EasyPost tracking updates. Needs the raw body to check the HMAC signature,
+// so it lives here with the Stripe webhook, before the JSON body parser.
+webhookApp.post(
+  '/webhook/easypost',
+  express.raw({ type: 'application/json' }),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const rawBody = Buffer.isBuffer(req.body)
+        ? req.body
+        : Buffer.from(req.body || '', 'utf8')
+      await ShippingServices.handleEasyPostWebhook(rawBody, req.headers)
+      res.status(200).json({ received: true })
+    } catch (error: any) {
+      const status = error?.statusCode || 500
+      console.error('[EasyPost webhook]', status, error?.message)
+      res.status(status).json({ error: error?.message || 'Webhook failed' })
     }
   },
 )

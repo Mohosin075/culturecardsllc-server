@@ -1,3 +1,4 @@
+import { PACKAGE_TYPES } from '../shipping/shipping.constants'
 import { Schema, model } from 'mongoose'
 import { IProduct } from './product.interface'
 
@@ -107,6 +108,15 @@ const ProductSchema = new Schema<IProduct>(
     shippingWeight: {
       type: Number,
       default: 0,
+    },
+    packageType: {
+      type: String,
+      enum: PACKAGE_TYPES,
+    },
+    packageDimensions: {
+      lengthIn: Number,
+      widthIn: Number,
+      heightIn: Number,
     },
     allowOffers: {
       type: Boolean,

@@ -57,6 +57,12 @@ export default {
     webhookSecret: envVars.WEBHOOK_SECRET,
     paymentSuccess: process.env.SUCCESS_URL,
   },
+  shipping: {
+    /** 'mock' until the EasyPost key arrives; then 'easypost'. */
+    provider: (process.env.SHIPPING_PROVIDER || 'mock') as 'mock' | 'easypost',
+    easypostApiKey: process.env.EASYPOST_API_KEY,
+    easypostWebhookSecret: process.env.EASYPOST_WEBHOOK_SECRET,
+  },
   agora: {
     app_id: process.env.AGORA_APP_ID,
     app_certificate: process.env.AGORA_APP_CERTIFICATE,

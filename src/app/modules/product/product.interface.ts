@@ -1,3 +1,4 @@
+import { PackageType } from '../shipping/shipping.constants'
 import { Schema, Document } from 'mongoose'
 
 export type IProductCategory =
@@ -40,7 +41,11 @@ export type IProduct = {
   boostedUntil?: Date
   allowTrade: boolean
   isTradeOnly?: boolean
+  /** Pounds. */
   shippingWeight?: number
+  packageType?: PackageType
+  /** Inches; set when packageType is "custom". */
+  packageDimensions?: { lengthIn: number; widthIn: number; heightIn: number }
   allowOffers?: boolean
   minOfferAmount?: number
   shareCount?: number

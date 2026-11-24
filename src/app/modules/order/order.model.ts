@@ -84,7 +84,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     trackingDetails: {
       carrier: { type: String },
-      trackingNumber: { type: String },
+      trackingNumber: { type: String, index: true },
       estimatedDelivery: { type: Date },
       journeyUpdates: [
         {
@@ -101,6 +101,18 @@ const OrderSchema = new Schema<IOrder>(
     },
     shippingLabelUrl: {
       type: String,
+    },
+    shipment: {
+      provider: { type: String, enum: ['mock', 'easypost'] },
+      shipmentId: { type: String },
+      rateId: { type: String },
+      carrier: { type: String },
+      service: { type: String },
+      labelCost: { type: Number },
+      trackerId: { type: String },
+      trackingStatus: { type: String },
+      purchasedAt: { type: Date },
+      refundedAt: { type: Date },
     },
     spinWheelPrize: {
       type: String,

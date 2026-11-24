@@ -30,6 +30,19 @@ export type IAddress = {
   presentAddress?: string
 }
 
+/** A carrier-verified street address for outgoing labels. */
+export type IShipFromAddress = {
+  name: string
+  street1: string
+  street2?: string
+  city: string
+  state: string
+  zip: string
+  country: string
+  phone?: string
+  verifiedAt?: Date
+}
+
 export type Point = {
   type: 'Point'
   coordinates: [number, number] // [longitude, latitude]
@@ -54,6 +67,8 @@ export type IUser = {
   sellerVerified: boolean
   isCelebrity?: boolean
   address?: IAddress
+  /** Where this user's packages ship from; printed on their labels. */
+  shipFromAddress?: IShipFromAddress
   location: Point
   password: string
   roles: USER_ROLES[]

@@ -11,6 +11,22 @@ export type IJourneyUpdate = {
   timestamp: Date
 }
 
+export type IOrderShipment = {
+  provider: 'mock' | 'easypost'
+  shipmentId: string
+  rateId: string
+  carrier: string
+  service: string
+  /** Dollars ARIES paid for the label. */
+  labelCost: number
+  trackerId?: string
+  /** Last status the carrier reported. */
+  trackingStatus?: string
+  purchasedAt: Date
+  /** Set when an unused label was voided. */
+  refundedAt?: Date
+}
+
 export type IOrder = {
   buyerId: Schema.Types.ObjectId
   sellerId: Schema.Types.ObjectId
@@ -54,6 +70,12 @@ export type IOrder = {
   }
   shippingWeight?: number
   shippingLabelUrl?: string
+  /**
+   * The carrier shipment behind the label. Absent until the seller buys a
+   * label through the shipping provider; older orders only ever had the mock
+   * label in shippingLabelUrl.
+   */
+  shipment?: IOrderShipment
   spinWheelPrize?: string
   createdAt: Date
   updatedAt: Date

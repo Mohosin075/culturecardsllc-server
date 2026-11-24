@@ -1,4 +1,12 @@
 import { z } from 'zod'
+import { PACKAGE_TYPES, PackageType } from '../shipping/shipping.constants'
+
+/** Inches. Required when packageType is "custom". */
+const packageDimensionsSchema = z.object({
+  lengthIn: z.number().positive().max(108),
+  widthIn: z.number().positive().max(108),
+  heightIn: z.number().positive().max(108),
+})
 
 const createProductSchema = z.object({
   body: z.object({
@@ -37,6 +45,8 @@ const createProductSchema = z.object({
     minValue: z.number().nonnegative().optional(),
     maxValue: z.number().nonnegative().optional(),
     shippingWeight: z.number().nonnegative().optional(),
+    packageType: z.enum(PACKAGE_TYPES as [PackageType, ...PackageType[]]).optional(),
+    packageDimensions: packageDimensionsSchema.optional(),
     allowOffers: z.boolean().optional(),
     minOfferAmount: z.number().nonnegative().optional(),
     // Ignored: the server always uses the authenticated user as seller
@@ -69,6 +79,8 @@ const updateProductSchema = z.object({
     minValue: z.number().nonnegative().optional(),
     maxValue: z.number().nonnegative().optional(),
     shippingWeight: z.number().nonnegative().optional(),
+    packageType: z.enum(PACKAGE_TYPES as [PackageType, ...PackageType[]]).optional(),
+    packageDimensions: packageDimensionsSchema.optional(),
     allowOffers: z.boolean().optional(),
     minOfferAmount: z.number().nonnegative().optional(),
     status: z.enum(['active', 'sold', 'unsold', 'pending']).optional(),
