@@ -28,6 +28,94 @@ const resolveSocketUserId = (socket: Socket): string | null => {
   }
 }
 
+/**
+ * How long the server waits for a host to come back before it ends their show.
+ *
+ * A socket drops for all sorts of harmless reasons — the phone switches from
+ * wifi to mobile data, the screen locks, the app goes to the background for a
+ * moment. Ending the show on the first dropped socket kicks every viewer out
+ * over a blip the host never even noticed, so the end is deferred until the
+ * host has really stayed away.
+ */
+const HOST_DISCONNECT_GRACE_MS = 90_000
+
+/** Streams waiting to see whether their host comes back. */
+const pendingHostStreamEnd = new Map<string, NodeJS.Timeout>()
+
+const cancelHostStreamEnd = (streamId: string) => {
+  const timer = pendingHostStreamEnd.get(streamId)
+  if (timer) {
+    clearTimeout(timer)
+    pendingHostStreamEnd.delete(streamId)
+    console.log(colors.green(`Host returned to stream ${streamId}; it stays live.`))
+  }
+}
+
+const scheduleHostStreamEnd = (io: Server, streamId: string) => {
+  if (pendingHostStreamEnd.has(streamId)) return
+
+  const timer = setTimeout(async () => {
+    pendingHostStreamEnd.delete(streamId)
+    try {
+      // The host may have come back on a different socket while we waited.
+      const sockets = await io.in(`stream:${streamId}`).fetchSockets()
+      const hostIsBack = sockets.some(
+        s => (s.data as any)?.hostedStreamId === streamId,
+      )
+      if (hostIsBack) return
+
+      const liveDoc = await LiveStream.findOne({ _id: streamId, status: 'live' })
+      if (!liveDoc) return // already ended, by the host or an admin
+
+      liveDoc.status = 'ended'
+      liveDoc.endedAt = new Date()
+      await liveDoc.save()
+      io.to(`stream:${streamId}`).emit('stream-ended', {
+        streamId,
+        status: 'ended',
+      })
+      console.log(
+        colors.red(`Host never returned: ended stream ${streamId}.`),
+      )
+    } catch (err: any) {
+      console.error(
+        colors.red('Failed to end a stream after the host grace window:'),
+        err?.message,
+      )
+    }
+  }, HOST_DISCONNECT_GRACE_MS)
+
+  pendingHostStreamEnd.set(streamId, timer)
+  console.log(
+    colors.yellow(
+      `Host left stream ${streamId}; waiting ${HOST_DISCONNECT_GRACE_MS / 1000}s for a reconnect.`,
+    ),
+  )
+}
+
+/**
+ * Publish the viewer count, counting the sockets actually in the room.
+ *
+ * The count used to be a running total in the database, nudged up and down on
+ * every join and leave. One missed event — a server restart, a socket the
+ * adapter never reported — and the number drifted away from reality for the
+ * rest of the show. Counting the room is self-correcting instead.
+ */
+const syncViewerCount = async (io: Server, streamId: string): Promise<number> => {
+  const streamRoom = `stream:${streamId}`
+  let viewersCount: number
+  try {
+    const sockets = await io.in(streamRoom).fetchSockets()
+    viewersCount = sockets.length
+  } catch {
+    viewersCount = io.sockets.adapter.rooms.get(streamRoom)?.size ?? 0
+  }
+
+  await LiveStream.findByIdAndUpdate(streamId, { $set: { viewersCount } })
+  io.to(streamRoom).emit('viewer-count-update', { streamId, viewersCount })
+  return viewersCount
+}
+
 const socket = (io: Server) => {
   io.on('connection', async (socket: Socket) => {
     console.log(colors.blue('A user connected:'), socket.id)
@@ -79,25 +167,22 @@ const socket = (io: Server) => {
             colors.green(`User ${socket.id} joined stream room: ${streamId}`),
           )
 
-          // Increment Mongoose stream viewer count
-          const stream = await LiveStream.findByIdAndUpdate(
-            streamId,
-            { $inc: { viewersCount: 1 } },
-            { new: true },
-          )
+          const stream = await LiveStream.findById(streamId)
 
           if (stream) {
-            io.to(streamRoom).emit('viewer-count-update', {
-              streamId,
-              viewersCount: stream.viewersCount,
-            })
             if ((socket as any).userId && stream.sellerId.toString() === (socket as any).userId) {
               ;(socket as any).isStreamHost = true
               ;(socket as any).hostedStreamId = streamId
+              // Mirrored onto socket.data so fetchSockets() can see it, which
+              // is how the grace window checks whether the host is back.
+              socket.data.hostedStreamId = streamId
+              cancelHostStreamEnd(streamId)
             }
           }
 
-          (socket as any).activeStreamId = streamId
+          await syncViewerCount(io, streamId)
+
+          ;(socket as any).activeStreamId = streamId
           // Only trust the verified socket identity, never the client-sent userId
           if ((socket as any).userId) {
             (socket as any).streamUserId = (socket as any).userId
@@ -115,34 +200,13 @@ const socket = (io: Server) => {
           colors.yellow(`User ${socket.id} left stream room: ${streamId}`),
         )
 
-        const stream = await LiveStream.findByIdAndUpdate(
-          streamId,
-          { $inc: { viewersCount: -1 } },
-          { new: true },
-        )
-
-        const currentCount =
-          stream && stream.viewersCount > 0 ? stream.viewersCount : 0
-        if (stream && stream.viewersCount < 0) {
-          await LiveStream.findByIdAndUpdate(streamId, {
-            $set: { viewersCount: 0 },
-          })
-        }
-
-        io.to(streamRoom).emit('viewer-count-update', {
-          streamId,
-          viewersCount: currentCount,
-        })
+        await syncViewerCount(io, streamId)
 
         if ((socket as any).isStreamHost && (socket as any).hostedStreamId === streamId) {
-          const liveStream = await LiveStream.findById(streamId)
-          if (liveStream && liveStream.status === 'live') {
-            liveStream.status = 'ended'
-            liveStream.endedAt = new Date()
-            await liveStream.save()
-            io.to(streamRoom).emit('stream-ended', { streamId, status: 'ended' })
-            console.log(colors.red(`Host left: ended stream ${streamId}`))
-          }
+          // Give the host a moment to come back rather than ending the show
+          // under everyone watching. An explicit "End & Exit" goes through the
+          // status endpoint, so that still ends the stream straight away.
+          scheduleHostStreamEnd(io, streamId)
         }
 
         ;(socket as any).activeStreamId = null
@@ -502,39 +566,16 @@ const socket = (io: Server) => {
         })
       }
 
-      // Decrement viewer count if they left a stream room unexpectedly
+      // Republish the viewer count if they left a stream room unexpectedly
       const streamId = (socket as any).activeStreamId
       if (streamId) {
-        const stream = await LiveStream.findByIdAndUpdate(
-          streamId,
-          { $inc: { viewersCount: -1 } },
-          { new: true },
-        )
-
-        const currentCount =
-          stream && stream.viewersCount > 0 ? stream.viewersCount : 0
-        if (stream && stream.viewersCount < 0) {
-          await LiveStream.findByIdAndUpdate(streamId, {
-            $set: { viewersCount: 0 },
-          })
-        }
-
-        io.to(`stream:${streamId}`).emit('viewer-count-update', {
-          streamId,
-          viewersCount: currentCount,
-        })
+        await syncViewerCount(io, streamId)
       }
 
       if ((socket as any).isStreamHost && (socket as any).hostedStreamId) {
-        const streamId = (socket as any).hostedStreamId
-        const liveDoc = await LiveStream.findOne({ _id: streamId, status: 'live' })
-        if (liveDoc) {
-          liveDoc.status = 'ended'
-          liveDoc.endedAt = new Date()
-          await liveDoc.save()
-          io.to(`stream:${streamId}`).emit('stream-ended', { streamId, status: 'ended' })
-          console.log(colors.red(`Host disconnected: marked stream ${streamId} as ended.`))
-        }
+        // A dropped socket is not the same as a host who meant to stop. Wait
+        // out the grace window; if they reconnect, the show never flinched.
+        scheduleHostStreamEnd(io, (socket as any).hostedStreamId)
       }
     })
   })

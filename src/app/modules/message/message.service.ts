@@ -127,6 +127,7 @@ const getMessageFromDB = async (
 
   const messages = await Message.find({ chatId })
     .sort({ createdAt: -1 })
+    .populate('sender', 'name fullName email profile role')
     .populate({
       path: 'metadata.tradeOfferId',
       populate: [
