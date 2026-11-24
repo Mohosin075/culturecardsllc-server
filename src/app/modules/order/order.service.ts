@@ -152,6 +152,18 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Product is out of stock.')
   }
 
+  // Trade-only listings can be posted without seller approval, so they must
+  // never be bought for cash.
+  if (
+    product.isTradeOnly &&
+    (payload.purchaseType || 'buy_now') !== 'trade_swap'
+  ) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'This item is listed for trade only and cannot be bought.',
+    )
+  }
+
   payload.purchaseType = payload.purchaseType || 'buy_now'
   if (!payload.amountDetails) {
     payload.amountDetails = {

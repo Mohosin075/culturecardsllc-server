@@ -75,8 +75,15 @@ const createCheckoutSession = async (
     const productId = (payload.metadata as any)?.productId
     if (productId && Types.ObjectId.isValid(String(productId))) {
       const product = await Product.findById(productId).select(
-        'sellerId buyNowPrice estValue title',
+        'sellerId buyNowPrice estValue title isTradeOnly',
       )
+
+      if (product?.isTradeOnly) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          'This item is listed for trade only and cannot be bought.',
+        )
+      }
 
       // Only route through Connect when the seller can actually be paid.
       // A seller who has not onboarded yet falls through to the platform
@@ -191,6 +198,9 @@ const createCheckoutSession = async (
       paymentIntentId: paymentIntent.id,
     }
   } catch (error: unknown) {
+    // Deliberate refusals (trade-only item, price too low, ...) keep their
+    // own status and message; only unexpected failures become a 500.
+    if (error instanceof ApiError) throw error
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error'
     throw new ApiError(
@@ -325,6 +335,28 @@ const createPaymentIntent = async (
         StatusCodes.BAD_REQUEST,
         'No payable amount found for this payment',
       )
+    }
+
+    // Trade-only listings are posted without seller approval, so they must
+    // never be paid for. The app's 1-tap checkout sends the product id as
+    // `orderId`, so check both places a product id can arrive.
+    const candidateProductIds = [
+      (payload.metadata as any)?.productId,
+      payload.orderId,
+    ]
+      .map(id => (id ? String(id) : ''))
+      .filter(id => Types.ObjectId.isValid(id))
+    if (candidateProductIds.length) {
+      const tradeOnly = await Product.exists({
+        _id: { $in: candidateProductIds },
+        isTradeOnly: true,
+      })
+      if (tradeOnly) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          'This item is listed for trade only and cannot be bought.',
+        )
+      }
     }
 
     // Get or create Stripe customer (needed for saved card payments)

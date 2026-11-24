@@ -14,15 +14,41 @@ import { paginationHelper } from '../../../helpers/paginationHelper'
 import { USER_ROLES } from '../../../enum/user'
 import { SellerServices } from '../seller/seller.service'
 
+/** A trade-only listing that is not a giveaway — no money changes hands. */
+const isTradeOnlyListing = (p: Partial<IProduct>): boolean =>
+  p.isTradeOnly === true && p.isGiveaway !== true
+
+const SALE_FIELDS = [
+  'buyNowPrice',
+  'startingBid',
+  'reservePrice',
+  'allowOffers',
+  'minOfferAmount',
+] as const
+
+const stripSaleFields = (p: Partial<IProduct>): void => {
+  for (const field of SALE_FIELDS) delete p[field]
+  p.allowTrade = true
+}
+
 const createProduct = async (payload: Partial<IProduct>): Promise<IProduct> => {
   const seller = await User.findById(payload.sellerId)
   if (!seller) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Seller not found')
   }
 
-  // Seller activation (client spec, section 5): ARIES approval *and* Stripe
-  // payout eligibility are both required before anything can be listed.
-  await SellerServices.assertSellerCanSell(seller._id)
+  if (isTradeOnlyListing(payload)) {
+    // Client spec, section 6: anyone can list an item for trade without
+    // seller approval. A trade-only item is never for sale, so any price
+    // fields are dropped — otherwise it could be bought outright by someone
+    // who was never approved to take money.
+    stripSaleFields(payload)
+  } else {
+    // Seller activation (client spec, section 5): ARIES approval *and*
+    // Stripe payout eligibility are both required before anything is listed
+    // for sale.
+    await SellerServices.assertSellerCanSell(seller._id)
+  }
 
   const result = await Product.create(payload)
   return result
@@ -229,6 +255,19 @@ const updateProduct = async (
       if (locked || !['active', 'unsold'].includes(p.status)) {
         delete p.status
       }
+    }
+
+    // Trade-only listings skip seller approval, so they must stay unsellable:
+    // a trade item keeps no price, and turning one into a sale needs the
+    // same approval as listing a sale item in the first place.
+    const after = {
+      isTradeOnly: p.isTradeOnly ?? product.isTradeOnly,
+      isGiveaway: p.isGiveaway ?? product.isGiveaway,
+    }
+    if (isTradeOnlyListing(after)) {
+      stripSaleFields(p)
+    } else if (product.isTradeOnly) {
+      await SellerServices.assertSellerCanSell(product.sellerId.toString())
     }
   }
   const result = await Product.findByIdAndUpdate(id, payload, {
