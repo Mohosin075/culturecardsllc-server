@@ -404,18 +404,17 @@ const switchRole = async (user: JwtPayload, role: USER_ROLES) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
   }
 
-  // Special case: User wants to become seller but doesn't have the role yet
+  // The seller role is granted only by an admin approving a seller
+  // application (SellerServices.approveApplication). Switching cannot hand
+  // it out, or anyone could put themselves in seller mode unreviewed.
   if (
     role === USER_ROLES.SELLER &&
     !isUserExist.roles.includes(USER_ROLES.SELLER)
   ) {
-    // ProfessionalProfile logic removed
-
-    // Add the seller role to the user and request verification
-    await User.findByIdAndUpdate(user.userId, {
-      $addToSet: { roles: USER_ROLES.SELLER },
-      $set: { sellerVerified: false },
-    })
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Apply to become a seller first. You can switch to seller mode once ARIES approves your application.',
+    )
   } else if (!isUserExist.roles.includes(role)) {
     // For other roles, they must already have it
     throw new ApiError(
