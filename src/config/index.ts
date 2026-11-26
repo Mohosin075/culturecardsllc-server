@@ -55,6 +55,11 @@ export default {
   stripe: {
     stripeSecretKey: envVars.STRIPE_API_SECRET,
     webhookSecret: envVars.WEBHOOK_SECRET,
+    /**
+     * Stripe signs events from connected (seller) accounts with the secret of
+     * a separate "Connected accounts" endpoint. Both point at /webhook.
+     */
+    connectWebhookSecret: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
     paymentSuccess: process.env.SUCCESS_URL,
   },
   shipping: {

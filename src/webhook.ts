@@ -23,7 +23,16 @@ webhookApp.post(
         return
       }
 
-      if (!config.stripe.webhookSecret) {
+      // The platform endpoint and the Connect ("Connected accounts") endpoint
+      // each have their own signing secret; accept an event signed by either.
+      const secrets = [
+        config.stripe.webhookSecret,
+        config.stripe.connectWebhookSecret,
+      ]
+        .map(secret => secret?.trim())
+        .filter((secret): secret is string => Boolean(secret))
+
+      if (!secrets.length) {
         res.status(500).json({ error: 'Webhook secret not configured' })
         return
       }
@@ -32,18 +41,26 @@ webhookApp.post(
         ? req.body
         : Buffer.from(req.body, 'utf8')
 
-      const cleanSecret = config.stripe.webhookSecret.trim()
-
       let event
-      console.log('🚀 Webhook hit! Signature:', sig)
-      try {
-        event = stripe.webhooks.constructEvent(rawBody, sig, cleanSecret)
-        console.log('✅ Webhook Event Constructed:', event.type)
-      } catch (err: any) {
-        console.error('❌ Webhook Construction Error:', err.message)
-        res.status(400).json({ error: `Webhook Error: ${err.message}` })
+      let lastError: any
+      for (const secret of secrets) {
+        try {
+          event = stripe.webhooks.constructEvent(rawBody, sig, secret)
+          break
+        } catch (err: any) {
+          lastError = err
+        }
+      }
+      if (!event) {
+        console.error('❌ Webhook Construction Error:', lastError?.message)
+        res.status(400).json({ error: `Webhook Error: ${lastError?.message}` })
         return
       }
+      console.log(
+        '✅ Webhook Event Constructed:',
+        event.type,
+        event.account ? `(connected account ${event.account})` : '',
+      )
 
       // Connect account lifecycle — keeps each seller's verification and
       // payout eligibility in step with Stripe without the app having to poll.
