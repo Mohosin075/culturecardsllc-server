@@ -461,7 +461,10 @@ const approveApplication = async (
     user.roles.push(USER_ROLES.SELLER)
   }
   user.sellerVerified = true
-  if (restoringAccess) user.activeRole = USER_ROLES.SELLER
+  // They applied in order to sell: land them in seller mode. Leaving
+  // activeRole on buyer made every seller-only route (Go Live, ...) answer
+  // 403 until they found the role switch themselves.
+  user.activeRole = USER_ROLES.SELLER
   await user.save()
   io?.to(userId).emit('seller-onboarding-updated')
 

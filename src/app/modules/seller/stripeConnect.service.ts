@@ -108,28 +108,60 @@ export const createConnectedAccount = async (params: {
 }): Promise<Stripe.Account> => {
   requireStripe()
 
-  return callStripe('account create', () =>
-    stripe.accounts.create(
+  // Stripe no longer lets new Connect platforms create accounts through
+  // POST /v1/accounts, so creation goes through Accounts v2. Everything else
+  // (retrieve, account links, login links, direct charges, account.updated
+  // events) keeps using v1, which Stripe supports for v2-created accounts.
+  //
+  // Responsibilities match the client's spec: Stripe's processing fee comes
+  // out of the seller's proceeds, and Stripe (not ARIES) carries the risk of
+  // negative balances. Stripe refuses platform-held losses on this platform.
+  const created = await callStripe('account create', () =>
+    stripe.rawRequest(
+      'POST',
+      '/v2/core/accounts',
       {
-        type: 'express',
-        country: config.seller.connectCountry,
-        email: params.email,
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
+        contact_email: params.email,
+        identity: { country: config.seller.connectCountry },
+        dashboard: 'express',
+        defaults: {
+          responsibilities: {
+            fees_collector: 'stripe',
+            losses_collector: 'stripe',
+          },
         },
-        business_profile: {
-          // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
-          mcc: config.seller.connectMcc,
+        configuration: {
+          merchant: {
+            // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
+            mcc: config.seller.connectMcc,
+            capabilities: { card_payments: { requested: true } },
+          },
+          recipient: {
+            capabilities: {
+              stripe_balance: { stripe_transfers: { requested: true } },
+            },
+          },
         },
         metadata: {
           areisUserId: params.userId,
           platform: 'ARIES',
         },
       },
-      { idempotencyKey: `seller-connect-${params.userId}` },
+      {
+        apiVersion: config.seller.accountsV2ApiVersion,
+        idempotencyKey: `seller-connect-v2-${params.userId}`,
+      },
     ),
   )
+
+  const accountId = (created as unknown as { id?: string })?.id
+  if (!accountId) {
+    errorLogger.error('[SellerConnect] v2 account create returned no id')
+    throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, ONBOARDING_UNAVAILABLE)
+  }
+
+  // Callers work with the v1 shape (details_submitted, requirements, ...).
+  return retrieveAccount(accountId)
 }
 
 export const retrieveAccount = async (

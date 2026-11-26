@@ -89,6 +89,9 @@ export default {
     connectCountry: process.env.STRIPE_CONNECT_COUNTRY || 'US',
     /** 5945 = Hobby, Toy and Game Shops — closest fit for a card marketplace. */
     connectMcc: process.env.STRIPE_CONNECT_MCC || '5945',
+    /** Stripe-Version sent with POST /v2/core/accounts. */
+    accountsV2ApiVersion:
+      process.env.STRIPE_ACCOUNTS_V2_API_VERSION || '2026-11-18.preview',
     /** Stripe sends the seller here when the onboarding link has expired. */
     stripeRefreshUrl:
       process.env.STRIPE_CONNECT_REFRESH_URL ||
