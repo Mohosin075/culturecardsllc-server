@@ -3,6 +3,7 @@ import ApiError from '../../../errors/ApiError'
 import { Types } from 'mongoose'
 import { TradeVote, UserVoteLog } from './tradeVote.model'
 import { ITradeVote } from './tradeVote.interface'
+import { Product } from '../product/product.model'
 import { TradeOffer } from './trade.model'
 
 /**
@@ -250,6 +251,23 @@ const createTradeVoteFromCompletedTrade = async (
     const category =
       senderProd.categoryName || receiverProd.categoryName || 'Trading Cards'
 
+    // Multi-item trades: the card shows the first item, "+N more", and the
+    // side's total value.
+    const sideSummary = async (ids: any[] | undefined, fallbackValue: string) => {
+      const list = ids || []
+      if (list.length <= 1) return { suffix: '', value: fallbackValue }
+      const products = await Product.find({ _id: { $in: list } })
+        .select('estValue price')
+        .lean()
+      const total = products.reduce(
+        (sum: number, p: any) => sum + Number(p.estValue || p.price || 0),
+        0,
+      )
+      return { suffix: ` +${list.length - 1} more`, value: `$${total}` }
+    }
+    const sideA = await sideSummary(rawTrade.senderProductIds, itemAValue)
+    const sideB = await sideSummary(rawTrade.receiverProductIds, itemBValue)
+
     const traderAId = senderUser?._id || rawTrade.senderId
     const traderBId = receiverUser?._id || rawTrade.receiverId
 
@@ -257,15 +275,15 @@ const createTradeVoteFromCompletedTrade = async (
       tradeId: rawTrade._id,
       category,
       itemA: {
-        name: senderProd.title || 'Product A',
-        value: itemAValue,
+        name: `${senderProd.title || 'Product A'}${sideA.suffix}`,
+        value: sideA.value,
         image: itemAImage,
         traderId: traderAId,
         traderName: senderUser?.name || senderUser?.fullName || 'Trader A',
       },
       itemB: {
-        name: receiverProd.title || 'Product B',
-        value: itemBValue,
+        name: `${receiverProd.title || 'Product B'}${sideB.suffix}`,
+        value: sideB.value,
         image: itemBImage,
         traderId: traderBId,
         traderName: receiverUser?.name || receiverUser?.fullName || 'Trader B',

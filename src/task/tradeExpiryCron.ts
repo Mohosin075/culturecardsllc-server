@@ -4,6 +4,7 @@ import { Product } from '../app/modules/product/product.model'
 import { Chat } from '../app/modules/chat/chat.model'
 import { Message } from '../app/modules/message/message.model'
 import { io } from '../server'
+import { TradeFulfillment } from '../app/modules/trade/tradeFulfillment.service'
 
 /**
  * Trade Expiry Cron Job
@@ -36,7 +37,12 @@ export const startTradeExpiryCron = (): void => {
           // Restore product statuses if they were somehow locked
           await Product.updateMany(
             {
-              _id: { $in: [offer.senderProductId, offer.receiverProductId] },
+              _id: {
+                $in: [
+                  ...(offer.senderProductIds || []),
+                  ...(offer.receiverProductIds || []),
+                ],
+              },
               status: 'pending', // only restore if still pending (not sold/completed)
             },
             { status: 'active' },
@@ -79,6 +85,17 @@ export const startTradeExpiryCron = (): void => {
     } catch (err) {
       console.error('[TradeExpiryCron] Error during expiry check:', err)
     }
+  })
+
+  // Accepted trades: payment window and ship-by deadline (client #4 and the
+  // 2026-11-25 follow-up). Every 15 minutes.
+  cron.schedule('*/15 * * * *', async () => {
+    await TradeFulfillment.enforcePaymentDeadlines().catch(err =>
+      console.error('[TradeDeadlines] payment check failed:', err),
+    )
+    await TradeFulfillment.enforceShipDeadlines().catch(err =>
+      console.error('[TradeDeadlines] ship-by check failed:', err),
+    )
   })
 
   console.log('[TradeExpiryCron] Trade expiry cron job scheduled (every hour).')

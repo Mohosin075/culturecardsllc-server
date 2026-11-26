@@ -16,6 +16,11 @@ const systemSettingsSchema = new Schema<ISystemSettingsDocument>(
       stripePercent: { type: Number, default: 2.9 },
       stripeFlatFee: { type: Number, default: 0.3 },
     },
+    tradeRules: {
+      materialFee: { type: Number, default: 2 },
+      paymentWindowHours: { type: Number, default: 48 },
+      shipByBusinessDays: { type: Number, default: 7 },
+    },
     paymentGateway: {
       primaryProcessor: { type: String, default: 'Stripe' },
       apiKey: { type: String, default: 'sk_live_*******************' },

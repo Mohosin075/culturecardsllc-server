@@ -67,6 +67,22 @@ export default {
     provider: (process.env.SHIPPING_PROVIDER || 'mock') as 'mock' | 'easypost',
     easypostApiKey: process.env.EASYPOST_API_KEY,
     easypostWebhookSecret: process.env.EASYPOST_WEBHOOK_SECRET,
+    /**
+     * Where trade items go for authentication, and the sender on the labels
+     * that ship them back. Address from the client (2026-11-25); the name and
+     * phone are still to be confirmed, so both come from the env.
+     */
+    hubAddress: {
+      name: process.env.ARIES_HUB_NAME || 'ARIES Authentication',
+      company: process.env.ARIES_HUB_COMPANY || 'ARIES',
+      street1: process.env.ARIES_HUB_STREET1 || 'PO Box 770667',
+      street2: process.env.ARIES_HUB_STREET2 || undefined,
+      city: process.env.ARIES_HUB_CITY || 'Orlando',
+      state: process.env.ARIES_HUB_STATE || 'FL',
+      zip: process.env.ARIES_HUB_ZIP || '32877',
+      country: 'US',
+      phone: process.env.ARIES_HUB_PHONE || undefined,
+    },
   },
   agora: {
     app_id: process.env.AGORA_APP_ID,

@@ -5,7 +5,7 @@ import { WebhookService } from './app/modules/payment/webhook.service'
 import { webhookService as subscriptionWebhookService } from './app/modules/subscription/webhook.service'
 import { SellerServices } from './app/modules/seller/seller.service'
 import { TradeSettlementServices } from './app/modules/trade/tradeSettlement.service'
-import { TradeServices } from './app/modules/trade/trade.service'
+import { TradeFulfillment } from './app/modules/trade/tradeFulfillment.service'
 import { RefundServices } from './app/modules/refund/refund.service'
 import { ShippingServices } from './app/modules/shipping/shipping.service'
 
@@ -91,8 +91,8 @@ webhookApp.post(
         }
       }
 
-      // Trade settlement: a trade only swaps once both sides have paid, and
-      // the second payment can land long after the first, so the swap is
+      // Trade settlement: shipping starts only once both sides have paid,
+      // and the second payment can land long after the first, so it is
       // driven from here rather than from the request that started it.
       if (event.type === 'payment_intent.succeeded') {
         const intent = event.data.object as { id?: string; metadata?: any }
@@ -101,11 +101,16 @@ webhookApp.post(
             const outcome =
               await TradeSettlementServices.markPartyPaidByIntent(intent.id)
             if (outcome?.settled) {
-              await TradeServices.finalizeTradeSwap(outcome.tradeOfferId)
+              await TradeFulfillment.startFulfillment(outcome.tradeOfferId)
             }
           } catch (err) {
             console.error('[TradeSettlement] webhook handling failed:', err)
           }
+        }
+        if (intent?.metadata?.purchaseType === 'trade_extra' && intent.id) {
+          await TradeSettlementServices.markExtraPaidByIntent(intent.id).catch(
+            err => console.error('[TradeSettlement] extra charge failed:', err),
+          )
         }
       }
 

@@ -486,7 +486,12 @@ const handleEasyPostWebhook = async (
   headers: Record<string, string | string[] | undefined>,
 ) => {
   const update = getShippingProvider().parseTrackingWebhook(rawBody, headers)
-  if (update) await applyTrackingUpdate(update)
+  if (!update) return
+  await applyTrackingUpdate(update)
+  // Trade labels (participant ↔ ARIES). Imported lazily: the trade module
+  // imports this one.
+  const { TradeFulfillment } = await import('../trade/tradeFulfillment.service')
+  await TradeFulfillment.applyTrackingUpdate(update)
 }
 
 const MOCK_STEPS: { status: TrackingStatus; message: string }[] = [

@@ -282,6 +282,15 @@ export type IPlatformSettings = {
     /** Stripe's flat per-transaction fee, in dollars. Spec: $0.30. */
     stripeFlatFee: number
   }
+  /** Client decisions on trades (docs/TRADE_MANAGEMENT_CLIENT_ANSWERS.md). */
+  tradeRules?: {
+    /** Packing material fee each trader pays, in dollars. Spec: $2. */
+    materialFee: number
+    /** Hours both traders have to pay after an offer is accepted. */
+    paymentWindowHours: number
+    /** Business days to ship to ARIES once labels are issued (5 or 7). */
+    shipByBusinessDays: number
+  }
   paymentGateway: {
     primaryProcessor: string
     apiKey: string

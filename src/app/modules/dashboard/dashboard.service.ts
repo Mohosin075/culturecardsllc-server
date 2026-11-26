@@ -1155,6 +1155,7 @@ class DashboardService {
       return {
         commissionSettings: settings.commissionSettings,
         marketplaceFees: settings.marketplaceFees,
+        tradeRules: (settings as any).tradeRules,
         paymentGateway: settings.paymentGateway,
         notificationSettings: settings.notificationSettings,
         securitySettings: settings.securitySettings,
@@ -1181,6 +1182,21 @@ class DashboardService {
           ...data.commissionSettings,
         }
       }
+      // Field by field: the admin form may send just the one it changed.
+      const assignNumbers = (target: any, input: any) => {
+        for (const [key, value] of Object.entries(input || {})) {
+          const n = Number(value)
+          if (Number.isFinite(n) && n >= 0) target[key] = n
+        }
+      }
+      if (data.marketplaceFees) {
+        assignNumbers(settings.marketplaceFees, data.marketplaceFees)
+        settings.markModified('marketplaceFees')
+      }
+      if (data.tradeRules) {
+        assignNumbers((settings as any).tradeRules, data.tradeRules)
+        settings.markModified('tradeRules')
+      }
       if (data.paymentGateway) {
         settings.paymentGateway = {
           ...settings.paymentGateway,
@@ -1205,6 +1221,7 @@ class DashboardService {
       return {
         commissionSettings: settings.commissionSettings,
         marketplaceFees: settings.marketplaceFees,
+        tradeRules: (settings as any).tradeRules,
         paymentGateway: settings.paymentGateway,
         notificationSettings: settings.notificationSettings,
         securitySettings: settings.securitySettings,

@@ -85,5 +85,49 @@ router.get(
   TradeControllers.getTradeSettlement,
 )
 
+// POST /:id/extra-charge — pay a label that cost more than its estimate
+router.post(
+  '/:id/extra-charge',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  TradeControllers.payExtraCharge,
+)
+
+// ============================================================
+// 3. ADMIN: TRADES THROUGH ARIES (receive, authenticate, ship back)
+// ============================================================
+
+const ADMINS = [USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN]
+
+router.get('/admin/list', auth(...ADMINS), TradeControllers.adminListTrades)
+router.post(
+  '/admin/:id/receive',
+  auth(...ADMINS),
+  validateRequest(TradeValidations.adminReceiveSchema),
+  TradeControllers.adminMarkReceived,
+)
+router.post(
+  '/admin/:id/authenticate',
+  auth(...ADMINS),
+  validateRequest(TradeValidations.adminAuthenticateSchema),
+  TradeControllers.adminAuthenticate,
+)
+router.post('/admin/:id/ship-back', auth(...ADMINS), TradeControllers.adminShipBack)
+router.post('/admin/:id/retry-labels', auth(...ADMINS), TradeControllers.adminRetryLabels)
+// Overriding a trade's status is for the super admin only (client #14).
+router.post('/admin/:id/complete', auth(USER_ROLES.SUPER_ADMIN), TradeControllers.adminComplete)
+router.post(
+  '/admin/:id/cancel',
+  auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(TradeValidations.adminCancelSchema),
+  TradeControllers.adminCancel,
+)
+
+// GET /:id — one trade with this user's labels and tracking (keep last)
+router.get(
+  '/:id',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  TradeControllers.getTradeDetail,
+)
+
 export const TradeRoutes = router
 export default TradeRoutes
