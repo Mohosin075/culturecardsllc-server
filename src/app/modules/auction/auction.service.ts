@@ -48,13 +48,17 @@ const generateAgoraToken = async (
 
   // Security: only the stream's host may get a publisher (broadcast) token
   if (role === 'publisher') {
-    const hostStream = await LiveStream.findOne({ agoraChannelName: channelName }).select('sellerId')
+    const hostStream = await LiveStream.findOne({ agoraChannelName: channelName }).select('sellerId status')
     if (!hostStream || !requestingUserId || hostStream.sellerId.toString() !== requestingUserId) {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
         'Only the host of this live show can broadcast on it.',
       )
     }
+    if (hostStream.status === 'ended') {
+      throw new ApiError(StatusCodes.FORBIDDEN, 'This live show has ended.')
+    }
+    await SellerServices.assertSellerCanSell(requestingUserId)
   }
 
   if (requestingUserId) {
@@ -159,6 +163,8 @@ const startScheduledStream = async (
       'Unauthorized: Only the stream host can start this scheduled show.',
     )
   }
+
+  await SellerServices.assertSellerCanSell(sellerId)
 
   stream.status = 'live'
   stream.startedAt = new Date()
@@ -648,6 +654,18 @@ const completeAuction = async (
     )
   }
 
+  const auctionSellerId = stream?.sellerId?.toString() || ''
+  const isTestEnv =
+    process.env.TEST_MODE === 'true' && config.node_env !== 'production'
+  const connectedAccountId =
+    await MarketplaceCharge.findPayableConnectedAccount(auctionSellerId)
+  if (!connectedAccountId && !isTestEnv) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'The auction host must enable payments and payouts in Stripe before checkout.',
+    )
+  }
+
   // Atomically claim this auction so two concurrent "complete" calls can't
   // both create an order / charge the winner.
   const claimed = await AuctionItem.findOneAndUpdate(
@@ -675,8 +693,7 @@ const completeAuction = async (
   // application fee, so the money is already split by the time the order
   // exists. If the seller is not payout-ready the charge is refused, and the
   // winner falls through to the checkout session below.
-  const auctionSellerId = stream?.sellerId?.toString() || ''
-  if (winner.stripeCustomerId && auctionSellerId) {
+  if (winner.stripeCustomerId && connectedAccountId) {
     try {
       const charge = await MarketplaceCharge.chargeSavedCardDirect({
         buyerId: auctionItem.highestBidderId.toString(),
@@ -706,8 +723,6 @@ const completeAuction = async (
   // Sandbox Test Mode Bypass — ONLY when TEST_MODE=true is explicitly set AND
   // the server is not running in production. A missing saved card or a "test"
   // email no longer marks an order paid: those winners go to Stripe Checkout below.
-  const isTestEnv =
-    process.env.TEST_MODE === 'true' && config.node_env !== 'production'
   if (!isAutoPaid && isTestEnv) {
     isAutoPaid = true
     paymentIntentId = `pi_test_sandbox_${Date.now()}`
@@ -746,31 +761,7 @@ const completeAuction = async (
       },
     }
 
-    // Initialize shipping weight, rate, tracking, and label PDF on disk (supports bundling)
-    const existingOrder = await Order.findOne({
-      buyerId: auctionItem.highestBidderId,
-      sellerId: stream?.sellerId,
-      deliveryStatus: 'pending',
-      purchaseType: 'auction_win',
-      createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
-    })
-
-    if (existingOrder) {
-      orderPayload.trackingDetails = {
-        carrier: existingOrder.trackingDetails.carrier,
-        trackingNumber: existingOrder.trackingDetails.trackingNumber,
-        estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
-        journeyUpdates: []
-      }
-      orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl
-      orderPayload.shippingWeight = 0
-      orderPayload.amountDetails.shipping = 0
-      // Ships in the same package: one label, bought on the main order.
-      ;(orderPayload as any).bundledWithOrderId =
-        existingOrder.bundledWithOrderId ?? existingOrder._id
-    } else {
-      await initializeOrderShipping(orderPayload, product)
-    }
+    await initializeOrderShipping(orderPayload, product)
 
     const [order] = await Order.create([orderPayload])
 
@@ -842,46 +833,61 @@ const completeAuction = async (
     return { checkoutUrl: '', auctionItem }
   }
 
-  // Decrement stock by 1 for manual checkout session; if remaining stock > 0 keep active, else set pending
+  const metadata = {
+    purchaseType: 'auction_win',
+    productId: product._id.toString(),
+    sellerId: auctionSellerId,
+    streamId: stream._id.toString(),
+    winnerId: auctionItem.highestBidderId.toString(),
+    auctionItemId,
+  }
+  const stripeSession = await (async () => {
+    try {
+      if (!winner.email) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'Winner email not found')
+      }
+      const fees = await MarketplaceCharge.getFeeSettings()
+      return await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: `Auction Win: ${product.title}`,
+                  description: `You won the auction! Highest bid: $${auctionItem.currentBid}`,
+                },
+                unit_amount: Math.round(auctionItem.currentBid * 100),
+              },
+              quantity: 1,
+            },
+          ],
+          mode: 'payment',
+          success_url: `${config.clientUrl}?auction_won=true&auctionItemId=${auctionItemId}`,
+          cancel_url: `${config.clientUrl}/auction/cancel`,
+          customer_email: winner.email,
+          payment_intent_data: {
+            application_fee_amount: MarketplaceCharge.calculateSaleFee(auctionItem.currentBid, fees),
+          },
+          metadata,
+        }, {
+          stripeAccount: connectedAccountId!,
+          idempotencyKey: `auction-winner-checkout-${auctionItemId}`,
+        })
+    } catch (error) {
+      await AuctionItem.updateOne(
+        { _id: auctionItem._id, status: 'completed' },
+        { $set: { status: 'active' } },
+      )
+      throw error
+    }
+  })()
+
+  // Reserve stock after Stripe creates a checkout session.
   const currentStock = typeof product.stock === 'number' ? product.stock : 1
   const newStock = Math.max(0, currentStock - 1)
   const newStatus = newStock > 0 ? 'active' : 'pending'
   await Product.findByIdAndUpdate(product._id, { status: newStatus, stock: newStock })
-
-  auctionItem.status = 'completed'
-  await auctionItem.save()
-
-  if (!winner.email) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Winner email not found')
-  }
-
-  const stripeSession = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Auction Win: ${product.title}`,
-            description: `You won the auction! Highest bid: $${auctionItem.currentBid}`,
-          },
-          unit_amount: Math.round(auctionItem.currentBid * 100),
-        },
-        quantity: 1,
-      },
-    ],
-    mode: 'payment',
-    success_url: `${config.clientUrl}?auction_won=true&auctionItemId=${auctionItemId}`,
-    cancel_url: `${config.clientUrl}/auction/cancel`,
-    customer_email: winner.email,
-    metadata: {
-      purchaseType: 'auction_win',
-      productId: product._id.toString(),
-      sellerId: stream?.sellerId?.toString() || '',
-      winnerId: auctionItem.highestBidderId.toString(),
-      auctionItemId: auctionItemId,
-    },
-  })
 
   // Create Payment record for tracking & webhook safety
   await Payment.create({
@@ -899,6 +905,7 @@ const completeAuction = async (
       winnerId: auctionItem.highestBidderId.toString(),
       auctionItemId: auctionItemId,
       checkoutSessionId: stripeSession.id,
+      stripeAccountId: connectedAccountId,
     },
   })
 
@@ -1385,12 +1392,7 @@ const getStreamSales = async (streamId: string, sellerId?: string) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream session not found')
   }
 
-  const query: any = {
-    $or: [
-      { streamId: new Types.ObjectId(streamId) },
-      { productId: { $in: stream.inventoryIds || [] } },
-    ],
-  }
+  const query: any = { streamId: stream._id }
   if (sellerId) {
     query.sellerId = new Types.ObjectId(sellerId)
   }
@@ -1431,6 +1433,66 @@ const getStreamSales = async (streamId: string, sellerId?: string) => {
 }
 
 // UPDATE 6: Post-show Summary Screen Data & Shipping Labels
+const getCompletedShowsForShipping = async (sellerId: string) =>
+  LiveStream.find({ sellerId, status: 'ended' })
+    .select('title endedAt')
+    .sort({ endedAt: -1, _id: -1 })
+    .lean()
+
+const getShowShipments = async (streamId: string, sellerId: string) => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid show ID.')
+  }
+  const show = await LiveStream.findOne({ _id: streamId, sellerId, status: 'ended' })
+    .select('title endedAt')
+    .lean()
+  if (!show) throw new ApiError(StatusCodes.NOT_FOUND, 'Completed show not found.')
+
+  const orders = await Order.find({
+    streamId: show._id,
+    sellerId,
+    paymentStatus: 'paid',
+    deliveryStatus: { $ne: 'cancelled' },
+  })
+    .populate('buyerId', 'fullName name')
+    .populate('productId', 'title description')
+    .sort({ createdAt: 1, _id: 1 })
+    .lean()
+
+  const groups = new Map<string, typeof orders>()
+  for (const order of orders) {
+    const buyer = order.buyerId as any
+    const buyerId = String(buyer?._id ?? buyer ?? order._id)
+    const items = groups.get(buyerId)
+    if (items) items.push(order)
+    else groups.set(buyerId, [order])
+  }
+  return {
+    show,
+    shipments: [...groups.values()].map(items => {
+      const root = items.find(order => order.shippingLabelUrl && !order.bundledWithOrderId) ?? items[0]
+      const buyer = root.buyerId as any
+      return {
+        orderId: root._id,
+        buyerName: buyer?.fullName || buyer?.name || 'Buyer',
+        labelUrl: root.shippingLabelUrl,
+        trackingNumber: root.trackingDetails?.trackingNumber,
+        deliveryStatus: root.deliveryStatus,
+        total: items.reduce((sum, order) => sum + Math.round((order.amountDetails?.totalPaid || 0) * 100), 0) / 100,
+        items: items.map(order => {
+          const product = order.productId as any
+          return {
+            id: order._id,
+            title: product?.title || 'Item',
+            description: product?.description,
+            soldPrice: order.amountDetails?.itemSubtotal || 0,
+          }
+        }),
+      }
+    }),
+  }
+}
+
 const getStreamSummary = async (streamId: string, sellerId?: string) => {
   if (!Types.ObjectId.isValid(streamId)) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
@@ -1493,4 +1555,6 @@ export const AuctionServices = {
   spinWheel,
   getStreamSales,
   getStreamSummary,
+  getCompletedShowsForShipping,
+  getShowShipments,
 }

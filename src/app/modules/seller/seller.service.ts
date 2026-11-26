@@ -1,3 +1,4 @@
+import { io } from '../../../server'
 import { StatusCodes } from 'http-status-codes'
 import { JwtPayload } from 'jsonwebtoken'
 import { Types } from 'mongoose'
@@ -5,6 +6,8 @@ import ApiError from '../../../errors/ApiError'
 import config from '../../../config'
 import { USER_ROLES } from '../../../enum/user'
 import { User } from '../user/user.model'
+import { LiveStream } from '../auction/auction.model'
+import { Product } from '../product/product.model'
 import { SellerApplication } from './seller.model'
 import {
   ISellerApplication,
@@ -90,7 +93,8 @@ const buildOnboardingState = (
     adminApproved,
     canSell:
       adminApproved &&
-      (config.seller.requireStripeOnboarding ? stripePayoutReady : true),
+      (!config.seller.requireStripeOnboarding ||
+        (Boolean(stripe.detailsSubmitted) && stripePayoutReady)),
     stripe,
     rejectionReason: application.rejectionReason,
     outstandingRequirements: dedupe([
@@ -99,6 +103,7 @@ const buildOnboardingState = (
     ]).map(humanizeRequirement),
     submittedAt: application.submittedAt,
     reviewedAt: application.reviewedAt,
+    accessRevokedAt: application.accessRevokedAt,
   }
 }
 
@@ -172,6 +177,13 @@ const applyAsSeller = async (
     )
   }
 
+  if (application?.accessRevokedAt) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'ARIES can restore seller access using your existing application. Contact support for help.',
+    )
+  }
+
   // Talk to Stripe before touching the database. If Stripe refuses (outage,
   // platform not set up for Connect, a bad field) nothing is saved, so the
   // admin queue never shows an application with no Stripe account behind it.
@@ -181,8 +193,6 @@ const applyAsSeller = async (
     const account = await StripeConnectService.createConnectedAccount({
       userId: user.userId.toString(),
       email: userData.email,
-      businessName: payload.businessName,
-      whatTheySell: payload.whatTheySell,
     })
     stripeState = StripeConnectService.mapAccountToState(account)
   }
@@ -196,16 +206,22 @@ const applyAsSeller = async (
   }
 
   if (!application) {
-    application = await SellerApplication.create({
-      userId: new Types.ObjectId(user.userId),
-      whatTheySell: payload.whatTheySell,
-      categories: payload.categories?.map(id => new Types.ObjectId(id)),
-      businessName: payload.businessName,
-      policyAcceptance: acceptance,
-      status: 'stripe_pending',
-      stripe: stripeState,
-      submittedAt: new Date(),
-    })
+    const userId = new Types.ObjectId(user.userId)
+    application = await SellerApplication.findOneAndUpdate(
+      { userId },
+      {
+        $setOnInsert: {
+          whatTheySell: payload.whatTheySell,
+          categories: payload.categories?.map(id => new Types.ObjectId(id)),
+          businessName: payload.businessName,
+          policyAcceptance: acceptance,
+          status: 'stripe_pending',
+          stripe: stripeState,
+          submittedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true, runValidators: true },
+    )
   } else {
     // Re-applying after a rejection, or editing before Stripe is finished.
     application.whatTheySell = payload.whatTheySell
@@ -220,19 +236,23 @@ const applyAsSeller = async (
       application.status = 'stripe_pending'
       application.rejectionReason = undefined
       application.reviewedAt = undefined
+      application.accessRevokedAt = undefined
       application.reviewedBy = undefined
     }
     await application.save()
   }
 
-  if (userData.stripeConnectedAccountId !== stripeState.accountId) {
-    userData.stripeConnectedAccountId = stripeState.accountId
+  const accountId = application?.stripe?.accountId
+  if (!accountId) {
+    throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Stripe account was not saved.')
+  }
+
+  if (userData.stripeConnectedAccountId !== accountId) {
+    userData.stripeConnectedAccountId = accountId
     await userData.save()
   }
 
-  const onboardingUrl = await StripeConnectService.createOnboardingLink(
-    application.stripe.accountId as string,
-  )
+  const onboardingUrl = await StripeConnectService.createOnboardingLink(accountId)
 
   return {
     onboardingUrl,
@@ -308,6 +328,7 @@ const syncByAccountId = async (accountId: string): Promise<void> => {
   })
   if (!application) return
   await syncApplicationWithStripe(application as any)
+  io?.to(String(application.userId)).emit('seller-onboarding-updated')
 }
 
 /**
@@ -345,9 +366,10 @@ const listApplicationsForAdmin = async (
 ): Promise<any[]> => {
   const filter: Record<string, any> = {}
 
+  if (query.userId) filter.userId = query.userId
   if (query.status) {
     filter.status = query.status
-  } else {
+  } else if (!query.userId) {
     // The review queue: everyone who is not already approved.
     filter.status = { $in: ['stripe_pending', 'pending_approval', 'rejected'] }
   }
@@ -381,6 +403,7 @@ const listApplicationsForAdmin = async (
         connected: Boolean(stripe.accountId),
         accountId: stripe.accountId,
         detailsSubmitted: stripe.detailsSubmitted,
+        pendingVerification: dedupe(stripe.pendingVerification || []).map(humanizeRequirement),
         chargesEnabled: stripe.chargesEnabled,
         payoutsEnabled: stripe.payoutsEnabled,
         disabledReason: stripe.disabledReason,
@@ -393,6 +416,7 @@ const listApplicationsForAdmin = async (
       payoutEligible: Boolean(stripe.chargesEnabled && stripe.payoutsEnabled),
       rejectionReason: app.rejectionReason,
       reviewedAt: app.reviewedAt,
+      accessRevokedAt: app.accessRevokedAt,
     }
   })
 }
@@ -409,10 +433,14 @@ const approveApplication = async (
     )
   }
 
-  // Make the decision against fresh Stripe data rather than a stale mirror.
+  const restoringAccess = Boolean(application.accessRevokedAt)
+  const user = await User.findById(userId)
+  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
+
   await syncApplicationWithStripe(application as any)
 
   if (
+    !restoringAccess &&
     config.seller.requireStripeOnboarding &&
     !application.stripe?.detailsSubmitted
   ) {
@@ -426,18 +454,64 @@ const approveApplication = async (
   application.reviewedAt = new Date()
   application.reviewedBy = new Types.ObjectId(adminId)
   application.rejectionReason = undefined
+  application.accessRevokedAt = undefined
   await application.save()
-
-  const user = await User.findById(userId)
-  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, 'User not found')
 
   if (!user.roles.includes(USER_ROLES.SELLER)) {
     user.roles.push(USER_ROLES.SELLER)
   }
   user.sellerVerified = true
+  if (restoringAccess) user.activeRole = USER_ROLES.SELLER
   await user.save()
+  io?.to(userId).emit('seller-onboarding-updated')
 
   return buildOnboardingState(application)
+}
+
+const removeSellerAccess = async (userId: string, adminId: string, reason: string) => {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.')
+  }
+
+  const user = await User.findById(userId)
+  if (!user) throw new ApiError(StatusCodes.NOT_FOUND, 'User not found.')
+  if (user.roles.some(role => role === USER_ROLES.ADMIN || role === USER_ROLES.SUPER_ADMIN)) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Admin accounts cannot be changed to buyer-only.')
+  }
+
+  await User.updateOne(
+    { _id: userId },
+    { $set: { roles: [USER_ROLES.BUYER], activeRole: USER_ROLES.BUYER, sellerVerified: false } },
+  )
+
+  const reviewedAt = new Date()
+  await SellerApplication.updateOne(
+    { userId, status: { $ne: 'rejected' } },
+    { $set: { status: 'rejected', reviewedAt, reviewedBy: adminId, rejectionReason: reason, accessRevokedAt: reviewedAt } },
+  )
+
+  await Product.updateMany(
+    { sellerId: userId, status: 'active', isTradeOnly: { $ne: true } },
+    { $set: { status: 'pending' } },
+  )
+
+  const streams = await LiveStream.find({
+    sellerId: userId,
+    status: { $in: ['live', 'scheduled'] },
+  }).select('_id')
+  const streamIds = streams.map(stream => stream._id)
+  await LiveStream.updateMany(
+    { _id: { $in: streamIds }, status: { $in: ['live', 'scheduled'] } },
+    { $set: { status: 'ended', endedAt: reviewedAt } },
+  )
+  for (const streamId of streamIds) {
+    io?.to(`stream:${streamId}`).to(userId).emit('stream-ended', {
+      streamId: String(streamId),
+      reason: 'seller_access_removed',
+    })
+  }
+
+  io?.to(userId).emit('seller-onboarding-updated')
 }
 
 const rejectApplication = async (
@@ -466,6 +540,7 @@ const rejectApplication = async (
     await user.save()
   }
 
+  io?.to(userId).emit('seller-onboarding-updated')
   return buildOnboardingState(application)
 }
 
@@ -543,6 +618,7 @@ export const SellerServices = {
   listApplicationsForAdmin,
   approveApplication,
   rejectApplication,
+  removeSellerAccess,
   assertSellerCanSell,
   buildOnboardingState,
 }

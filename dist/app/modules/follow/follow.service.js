@@ -5,12 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FollowServices = void 0;
 const http_status_codes_1 = require("http-status-codes");
+const mongoose_1 = require("mongoose");
+const auction_model_1 = require("../auction/auction.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const follow_model_1 = require("./follow.model");
 const user_model_1 = require("../user/user.model");
 const paginationHelper_1 = require("../../../helpers/paginationHelper");
 const notification_integration_1 = require("../notification/notification.integration");
-const toggleFollow = async (followerId, followingId) => {
+const toggleFollow = async (followerId, followingId, streamId) => {
     if (followerId === followingId) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "You cannot follow yourself.");
     }
@@ -35,9 +37,17 @@ const toggleFollow = async (followerId, followingId) => {
     else {
         // Follow
         await follow_model_1.Follow.create({ followerId, followingId });
-        notification_integration_1.NotificationIntegration.onNewFollow(followerId, followingId).catch(err => console.error('Failed to send follow notification:', err));
+        notifyNewFollow(followerId, followingId, streamId).catch(err => console.error('Failed to send follow notification:', err));
         return { followed: true, message: 'Followed successfully' };
     }
+};
+const notifyNewFollow = async (followerId, followingId, streamId) => {
+    const show = streamId && mongoose_1.Types.ObjectId.isValid(streamId)
+        ? await auction_model_1.LiveStream.findOne({ _id: streamId, sellerId: followingId, status: 'live' })
+            .select('title')
+            .lean()
+        : null;
+    await notification_integration_1.NotificationIntegration.onNewFollow(followerId, followingId, show ? { id: String(show._id), title: show.title } : undefined);
 };
 const getFollowers = async (userId, paginationOptions) => {
     const { page, skip, limit, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(paginationOptions);

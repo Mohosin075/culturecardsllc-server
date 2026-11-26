@@ -85,67 +85,69 @@ const createCheckoutSession = async (
         )
       }
 
-      // Only route through Connect when the seller can actually be paid.
-      // A seller who has not onboarded yet falls through to the platform
-      // charge below — the old behaviour — so purchases keep working while
-      // existing sellers are migrated.
+      // Product purchases must settle on the seller's connected account.
       const payableAccount =
         await MarketplaceCharge.findPayableConnectedAccount(
           product?.sellerId?.toString(),
         )
 
-      if (product?.sellerId && payableAccount) {
-        const itemSubtotal = Number(
-          product.buyNowPrice || product.estValue || 0,
+      if (!product?.sellerId || !payableAccount) {
+        throw new ApiError(
+          StatusCodes.CONFLICT,
+          'This item is unavailable for purchase until the seller enables Stripe payments and payouts.',
         )
-        const totalAmount = Number(payload.amount || 0)
+      }
 
-        if (totalAmount + 0.005 < itemSubtotal) {
-          throw new ApiError(
-            StatusCodes.BAD_REQUEST,
-            'Payment amount is lower than the item price.',
-          )
-        }
+      const itemSubtotal = Number(
+        product.buyNowPrice || product.estValue || 0,
+      )
+      const totalAmount = Number(payload.amount || 0)
 
-        const charge = await MarketplaceCharge.createDirectChargeIntent({
-          buyerId: user.userId.toString(),
+      if (totalAmount + 0.005 < itemSubtotal) {
+        throw new ApiError(
+          StatusCodes.BAD_REQUEST,
+          'Payment amount is lower than the item price.',
+        )
+      }
+
+      const charge = await MarketplaceCharge.createDirectChargeIntent({
+        buyerId: user.userId.toString(),
+        sellerId: product.sellerId.toString(),
+        totalAmount,
+        itemSubtotal,
+        currency: payload.currency || 'usd',
+        metadata: {
+          productId: String(productId),
+          ...(payload.orderId && { orderId: payload.orderId.toString() }),
+          ...(payload.metadata as Record<string, string>),
+        },
+      })
+
+      await Payment.create({
+        userId: user.userId,
+        orderId: payload.orderId,
+        userEmail: userData.email,
+        amount: totalAmount,
+        currency: payload.currency || 'usd',
+        paymentMethod: 'stripe',
+        paymentIntentId: charge.paymentIntentId,
+        status: 'pending',
+        metadata: {
+          productId: String(productId),
           sellerId: product.sellerId.toString(),
-          totalAmount,
-          itemSubtotal,
-          currency: payload.currency || 'usd',
-          metadata: {
-            productId: String(productId),
-            ...(payload.orderId && { orderId: payload.orderId.toString() }),
-            ...(payload.metadata as Record<string, string>),
-          },
-        })
-
-        await Payment.create({
-          userId: user.userId,
-          orderId: payload.orderId,
-          userEmail: userData.email,
-          amount: totalAmount,
-          currency: payload.currency || 'usd',
-          paymentMethod: 'stripe',
-          paymentIntentId: charge.paymentIntentId,
-          status: 'pending',
-          metadata: {
-            productId: String(productId),
-            sellerId: product.sellerId.toString(),
-            stripeAccountId: charge.stripeAccountId,
-            platformFeeCents: charge.applicationFeeAmount,
-            ...payload.metadata,
-          },
-        })
-
-        return {
-          clientSecret: charge.clientSecret,
-          ephemeralKey: charge.ephemeralKey,
-          customer: charge.customer,
-          paymentIntentId: charge.paymentIntentId,
           stripeAccountId: charge.stripeAccountId,
-          platformFee: charge.applicationFeeAmount / 100,
-        }
+          platformFeeCents: charge.applicationFeeAmount,
+          ...payload.metadata,
+        },
+      })
+
+      return {
+        clientSecret: charge.clientSecret,
+        ephemeralKey: charge.ephemeralKey,
+        customer: charge.customer,
+        paymentIntentId: charge.paymentIntentId,
+        stripeAccountId: charge.stripeAccountId,
+        platformFee: charge.applicationFeeAmount / 100,
       }
     }
 

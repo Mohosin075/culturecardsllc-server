@@ -130,5 +130,6 @@ const OrderSchema = new mongoose_1.Schema({
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
 });
+OrderSchema.index({ streamId: 1, sellerId: 1, buyerId: 1, paymentStatus: 1, createdAt: 1 });
 exports.Order = (0, mongoose_1.model)('Order', OrderSchema);
 exports.default = exports.Order;

@@ -53,6 +53,7 @@ const SellerApplicationSchema = new Schema<ISellerApplication>(
     stripe: {
       accountId: { type: String, index: true },
       detailsSubmitted: { type: Boolean, default: false },
+      pendingVerification: { type: [String], default: [] },
       chargesEnabled: { type: Boolean, default: false },
       payoutsEnabled: { type: Boolean, default: false },
       disabledReason: { type: String },
@@ -65,6 +66,7 @@ const SellerApplicationSchema = new Schema<ISellerApplication>(
       default: Date.now,
     },
     reviewedAt: { type: Date },
+    accessRevokedAt: { type: Date },
     reviewedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

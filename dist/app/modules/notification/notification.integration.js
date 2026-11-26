@@ -137,7 +137,7 @@ class NotificationIntegration {
             console.error('Error creating auction won notification:', error);
         }
     }
-    static async onNewFollow(followerId, followingId) {
+    static async onNewFollow(followerId, followingId, show) {
         try {
             const follower = await user_model_1.User.findById(followerId);
             if (!follower)
@@ -146,12 +146,15 @@ class NotificationIntegration {
             await notification_service_1.NotificationServices.createNotification({
                 userId: followingId,
                 title: 'New Follower! 👤',
-                content: `${followerName} started following you.`,
+                content: show
+                    ? `${followerName} followed you from your live stream “${show.title}”.`
+                    : `${followerName} started following you.`,
                 type: notification_interface_1.NotificationType.NEW_FOLLOW,
                 channel: notification_interface_1.NotificationChannel.PUSH,
                 priority: notification_interface_1.NotificationPriority.MEDIUM,
                 metadata: {
                     followerId: followerId.toString(),
+                    ...(show && { source: 'live_stream', streamId: show.id }),
                 },
             });
         }

@@ -10,6 +10,7 @@ const createOrderSchema = zod_1.z.object({
         productId: zod_1.z
             .string({ required_error: 'Product ID is required' })
             .regex(/^[0-9a-fA-F]{24}$/, 'Invalid Product ID format'),
+        streamId: zod_1.z.string().regex(/^[a-fA-F0-9]{24}$/).optional(),
         purchaseType: zod_1.z
             .enum(['auction_win', 'buy_now', 'trade_swap'])
             .optional()

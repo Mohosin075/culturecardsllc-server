@@ -67,16 +67,17 @@ const callStripe = async (action, request) => {
 };
 /** Shape Stripe's account object into the subset we persist. */
 const mapAccountToState = (account) => {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     const requirements = account.requirements;
     return {
         accountId: account.id,
         detailsSubmitted: Boolean(account.details_submitted),
+        pendingVerification: (_a = requirements === null || requirements === void 0 ? void 0 : requirements.pending_verification) !== null && _a !== void 0 ? _a : [],
         chargesEnabled: Boolean(account.charges_enabled),
         payoutsEnabled: Boolean(account.payouts_enabled),
-        disabledReason: (_a = requirements === null || requirements === void 0 ? void 0 : requirements.disabled_reason) !== null && _a !== void 0 ? _a : undefined,
-        currentlyDue: (_b = requirements === null || requirements === void 0 ? void 0 : requirements.currently_due) !== null && _b !== void 0 ? _b : [],
-        pastDue: (_c = requirements === null || requirements === void 0 ? void 0 : requirements.past_due) !== null && _c !== void 0 ? _c : [],
+        disabledReason: (_b = requirements === null || requirements === void 0 ? void 0 : requirements.disabled_reason) !== null && _b !== void 0 ? _b : undefined,
+        currentlyDue: (_c = requirements === null || requirements === void 0 ? void 0 : requirements.currently_due) !== null && _c !== void 0 ? _c : [],
+        pastDue: (_d = requirements === null || requirements === void 0 ? void 0 : requirements.past_due) !== null && _d !== void 0 ? _d : [],
         lastSyncedAt: new Date(),
     };
 };
@@ -94,14 +95,12 @@ const createConnectedAccount = async (params) => {
         business_profile: {
             // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
             mcc: config_1.default.seller.connectMcc,
-            name: params.businessName || undefined,
-            product_description: params.whatTheySell || undefined,
         },
         metadata: {
             areisUserId: params.userId,
             platform: 'ARIES',
         },
-    }));
+    }, { idempotencyKey: `seller-connect-${params.userId}` }));
 };
 exports.createConnectedAccount = createConnectedAccount;
 const retrieveAccount = async (accountId) => {

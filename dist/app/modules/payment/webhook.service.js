@@ -10,6 +10,7 @@ const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const payment_model_1 = require("./payment.model");
 const emailHelper_1 = require("../../../helpers/emailHelper");
 const order_model_1 = require("../order/order.model");
+const auction_model_1 = require("../auction/auction.model");
 const product_model_1 = require("../product/product.model");
 const trade_model_1 = require("../trade/trade.model");
 const chat_model_1 = require("../chat/chat.model");
@@ -19,13 +20,15 @@ const user_model_1 = require("../user/user.model");
 const shippingHelper_1 = require("../../../helpers/shippingHelper");
 const tradeVote_service_1 = require("../trade/tradeVote.service");
 const partner_service_1 = require("../partner/partner.service");
-const handleCheckoutSessionCompleted = async (sessionData) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+const handleCheckoutSessionCompleted = async (sessionData, stripeAccountId) => {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     try {
         console.log('🔔 Processing Checkout Session Completed:', sessionData.id);
         const sessionWithDetails = await stripe_1.default.checkout.sessions.retrieve(sessionData.id, {
             expand: ['payment_intent', 'line_items'],
-        });
+        }, stripeAccountId ? { stripeAccount: stripeAccountId } : undefined);
+        if (sessionWithDetails.payment_status === 'unpaid')
+            return;
         let lookupId;
         if (typeof sessionWithDetails.payment_intent === 'string') {
             lookupId = sessionWithDetails.payment_intent;
@@ -53,6 +56,7 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                 return;
             }
             payment.status = 'succeeded';
+            payment.paymentIntentId = lookupId;
             payment.metadata = { ...payment.metadata, ...sessionWithDetails };
             await payment.save({ session: mongoSession });
             const meta = (sessionWithDetails.metadata || {});
@@ -86,19 +90,17 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                         postalCode: ((_g = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _g === void 0 ? void 0 : _g.postalCode) || '10001',
                         country: ((_h = buyerUser === null || buyerUser === void 0 ? void 0 : buyerUser.address) === null || _h === void 0 ? void 0 : _h.country) || 'US',
                     };
-                    // Check if there is an existing pending order for the same buyer, seller, and stream in the last 12 hours
-                    const existingOrder = await order_model_1.Order.findOne({
-                        buyerId: meta.winnerId,
-                        sellerId: meta.sellerId,
-                        deliveryStatus: 'pending',
-                        purchaseType: 'auction_win',
-                        createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
-                    }).session(mongoSession);
+                    const auction = meta.auctionItemId
+                        ? await auction_model_1.AuctionItem.findById(meta.auctionItemId).select('streamId').session(mongoSession)
+                        : null;
                     const orderPayload = {
                         buyerId: meta.winnerId,
                         sellerId: meta.sellerId,
+                        streamId: auction === null || auction === void 0 ? void 0 : auction.streamId,
                         productId: meta.productId,
                         purchaseType: 'auction_win',
+                        paymentIntentId: lookupId,
+                        stripeAccountId,
                         paymentStatus: 'paid',
                         deliveryStatus: 'pending',
                         shippingAddress,
@@ -111,25 +113,7 @@ const handleCheckoutSessionCompleted = async (sessionData) => {
                             totalPaid: totalPaid,
                         },
                     };
-                    if (existingOrder) {
-                        // Bundle order: Reuse tracking details and shipping label, set shipping rate to $0
-                        orderPayload.trackingDetails = {
-                            carrier: existingOrder.trackingDetails.carrier,
-                            trackingNumber: existingOrder.trackingDetails.trackingNumber,
-                            estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
-                            journeyUpdates: []
-                        };
-                        orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl;
-                        orderPayload.shippingWeight = 0;
-                        orderPayload.amountDetails.shipping = 0;
-                        orderPayload.bundledWithOrderId =
-                            (_j = existingOrder.bundledWithOrderId) !== null && _j !== void 0 ? _j : existingOrder._id;
-                        orderPayload.amountDetails.totalPaid = totalPaid;
-                    }
-                    else {
-                        // New order: Initialize full shipping weight, rate, tracking, and PDF label on disk
-                        await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
-                    }
+                    await (0, shippingHelper_1.initializeOrderShipping)(orderPayload, product);
                     // Create order
                     const [order] = await order_model_1.Order.create([orderPayload], { session: mongoSession });
                     // Record partner commission (50/50 split)
@@ -371,7 +355,7 @@ exports.WebhookService = {
             console.log(`Processing webhook: ${event.type}`);
             switch (event.type) {
                 case 'checkout.session.completed':
-                    await handleCheckoutSessionCompleted(event.data.object);
+                    await handleCheckoutSessionCompleted(event.data.object, event.account);
                     break;
                 case 'checkout.session.expired':
                     await handleCheckoutSessionExpired(event.data.object);

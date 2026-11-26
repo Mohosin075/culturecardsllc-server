@@ -50,6 +50,7 @@ const SellerApplicationSchema = new mongoose_1.Schema({
     stripe: {
         accountId: { type: String, index: true },
         detailsSubmitted: { type: Boolean, default: false },
+        pendingVerification: { type: [String], default: [] },
         chargesEnabled: { type: Boolean, default: false },
         payoutsEnabled: { type: Boolean, default: false },
         disabledReason: { type: String },
@@ -62,6 +63,7 @@ const SellerApplicationSchema = new mongoose_1.Schema({
         default: Date.now,
     },
     reviewedAt: { type: Date },
+    accessRevokedAt: { type: Date },
     reviewedBy: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User',

@@ -133,5 +133,7 @@ const OrderSchema = new Schema<IOrder>(
   },
 )
 
+OrderSchema.index({ streamId: 1, sellerId: 1, buyerId: 1, paymentStatus: 1, createdAt: 1 })
+
 export const Order = model<IOrder>('Order', OrderSchema)
 export default Order

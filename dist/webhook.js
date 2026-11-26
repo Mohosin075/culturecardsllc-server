@@ -79,7 +79,7 @@ webhookApp.post('/webhook', express_1.default.raw({ type: 'application/json' }),
                 }
             }
         }
-        await Promise.allSettled([
+        const [paymentResult] = await Promise.allSettled([
             webhook_service_1.WebhookService.handleWebhook({
                 body: rawBody,
                 headers: {
@@ -88,6 +88,9 @@ webhookApp.post('/webhook', express_1.default.raw({ type: 'application/json' }),
             }),
             webhook_service_2.webhookService.processWebhookEvent(event),
         ]);
+        if (paymentResult.status === 'rejected' && event.type === 'checkout.session.completed') {
+            throw paymentResult.reason;
+        }
         res.status(200).json({
             received: true,
             event: event.type,

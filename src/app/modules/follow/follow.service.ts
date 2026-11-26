@@ -1,4 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
+import { Types } from 'mongoose'
+import { LiveStream } from '../auction/auction.model'
 import ApiError from '../../../errors/ApiError'
 import { Follow } from './follow.model'
 import { User } from '../user/user.model'
@@ -6,7 +8,7 @@ import { paginationHelper } from '../../../helpers/paginationHelper'
 import { IPaginationOptions } from '../../../interfaces/pagination'
 import { NotificationIntegration } from '../notification/notification.integration'
 
-const toggleFollow = async (followerId: string, followingId: string) => {
+const toggleFollow = async (followerId: string, followingId: string, streamId?: string) => {
   if (followerId === followingId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "You cannot follow yourself.")
   }
@@ -37,11 +39,24 @@ const toggleFollow = async (followerId: string, followingId: string) => {
   } else {
     // Follow
     await Follow.create({ followerId, followingId })
-    NotificationIntegration.onNewFollow(followerId, followingId).catch(err =>
+    notifyNewFollow(followerId, followingId, streamId).catch(err =>
       console.error('Failed to send follow notification:', err),
     )
     return { followed: true, message: 'Followed successfully' }
   }
+}
+
+const notifyNewFollow = async (followerId: string, followingId: string, streamId?: string) => {
+  const show = streamId && Types.ObjectId.isValid(streamId)
+    ? await LiveStream.findOne({ _id: streamId, sellerId: followingId, status: 'live' })
+        .select('title')
+        .lean()
+    : null
+  await NotificationIntegration.onNewFollow(
+    followerId,
+    followingId,
+    show ? { id: String(show._id), title: show.title } : undefined,
+  )
 }
 
 const getFollowers = async (userId: string, paginationOptions: IPaginationOptions) => {

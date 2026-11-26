@@ -11,7 +11,7 @@ const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const user_model_1 = require("../modules/user/user.model");
 const user_1 = require("../../enum/user");
 const auth = (...roles) => async (req, res, next) => {
-    var _a, _b;
+    var _a, _b, _c;
     try {
         const tokenWithBearer = req.headers.authorization;
         if (!tokenWithBearer) {
@@ -49,7 +49,7 @@ const auth = (...roles) => async (req, res, next) => {
         }
         // VERIFY USER STATUS IN DB
         const userStatusCheck = await user_model_1.User.findById(verifyUser.userId)
-            .select('status')
+            .select('status roles')
             .lean();
         if (!userStatusCheck) {
             return next(new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'User does not exist'));
@@ -60,14 +60,18 @@ const auth = (...roles) => async (req, res, next) => {
         if (userStatusCheck.status === user_1.USER_STATUS.DELETED) {
             return next(new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account is deleted.'));
         }
+        if ((verifyUser.activeRole || verifyUser.role) === user_1.USER_ROLES.SELLER &&
+            !((_a = userStatusCheck.roles) === null || _a === void 0 ? void 0 : _a.includes(user_1.USER_ROLES.SELLER))) {
+            verifyUser.role = verifyUser.activeRole = user_1.USER_ROLES.BUYER;
+        }
         // Attach to req
         req.user = verifyUser;
         // SECOND: role check
         if (roles.length > 0) {
             const userRole = verifyUser.activeRole ||
                 verifyUser.role ||
-                ((_a = verifyUser.user) === null || _a === void 0 ? void 0 : _a.role) ||
-                ((_b = verifyUser.data) === null || _b === void 0 ? void 0 : _b.role);
+                ((_b = verifyUser.user) === null || _b === void 0 ? void 0 : _b.role) ||
+                ((_c = verifyUser.data) === null || _c === void 0 ? void 0 : _c.role);
             if (!userRole) {
                 return next(new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'User role missing in token'));
             }

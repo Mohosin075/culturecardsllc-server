@@ -272,7 +272,19 @@ const getStreamSummary = (0, catchAsync_1.default)(async (req, res) => {
         data: result,
     });
 });
+const getCompletedShowsForShipping = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const data = await auction_service_1.AuctionServices.getCompletedShowsForShipping(user.userId);
+    (0, sendResponse_1.default)(res, { statusCode: http_status_codes_1.StatusCodes.OK, success: true, message: 'Completed shows retrieved.', data });
+});
+const getShowShipments = (0, catchAsync_1.default)(async (req, res) => {
+    const user = req.user;
+    const data = await auction_service_1.AuctionServices.getShowShipments(req.params.streamId, user.userId);
+    (0, sendResponse_1.default)(res, { statusCode: http_status_codes_1.StatusCodes.OK, success: true, message: 'Show shipments retrieved.', data });
+});
 exports.AuctionControllers = {
+    getCompletedShowsForShipping,
+    getShowShipments,
     generateAgoraToken,
     createLiveStream,
     startScheduledStream,

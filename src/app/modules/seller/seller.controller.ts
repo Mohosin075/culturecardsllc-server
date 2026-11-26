@@ -126,8 +126,8 @@ const renderBounce = (
 
 const stripeReturn = catchAsync(async (req: Request, res: Response) => {
   renderBounce(res, {
-    heading: 'Stripe setup complete',
-    body: 'Your details are with Stripe. Your application is now pending ARIES approval — we will let you know as soon as it is reviewed.',
+    heading: 'Return to ARIES',
+    body: 'Open the app to check your Stripe status. If Stripe still needs information, you can continue setup there. Once Stripe marks setup complete, your application can move to ARIES review.',
   })
 })
 

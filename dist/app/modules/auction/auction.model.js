@@ -20,7 +20,7 @@ const LiveStreamSchema = new mongoose_1.Schema({
     },
     coverImage: {
         type: String,
-        required: true,
+        default: '',
         trim: true,
     },
     promoVideo: {

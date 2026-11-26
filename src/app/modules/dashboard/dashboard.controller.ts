@@ -3,6 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 import { dashboardService } from './dashboard.service'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
+import ApiError from '../../../errors/ApiError'
+import { SellerServices } from '../seller/seller.service'
 
 const getOverviewData = catchAsync(async (req: Request, res: Response) => {
   const result = await dashboardService.getOverviewData()
@@ -21,6 +23,34 @@ const getUsersData = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: 'Users management data retrieved successfully.',
     data: result,
+  })
+})
+
+const getUserSellerApplication = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params
+  if (!/^[a-f0-9]{24}$/i.test(userId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid user ID.')
+  }
+  const [application] = await SellerServices.listApplicationsForAdmin({ userId, limit: 1 })
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Seller application retrieved.',
+    data: { application: application ?? null },
+  })
+})
+
+const removeSellerAccess = catchAsync(async (req: Request, res: Response) => {
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : ''
+  if (!reason || reason.length > 1000) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Enter a reason up to 1,000 characters.')
+  }
+  const admin = req.user as { userId: string }
+  await SellerServices.removeSellerAccess(req.params.userId, admin.userId, reason)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Seller access removed. The account is now buyer-only.',
   })
 })
 
@@ -232,6 +262,8 @@ const getOrCreateDisputeChat = catchAsync(async (req: Request, res: Response) =>
 export const dashboardController = {
   getOverviewData,
   getUsersData,
+  removeSellerAccess,
+  getUserSellerApplication,
   getSellerVerificationsData,
   getListingsData,
   getLiveStreamsData,

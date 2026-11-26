@@ -8,6 +8,8 @@ const http_status_codes_1 = require("http-status-codes");
 const dashboard_service_1 = require("./dashboard.service");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const seller_service_1 = require("../seller/seller.service");
 const getOverviewData = (0, catchAsync_1.default)(async (req, res) => {
     const result = await dashboard_service_1.dashboardService.getOverviewData();
     (0, sendResponse_1.default)(res, {
@@ -24,6 +26,33 @@ const getUsersData = (0, catchAsync_1.default)(async (req, res) => {
         success: true,
         message: 'Users management data retrieved successfully.',
         data: result,
+    });
+});
+const getUserSellerApplication = (0, catchAsync_1.default)(async (req, res) => {
+    const { userId } = req.params;
+    if (!/^[a-f0-9]{24}$/i.test(userId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid user ID.');
+    }
+    const [application] = await seller_service_1.SellerServices.listApplicationsForAdmin({ userId, limit: 1 });
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Seller application retrieved.',
+        data: { application: application !== null && application !== void 0 ? application : null },
+    });
+});
+const removeSellerAccess = (0, catchAsync_1.default)(async (req, res) => {
+    var _a;
+    const reason = typeof ((_a = req.body) === null || _a === void 0 ? void 0 : _a.reason) === 'string' ? req.body.reason.trim() : '';
+    if (!reason || reason.length > 1000) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Enter a reason up to 1,000 characters.');
+    }
+    const admin = req.user;
+    await seller_service_1.SellerServices.removeSellerAccess(req.params.userId, admin.userId, reason);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Seller access removed. The account is now buyer-only.',
     });
 });
 const getSellerVerificationsData = (0, catchAsync_1.default)(async (req, res) => {
@@ -202,6 +231,8 @@ const getOrCreateDisputeChat = (0, catchAsync_1.default)(async (req, res) => {
 exports.dashboardController = {
     getOverviewData,
     getUsersData,
+    removeSellerAccess,
+    getUserSellerApplication,
     getSellerVerificationsData,
     getListingsData,
     getLiveStreamsData,

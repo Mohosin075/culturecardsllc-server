@@ -10,9 +10,11 @@ const http_status_codes_1 = require("http-status-codes");
 const follow_service_1 = require("./follow.service");
 const pick_1 = __importDefault(require("../../../shared/pick"));
 const toggleFollow = (0, catchAsync_1.default)(async (req, res) => {
+    var _a;
     const { id: followingId } = req.params;
     const followerId = req.user.userId;
-    const result = await follow_service_1.FollowServices.toggleFollow(followerId, followingId);
+    const streamId = typeof ((_a = req.body) === null || _a === void 0 ? void 0 : _a.streamId) === 'string' ? req.body.streamId : undefined;
+    const result = await follow_service_1.FollowServices.toggleFollow(followerId, followingId, streamId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_codes_1.StatusCodes.OK,
         success: true,

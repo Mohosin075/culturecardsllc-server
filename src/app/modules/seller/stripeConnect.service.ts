@@ -92,6 +92,7 @@ export const mapAccountToState = (
   return {
     accountId: account.id,
     detailsSubmitted: Boolean(account.details_submitted),
+    pendingVerification: requirements?.pending_verification ?? [],
     chargesEnabled: Boolean(account.charges_enabled),
     payoutsEnabled: Boolean(account.payouts_enabled),
     disabledReason: requirements?.disabled_reason ?? undefined,
@@ -104,31 +105,30 @@ export const mapAccountToState = (
 export const createConnectedAccount = async (params: {
   userId: string
   email?: string
-  businessName?: string
-  whatTheySell?: string
 }): Promise<Stripe.Account> => {
   requireStripe()
 
   return callStripe('account create', () =>
-    stripe.accounts.create({
-      type: 'express',
-      country: config.seller.connectCountry,
-      email: params.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
+    stripe.accounts.create(
+      {
+        type: 'express',
+        country: config.seller.connectCountry,
+        email: params.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_profile: {
+          // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
+          mcc: config.seller.connectMcc,
+        },
+        metadata: {
+          areisUserId: params.userId,
+          platform: 'ARIES',
+        },
       },
-      business_profile: {
-        // Collectibles / trading cards. 5945 = "Hobby, Toy and Game Shops".
-        mcc: config.seller.connectMcc,
-        name: params.businessName || undefined,
-        product_description: params.whatTheySell || undefined,
-      },
-      metadata: {
-        areisUserId: params.userId,
-        platform: 'ARIES',
-      },
-    }),
+      { idempotencyKey: `seller-connect-${params.userId}` },
+    ),
   )
 }
 

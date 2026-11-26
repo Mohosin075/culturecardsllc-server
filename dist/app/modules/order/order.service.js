@@ -7,6 +7,7 @@ exports.OrderServices = exports.formatShipByDate = exports.addBusinessDays = exp
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const order_model_1 = require("./order.model");
+const auction_model_1 = require("../auction/auction.model");
 const product_model_1 = require("../product/product.model");
 const payment_model_1 = require("../payment/payment.model");
 const chat_model_1 = require("../chat/chat.model");
@@ -144,6 +145,17 @@ const createOrder = async (payload) => {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This item is listed for trade only and cannot be bought.');
     }
     payload.purchaseType = payload.purchaseType || 'buy_now';
+    if (payload.streamId) {
+        const show = await auction_model_1.LiveStream.exists({
+            _id: payload.streamId,
+            sellerId: product.sellerId,
+            inventoryIds: product._id,
+            status: { $in: ['live', 'ended'] },
+        });
+        if (!show || payload.purchaseType === 'trade_swap') {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This item does not belong to that live show.');
+        }
+    }
     if (!payload.amountDetails) {
         payload.amountDetails = {
             itemSubtotal: product.buyNowPrice || product.estValue || 0,

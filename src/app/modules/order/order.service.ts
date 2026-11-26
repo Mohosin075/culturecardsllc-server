@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import { Order } from './order.model'
+import { LiveStream } from '../auction/auction.model'
 import { IOrder, IJourneyUpdate } from './order.interface'
 import { Product } from '../product/product.model'
 import { Payment } from '../payment/payment.model'
@@ -165,6 +166,17 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
   }
 
   payload.purchaseType = payload.purchaseType || 'buy_now'
+  if (payload.streamId) {
+    const show = await LiveStream.exists({
+      _id: payload.streamId,
+      sellerId: product.sellerId,
+      inventoryIds: product._id,
+      status: { $in: ['live', 'ended'] },
+    })
+    if (!show || payload.purchaseType === 'trade_swap') {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'This item does not belong to that live show.')
+    }
+  }
   if (!payload.amountDetails) {
     payload.amountDetails = {
       itemSubtotal: product.buyNowPrice || product.estValue || 0,

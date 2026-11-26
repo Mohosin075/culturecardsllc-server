@@ -5,9 +5,7 @@ const createLiveStreamSchema = z.object({
     title: z
       .string({ required_error: 'Title is required' })
       .min(3, 'Title must be at least 3 characters long'),
-    coverImage: z
-      .string({ required_error: 'Cover image is required' })
-      .min(1, 'Cover image is required'),
+    coverImage: z.string().trim().default(''),
     promoVideo: z.string().optional(),
     description: z.string().optional(),
     scheduledAt: z

@@ -330,7 +330,21 @@ const getStreamSummary = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const getCompletedShowsForShipping = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const data = await AuctionServices.getCompletedShowsForShipping(user.userId)
+  sendResponse(res, { statusCode: StatusCodes.OK, success: true, message: 'Completed shows retrieved.', data })
+})
+
+const getShowShipments = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const data = await AuctionServices.getShowShipments(req.params.streamId, user.userId)
+  sendResponse(res, { statusCode: StatusCodes.OK, success: true, message: 'Show shipments retrieved.', data })
+})
+
 export const AuctionControllers = {
+  getCompletedShowsForShipping,
+  getShowShipments,
   generateAgoraToken,
   createLiveStream,
   startScheduledStream,

@@ -5,7 +5,7 @@ import config from '../../config'
 import { jwtHelper } from '../../helpers/jwtHelper'
 import ApiError from '../../errors/ApiError'
 import { User } from '../modules/user/user.model'
-import { USER_STATUS } from '../../enum/user'
+import { USER_ROLES, USER_STATUS } from '../../enum/user'
 
 type IVerifyUser = {
   userId?: string
@@ -72,7 +72,7 @@ const auth =
 
       // VERIFY USER STATUS IN DB
       const userStatusCheck = await User.findById(verifyUser.userId)
-        .select('status')
+        .select('status roles')
         .lean()
       if (!userStatusCheck) {
         return next(
@@ -91,6 +91,13 @@ const auth =
         return next(
           new ApiError(StatusCodes.FORBIDDEN, 'Your account is deleted.'),
         )
+      }
+
+      if (
+        (verifyUser.activeRole || verifyUser.role) === USER_ROLES.SELLER &&
+        !userStatusCheck.roles?.includes(USER_ROLES.SELLER)
+      ) {
+        verifyUser.role = verifyUser.activeRole = USER_ROLES.BUYER
       }
 
       // Attach to req

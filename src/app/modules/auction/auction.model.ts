@@ -20,7 +20,7 @@ const LiveStreamSchema = new Schema<ILiveStream>(
     },
     coverImage: {
       type: String,
-      required: true,
+      default: '',
       trim: true,
     },
     promoVideo: {

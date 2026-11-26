@@ -4,6 +4,7 @@ import ApiError from '../../../errors/ApiError'
 import { Payment } from './payment.model'
 import { emailHelper } from '../../../helpers/emailHelper'
 import { Order } from '../order/order.model'
+import { AuctionItem } from '../auction/auction.model'
 import { Product } from '../product/product.model'
 import { TradeOffer } from '../trade/trade.model'
 import { Chat } from '../chat/chat.model'
@@ -16,6 +17,7 @@ import { PartnerService } from '../partner/partner.service'
 
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
+  stripeAccountId?: string,
 ): Promise<void> => {
   try {
     console.log('🔔 Processing Checkout Session Completed:', sessionData.id)
@@ -24,7 +26,10 @@ const handleCheckoutSessionCompleted = async (
       {
         expand: ['payment_intent', 'line_items'],
       },
+      stripeAccountId ? { stripeAccount: stripeAccountId } : undefined,
     )
+
+    if (sessionWithDetails.payment_status === 'unpaid') return
 
     let lookupId: string
     if (typeof sessionWithDetails.payment_intent === 'string') {
@@ -56,6 +61,7 @@ const handleCheckoutSessionCompleted = async (
       }
 
       payment.status = 'succeeded'
+      payment.paymentIntentId = lookupId
       payment.metadata = { ...payment.metadata, ...sessionWithDetails }
       await payment.save({ session: mongoSession })
 
@@ -102,20 +108,18 @@ const handleCheckoutSessionCompleted = async (
             country: buyerUser?.address?.country || 'US',
           }
 
-          // Check if there is an existing pending order for the same buyer, seller, and stream in the last 12 hours
-          const existingOrder = await Order.findOne({
-            buyerId: meta.winnerId,
-            sellerId: meta.sellerId,
-            deliveryStatus: 'pending',
-            purchaseType: 'auction_win',
-            createdAt: { $gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
-          }).session(mongoSession)
+          const auction = meta.auctionItemId
+            ? await AuctionItem.findById(meta.auctionItemId).select('streamId').session(mongoSession)
+            : null
 
           const orderPayload: any = {
             buyerId: meta.winnerId,
             sellerId: meta.sellerId,
+            streamId: auction?.streamId,
             productId: meta.productId,
             purchaseType: 'auction_win' as const,
+            paymentIntentId: lookupId,
+            stripeAccountId,
             paymentStatus: 'paid' as const,
             deliveryStatus: 'pending' as const,
             shippingAddress,
@@ -129,25 +133,7 @@ const handleCheckoutSessionCompleted = async (
             },
           }
 
-          if (existingOrder) {
-            // Bundle order: Reuse tracking details and shipping label, set shipping rate to $0
-            orderPayload.trackingDetails = {
-              carrier: existingOrder.trackingDetails.carrier,
-              trackingNumber: existingOrder.trackingDetails.trackingNumber,
-              estimatedDelivery: existingOrder.trackingDetails.estimatedDelivery,
-              journeyUpdates: []
-            }
-            orderPayload.shippingLabelUrl = existingOrder.shippingLabelUrl
-            orderPayload.shippingWeight = 0
-            orderPayload.amountDetails.shipping = 0
-            // Ships in the same package: one label, bought on the main order.
-            ;(orderPayload as any).bundledWithOrderId =
-              existingOrder.bundledWithOrderId ?? existingOrder._id
-            orderPayload.amountDetails.totalPaid = totalPaid
-          } else {
-            // New order: Initialize full shipping weight, rate, tracking, and PDF label on disk
-            await initializeOrderShipping(orderPayload, product)
-          }
+          await initializeOrderShipping(orderPayload, product)
 
           // Create order
           const [order] = await Order.create([orderPayload], { session: mongoSession })
@@ -465,7 +451,7 @@ export const WebhookService = {
 
       switch (event.type) {
         case 'checkout.session.completed':
-          await handleCheckoutSessionCompleted(event.data.object)
+          await handleCheckoutSessionCompleted(event.data.object, event.account)
           break
         case 'checkout.session.expired':
           await handleCheckoutSessionExpired(event.data.object)

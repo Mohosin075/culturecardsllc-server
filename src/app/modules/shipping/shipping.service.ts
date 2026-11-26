@@ -6,6 +6,7 @@ import { USER_ROLES } from '../../../enum/user'
 import { User } from '../user/user.model'
 import { Product } from '../product/product.model'
 import { Order } from '../order/order.model'
+import { LiveStream } from '../auction/auction.model'
 import { OrderServices } from '../order/order.service'
 import { IDeliveryStatus, IJourneyUpdate } from '../order/order.interface'
 import { IShipFromAddress } from '../user/user.interface'
@@ -204,24 +205,67 @@ const buyLabelForOrder = async (
   if (order.deliveryStatus === 'cancelled') {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'This order was cancelled.')
   }
-  if (order.shipment?.shipmentId && !order.shipment.refundedAt) {
+  const showGroup = order.streamId ? {
+    streamId: order.streamId,
+    sellerId: order.sellerId,
+    buyerId: order.buyerId,
+    paymentStatus: 'paid',
+    deliveryStatus: { $ne: 'cancelled' },
+  } : null
+
+  if (showGroup) {
+    const show = await LiveStream.findById(order.streamId).select('status')
+    if (show?.status !== 'ended') {
+      throw new ApiError(StatusCodes.CONFLICT, 'End the show before buying a shipment label.')
+    }
+    const anchor = await Order.findOne({
+      ...showGroup,
+      bundledWithOrderId: { $exists: false },
+      'shipment.shipmentId': { $exists: true },
+      'shipment.refundedAt': { $exists: false },
+    }) || await Order.findOne(showGroup).sort({ createdAt: 1, _id: 1 })
+
+    if (anchor?.shipment?.shipmentId && !anchor.shipment.refundedAt &&
+        !anchor.bundledWithOrderId &&
+        order.shipment?.shipmentId !== anchor.shipment.shipmentId) {
+      await Order.updateOne({ _id: order._id }, {
+        $set: {
+          bundledWithOrderId: anchor._id,
+          shipment: anchor.shipment,
+          shippingLabelUrl: anchor.shippingLabelUrl,
+          'trackingDetails.carrier': anchor.trackingDetails?.carrier,
+          'trackingDetails.trackingNumber': anchor.trackingDetails?.trackingNumber,
+        },
+      })
+      return Order.findById(orderId)
+    }
+    if (anchor && String(anchor._id) !== orderId) {
+      await buyLabelForOrder(user, String(anchor._id), options)
+      return Order.findById(orderId)
+    }
+  }
+
+  if (order.shipment?.shipmentId && !order.shipment.refundedAt &&
+      (!showGroup || !order.bundledWithOrderId)) {
     return order
   }
 
-  // A bundled auction win ships in its main order's package: buy (or reuse)
-  // that one label, which is then shared with this order.
-  if (order.bundledWithOrderId) {
+  // Preserve legacy non-show bundles.
+  if (!showGroup && order.bundledWithOrderId) {
     await buyLabelForOrder(user, String(order.bundledWithOrderId), options)
     return Order.findById(orderId)
   }
 
-  if (labelsInFlight.has(orderId)) {
+  const lockKey = showGroup
+    ? [showGroup.streamId, showGroup.sellerId, showGroup.buyerId].join(':')
+    : orderId
+  if (labelsInFlight.has(lockKey)) {
     throw new ApiError(
       StatusCodes.CONFLICT,
       'The label for this order is already being created. Please wait a moment.',
     )
   }
-  labelsInFlight.add(orderId)
+  labelsInFlight.add(lockKey)
 
   try {
     const [from, product, buyer] = await Promise.all([
@@ -251,6 +295,21 @@ const buyLabelForOrder = async (
 
     const provider = getShippingProvider()
     const parcel = parcelForProduct((product as any) || {})
+    if (showGroup) {
+      const items = await Order.find(showGroup).populate('productId', 'shippingWeight packageType packageDimensions').lean()
+      if (items.length > 1) {
+        const itemParcels = items.map(item =>
+          parcelForProduct({
+            ...(item.productId as any),
+            shippingWeight: (item.productId as any)?.shippingWeight || item.shippingWeight,
+          }),
+        )
+        parcel.weightOz = itemParcels.reduce((sum, item) => sum + item.weightOz, 0)
+        parcel.lengthIn = Math.max(...itemParcels.map(item => item.lengthIn))
+        parcel.widthIn = Math.max(...itemParcels.map(item => item.widthIn))
+        parcel.heightIn = itemParcels.reduce((sum, item) => sum + item.heightIn, 0)
+      }
+    }
     const fromAddress = shipFromToAddress(from)
     const quote = await provider.getRates(fromAddress, to, parcel)
     const sorted = [...quote.rates].sort((a, b) => a.amount - b.amount)
@@ -292,13 +351,15 @@ const buyLabelForOrder = async (
       timestamp: new Date(),
     }
     order.trackingDetails.journeyUpdates.push(labelCreated)
+    if (showGroup) order.bundledWithOrderId = undefined
     await order.save()
 
     // Orders bundled into this one travel in the same package.
     await Order.updateMany(
-      { bundledWithOrderId: order._id },
+      showGroup ? { ...showGroup, _id: { $ne: order._id } } : { bundledWithOrderId: order._id },
       {
         $set: {
+          ...(showGroup && { bundledWithOrderId: order._id }),
           shipment: order.shipment,
           shippingLabelUrl: order.shippingLabelUrl,
           'trackingDetails.carrier': label.carrier,
@@ -309,7 +370,7 @@ const buyLabelForOrder = async (
     )
     return order
   } finally {
-    labelsInFlight.delete(orderId)
+    labelsInFlight.delete(lockKey)
   }
 }
 

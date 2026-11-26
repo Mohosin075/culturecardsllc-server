@@ -184,6 +184,7 @@ export class NotificationIntegration {
   static async onNewFollow(
     followerId: Types.ObjectId | string,
     followingId: Types.ObjectId | string,
+    show?: { id: string; title: string },
   ): Promise<void> {
     try {
       const follower = await User.findById(followerId)
@@ -194,12 +195,15 @@ export class NotificationIntegration {
       await NotificationServices.createNotification({
         userId: followingId,
         title: 'New Follower! 👤',
-        content: `${followerName} started following you.`,
+        content: show
+          ? `${followerName} followed you from your live stream “${show.title}”.`
+          : `${followerName} started following you.`,
         type: NotificationType.NEW_FOLLOW,
         channel: NotificationChannel.PUSH,
         priority: NotificationPriority.MEDIUM,
         metadata: {
           followerId: followerId.toString(),
+          ...(show && { source: 'live_stream', streamId: show.id }),
         },
       })
     } catch (error) {

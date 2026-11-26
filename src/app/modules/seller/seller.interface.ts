@@ -21,6 +21,7 @@ export type ISellerStripeState = {
   accountId?: string
   /** Seller finished Stripe's hosted onboarding form. */
   detailsSubmitted: boolean
+  pendingVerification?: string[]
   /** Stripe will let this account take payments. */
   chargesEnabled: boolean
   /** Stripe will pay this account out to its bank. */
@@ -55,6 +56,7 @@ export type ISellerApplication = {
   stripe: ISellerStripeState
   submittedAt: Date
   reviewedAt?: Date
+  accessRevokedAt?: Date
   reviewedBy?: Types.ObjectId
   rejectionReason?: string
   createdAt: Date
@@ -84,4 +86,5 @@ export type ISellerOnboardingState = {
   outstandingRequirements: string[]
   submittedAt?: Date
   reviewedAt?: Date
+  accessRevokedAt?: Date
 }

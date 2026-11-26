@@ -265,19 +265,17 @@ exports.findSellerAccountId = findSellerAccountId;
 /**
  * The seller's account only if Stripe will actually let it take money.
  *
- * Returns null rather than throwing, so a caller can fall back to a platform
- * charge for a seller who has not onboarded yet. That fallback is what keeps
- * the marketplace working while existing sellers are migrated onto Connect —
- * without it, shipping Connect would fail every purchase on the platform.
+ * Returns null if the seller has not completed Connect setup or Stripe has
+ * restricted charges or payouts.
  */
 const findPayableConnectedAccount = async (sellerId) => {
     var _a;
     if (!sellerId)
         return null;
     const application = await seller_model_1.SellerApplication.findOne({ userId: sellerId });
-    if (!((_a = application === null || application === void 0 ? void 0 : application.stripe) === null || _a === void 0 ? void 0 : _a.accountId))
+    if ((application === null || application === void 0 ? void 0 : application.status) !== 'approved' || !((_a = application.stripe) === null || _a === void 0 ? void 0 : _a.accountId))
         return null;
-    if (!application.stripe.chargesEnabled)
+    if (!application.stripe.chargesEnabled || !application.stripe.payoutsEnabled)
         return null;
     return application.stripe.accountId;
 };

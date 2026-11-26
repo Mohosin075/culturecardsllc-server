@@ -92,7 +92,7 @@ webhookApp.post(
         }
       }
 
-      await Promise.allSettled([
+      const [paymentResult] = await Promise.allSettled([
         WebhookService.handleWebhook({
           body: rawBody,
           headers: {
@@ -101,6 +101,10 @@ webhookApp.post(
         }),
         subscriptionWebhookService.processWebhookEvent(event),
       ])
+
+      if (paymentResult.status === 'rejected' && event.type === 'checkout.session.completed') {
+        throw paymentResult.reason
+      }
 
       res.status(200).json({
         received: true,

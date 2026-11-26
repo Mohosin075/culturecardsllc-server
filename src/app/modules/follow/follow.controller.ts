@@ -9,7 +9,8 @@ const toggleFollow = catchAsync(async (req: Request, res: Response) => {
   const { id: followingId } = req.params
   const followerId = (req as any).user.userId
 
-  const result = await FollowServices.toggleFollow(followerId, followingId)
+  const streamId = typeof req.body?.streamId === 'string' ? req.body.streamId : undefined
+  const result = await FollowServices.toggleFollow(followerId, followingId, streamId)
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,

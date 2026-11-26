@@ -18,6 +18,18 @@ router.get(
 )
 
 router.get(
+  '/users/:userId/seller-application',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.getUserSellerApplication,
+)
+
+router.patch(
+  '/users/:userId/remove-seller-access',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  dashboardController.removeSellerAccess,
+)
+
+router.get(
   '/seller-verifications',
   auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   dashboardController.getSellerVerificationsData,

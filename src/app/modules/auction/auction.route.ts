@@ -7,6 +7,9 @@ import { USER_ROLES } from '../../../enum/user'
 
 const router = express.Router()
 
+router.get('/shipping/shows', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getCompletedShowsForShipping)
+router.get('/shipping/shows/:streamId', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getShowShipments)
+
 // GET /token — Generate Agora RTC token (authenticated users only)
 router.get(
   '/token',

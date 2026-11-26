@@ -11,6 +11,8 @@ const auction_validation_1 = require("./auction.validation");
 const auth_1 = __importDefault(require("../../middleware/auth"));
 const user_1 = require("../../../enum/user");
 const router = express_1.default.Router();
+router.get('/shipping/shows', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), auction_controller_1.AuctionControllers.getCompletedShowsForShipping);
+router.get('/shipping/shows/:streamId', (0, auth_1.default)(user_1.USER_ROLES.SELLER, user_1.USER_ROLES.BUYER), auction_controller_1.AuctionControllers.getShowShipments);
 // GET /token — Generate Agora RTC token (authenticated users only)
 router.get('/token', (0, auth_1.default)(user_1.USER_ROLES.BUYER, user_1.USER_ROLES.SELLER, user_1.USER_ROLES.ADMIN, user_1.USER_ROLES.SUPER_ADMIN), auction_controller_1.AuctionControllers.generateAgoraToken);
 // POST /stream — Create live stream session (seller only)

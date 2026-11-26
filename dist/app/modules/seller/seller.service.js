@@ -4,12 +4,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SellerServices = void 0;
+const server_1 = require("../../../server");
 const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const config_1 = __importDefault(require("../../../config"));
 const user_1 = require("../../../enum/user");
 const user_model_1 = require("../user/user.model");
+const auction_model_1 = require("../auction/auction.model");
+const product_model_1 = require("../product/product.model");
 const seller_model_1 = require("./seller.model");
 const stripeConnect_service_1 = require("./stripeConnect.service");
 const EMPTY_STRIPE_STATE = {
@@ -81,7 +84,8 @@ const buildOnboardingState = (application) => {
         stripePayoutReady,
         adminApproved,
         canSell: adminApproved &&
-            (config_1.default.seller.requireStripeOnboarding ? stripePayoutReady : true),
+            (!config_1.default.seller.requireStripeOnboarding ||
+                (Boolean(stripe.detailsSubmitted) && stripePayoutReady)),
         stripe,
         rejectionReason: application.rejectionReason,
         outstandingRequirements: dedupe([
@@ -90,6 +94,7 @@ const buildOnboardingState = (application) => {
         ]).map(humanizeRequirement),
         submittedAt: application.submittedAt,
         reviewedAt: application.reviewedAt,
+        accessRevokedAt: application.accessRevokedAt,
     };
 };
 /**
@@ -128,7 +133,7 @@ const syncApplicationWithStripe = async (application) => {
 // 1. Seller application  +  2. Stripe onboarding
 // ────────────────────────────────────────────────────────────────────────────
 const applyAsSeller = async (user, payload, ipAddress) => {
-    var _a, _b;
+    var _a, _b, _c;
     const userData = await user_model_1.User.findById(user.userId);
     if (!userData) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
@@ -136,6 +141,9 @@ const applyAsSeller = async (user, payload, ipAddress) => {
     let application = await seller_model_1.SellerApplication.findOne({ userId: user.userId });
     if ((application === null || application === void 0 ? void 0 : application.status) === 'approved') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You are already an approved seller.');
+    }
+    if (application === null || application === void 0 ? void 0 : application.accessRevokedAt) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'ARIES can restore seller access using your existing application. Contact support for help.');
     }
     // Talk to Stripe before touching the database. If Stripe refuses (outage,
     // platform not set up for Connect, a bad field) nothing is saved, so the
@@ -146,8 +154,6 @@ const applyAsSeller = async (user, payload, ipAddress) => {
         const account = await stripeConnect_service_1.StripeConnectService.createConnectedAccount({
             userId: user.userId.toString(),
             email: userData.email,
-            businessName: payload.businessName,
-            whatTheySell: payload.whatTheySell,
         });
         stripeState = stripeConnect_service_1.StripeConnectService.mapAccountToState(account);
     }
@@ -159,16 +165,18 @@ const applyAsSeller = async (user, payload, ipAddress) => {
         ipAddress,
     };
     if (!application) {
-        application = await seller_model_1.SellerApplication.create({
-            userId: new mongoose_1.Types.ObjectId(user.userId),
-            whatTheySell: payload.whatTheySell,
-            categories: (_a = payload.categories) === null || _a === void 0 ? void 0 : _a.map(id => new mongoose_1.Types.ObjectId(id)),
-            businessName: payload.businessName,
-            policyAcceptance: acceptance,
-            status: 'stripe_pending',
-            stripe: stripeState,
-            submittedAt: new Date(),
-        });
+        const userId = new mongoose_1.Types.ObjectId(user.userId);
+        application = await seller_model_1.SellerApplication.findOneAndUpdate({ userId }, {
+            $setOnInsert: {
+                whatTheySell: payload.whatTheySell,
+                categories: (_a = payload.categories) === null || _a === void 0 ? void 0 : _a.map(id => new mongoose_1.Types.ObjectId(id)),
+                businessName: payload.businessName,
+                policyAcceptance: acceptance,
+                status: 'stripe_pending',
+                stripe: stripeState,
+                submittedAt: new Date(),
+            },
+        }, { upsert: true, new: true, runValidators: true });
     }
     else {
         // Re-applying after a rejection, or editing before Stripe is finished.
@@ -182,15 +190,20 @@ const applyAsSeller = async (user, payload, ipAddress) => {
             application.status = 'stripe_pending';
             application.rejectionReason = undefined;
             application.reviewedAt = undefined;
+            application.accessRevokedAt = undefined;
             application.reviewedBy = undefined;
         }
         await application.save();
     }
-    if (userData.stripeConnectedAccountId !== stripeState.accountId) {
-        userData.stripeConnectedAccountId = stripeState.accountId;
+    const accountId = (_c = application === null || application === void 0 ? void 0 : application.stripe) === null || _c === void 0 ? void 0 : _c.accountId;
+    if (!accountId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'Stripe account was not saved.');
+    }
+    if (userData.stripeConnectedAccountId !== accountId) {
+        userData.stripeConnectedAccountId = accountId;
         await userData.save();
     }
-    const onboardingUrl = await stripeConnect_service_1.StripeConnectService.createOnboardingLink(application.stripe.accountId);
+    const onboardingUrl = await stripeConnect_service_1.StripeConnectService.createOnboardingLink(accountId);
     return {
         onboardingUrl,
         state: buildOnboardingState(application),
@@ -240,6 +253,7 @@ const syncByAccountId = async (accountId) => {
     if (!application)
         return;
     await syncApplicationWithStripe(application);
+    server_1.io === null || server_1.io === void 0 ? void 0 : server_1.io.to(String(application.userId)).emit('seller-onboarding-updated');
 };
 /**
  * The seller's own earnings, straight from their Stripe balance. ARIES's 6.5%
@@ -264,10 +278,12 @@ const getMyEarnings = async (user) => {
 // ────────────────────────────────────────────────────────────────────────────
 const listApplicationsForAdmin = async (query) => {
     const filter = {};
+    if (query.userId)
+        filter.userId = query.userId;
     if (query.status) {
         filter.status = query.status;
     }
-    else {
+    else if (!query.userId) {
         // The review queue: everyone who is not already approved.
         filter.status = { $in: ['stripe_pending', 'pending_approval', 'rejected'] };
     }
@@ -299,6 +315,7 @@ const listApplicationsForAdmin = async (query) => {
                 connected: Boolean(stripe.accountId),
                 accountId: stripe.accountId,
                 detailsSubmitted: stripe.detailsSubmitted,
+                pendingVerification: dedupe(stripe.pendingVerification || []).map(humanizeRequirement),
                 chargesEnabled: stripe.chargesEnabled,
                 payoutsEnabled: stripe.payoutsEnabled,
                 disabledReason: stripe.disabledReason,
@@ -311,6 +328,7 @@ const listApplicationsForAdmin = async (query) => {
             payoutEligible: Boolean(stripe.chargesEnabled && stripe.payoutsEnabled),
             rejectionReason: app.rejectionReason,
             reviewedAt: app.reviewedAt,
+            accessRevokedAt: app.accessRevokedAt,
         };
     });
 };
@@ -320,9 +338,13 @@ const approveApplication = async (userId, adminId) => {
     if (!application) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'No seller application found for this user.');
     }
-    // Make the decision against fresh Stripe data rather than a stale mirror.
+    const restoringAccess = Boolean(application.accessRevokedAt);
+    const user = await user_model_1.User.findById(userId);
+    if (!user)
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
     await syncApplicationWithStripe(application);
-    if (config_1.default.seller.requireStripeOnboarding &&
+    if (!restoringAccess &&
+        config_1.default.seller.requireStripeOnboarding &&
         !((_a = application.stripe) === null || _a === void 0 ? void 0 : _a.detailsSubmitted)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'This seller has not finished Stripe onboarding yet, so they cannot be approved.');
     }
@@ -330,16 +352,45 @@ const approveApplication = async (userId, adminId) => {
     application.reviewedAt = new Date();
     application.reviewedBy = new mongoose_1.Types.ObjectId(adminId);
     application.rejectionReason = undefined;
+    application.accessRevokedAt = undefined;
     await application.save();
-    const user = await user_model_1.User.findById(userId);
-    if (!user)
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
     if (!user.roles.includes(user_1.USER_ROLES.SELLER)) {
         user.roles.push(user_1.USER_ROLES.SELLER);
     }
     user.sellerVerified = true;
+    if (restoringAccess)
+        user.activeRole = user_1.USER_ROLES.SELLER;
     await user.save();
+    server_1.io === null || server_1.io === void 0 ? void 0 : server_1.io.to(userId).emit('seller-onboarding-updated');
     return buildOnboardingState(application);
+};
+const removeSellerAccess = async (userId, adminId, reason) => {
+    if (!mongoose_1.Types.ObjectId.isValid(userId)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid user ID.');
+    }
+    const user = await user_model_1.User.findById(userId);
+    if (!user)
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found.');
+    if (user.roles.some(role => role === user_1.USER_ROLES.ADMIN || role === user_1.USER_ROLES.SUPER_ADMIN)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Admin accounts cannot be changed to buyer-only.');
+    }
+    await user_model_1.User.updateOne({ _id: userId }, { $set: { roles: [user_1.USER_ROLES.BUYER], activeRole: user_1.USER_ROLES.BUYER, sellerVerified: false } });
+    const reviewedAt = new Date();
+    await seller_model_1.SellerApplication.updateOne({ userId, status: { $ne: 'rejected' } }, { $set: { status: 'rejected', reviewedAt, reviewedBy: adminId, rejectionReason: reason, accessRevokedAt: reviewedAt } });
+    await product_model_1.Product.updateMany({ sellerId: userId, status: 'active', isTradeOnly: { $ne: true } }, { $set: { status: 'pending' } });
+    const streams = await auction_model_1.LiveStream.find({
+        sellerId: userId,
+        status: { $in: ['live', 'scheduled'] },
+    }).select('_id');
+    const streamIds = streams.map(stream => stream._id);
+    await auction_model_1.LiveStream.updateMany({ _id: { $in: streamIds }, status: { $in: ['live', 'scheduled'] } }, { $set: { status: 'ended', endedAt: reviewedAt } });
+    for (const streamId of streamIds) {
+        server_1.io === null || server_1.io === void 0 ? void 0 : server_1.io.to(`stream:${streamId}`).to(userId).emit('stream-ended', {
+            streamId: String(streamId),
+            reason: 'seller_access_removed',
+        });
+    }
+    server_1.io === null || server_1.io === void 0 ? void 0 : server_1.io.to(userId).emit('seller-onboarding-updated');
 };
 const rejectApplication = async (userId, adminId, reason) => {
     const application = await seller_model_1.SellerApplication.findOne({ userId });
@@ -357,6 +408,7 @@ const rejectApplication = async (userId, adminId, reason) => {
         user.roles = user.roles.filter(role => role !== user_1.USER_ROLES.SELLER);
         await user.save();
     }
+    server_1.io === null || server_1.io === void 0 ? void 0 : server_1.io.to(userId).emit('seller-onboarding-updated');
     return buildOnboardingState(application);
 };
 // ────────────────────────────────────────────────────────────────────────────
@@ -414,6 +466,7 @@ exports.SellerServices = {
     listApplicationsForAdmin,
     approveApplication,
     rejectApplication,
+    removeSellerAccess,
     assertSellerCanSell,
     buildOnboardingState,
 };
