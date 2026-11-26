@@ -49,12 +49,18 @@ const resetPasswordZodSchema = z.object({
 
 const loginZodSchema = z.object({
   body: z.object({
+    // The app's field is "Email or username", so accept either here.
     email: z
       .string()
+      .trim()
       .optional()
-      .refine(value => !value || /^\S+@\S+\.\S+$/.test(value), {
-        message: 'Invalid email format',
-      }),
+      .refine(
+        value =>
+          !value ||
+          /^\S+@\S+\.\S+$/.test(value) ||
+          /^[A-Za-z0-9._-]{3,30}$/.test(value),
+        { message: 'Enter a valid email or username' },
+      ),
     phone: z
       .string()
       .optional()

@@ -58,11 +58,23 @@ const users = [
       permanentAddress: '350 5th Ave',
     },
   },
+  {
+    // Never applied: for walking through the seller application from scratch.
+    email: 'applicant.local@test.areis',
+    name: 'Local Applicant',
+    username: 'localapplicant',
+    roles: [USER_ROLES.BUYER],
+    activeRole: USER_ROLES.BUYER,
+    sellerVerified: false,
+  },
 ]
 
 const run = async () => {
   await mongoose.connect(dbUrl)
-  for (const data of users) {
+  // SEED_ONLY=email1,email2 reseeds just those users and leaves the rest
+  // (and their seller applications) untouched.
+  const only = (process.env.SEED_ONLY || '').split(',').filter(Boolean)
+  for (const data of users.filter(u => !only.length || only.includes(u.email))) {
     await User.deleteOne({ email: data.email })
     await User.create({
       ...data,

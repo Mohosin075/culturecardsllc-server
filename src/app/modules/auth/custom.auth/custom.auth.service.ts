@@ -107,7 +107,13 @@ const createUser = async (payload: IUser) => {
 
 const customLogin = async (payload: ILoginData): Promise<IAuthResponse> => {
   const { email, phone } = payload
-  const query = email ? { email: email.toLowerCase().trim() } : { phone: phone }
+  // "email" carries whatever the user typed in "Email or username".
+  const identifier = email?.toLowerCase().trim()
+  const query = identifier
+    ? identifier.includes('@')
+      ? { email: identifier }
+      : { username: identifier }
+    : { phone: phone }
 
   const isUserExist = await User.findOne({
     ...query,
@@ -118,7 +124,9 @@ const customLogin = async (payload: ILoginData): Promise<IAuthResponse> => {
   if (!isUserExist) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      `No account found with this ${email ? 'email' : 'phone'}`,
+      `No account found with this ${
+        identifier ? (identifier.includes('@') ? 'email' : 'username') : 'phone'
+      }`,
     )
   }
 
@@ -129,7 +137,11 @@ const customLogin = async (payload: ILoginData): Promise<IAuthResponse> => {
     )
   }
 
-  const result = await AuthCommonServices.handleLoginLogic(payload, isUserExist)
+  // Downstream (OTP for unverified accounts) needs the real email address.
+  const result = await AuthCommonServices.handleLoginLogic(
+    { ...payload, email: isUserExist.email ?? payload.email },
+    isUserExist,
+  )
 
   return result
 }
