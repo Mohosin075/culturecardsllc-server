@@ -21,13 +21,19 @@ import { WebhookService } from './webhook.service'
 import { emailHelper } from '../../../helpers/emailHelper'
 import { generatePDFInvoice } from '../../../helpers/invoiceHelper'
 
+/** The stored customer belongs to other Stripe keys, or was deleted. */
+const isMissingCustomer = (err: any) =>
+  err?.code === 'resource_missing' ||
+  /no such customer/i.test(err?.message || '')
+
 const getOrCreateStripeCustomer = async (userData: any): Promise<string> => {
   let customerId = userData.stripeCustomerId
   if (customerId) {
     try {
-      await stripe.customers.retrieve(customerId)
+      const existing: any = await stripe.customers.retrieve(customerId)
+      if (existing?.deleted) customerId = undefined
     } catch (err: any) {
-      if (err.raw?.type === 'invalid_request_error' || err.message?.includes('No such customer')) {
+      if (isMissingCustomer(err)) {
         customerId = undefined
       } else {
         throw err
@@ -814,14 +820,24 @@ const getMyPaymentMethods = async (user: JwtPayload) => {
   const userData = await User.findById(user.userId)
   if (!userData?.stripeCustomerId) return []
 
-  const paymentMethods = await stripe.paymentMethods.list({
-    customer: userData.stripeCustomerId,
-    type: 'card',
-  })
-
-  const customer = (await stripe.customers.retrieve(
-    userData.stripeCustomerId,
-  )) as import('stripe').Stripe.Customer
+  let paymentMethods: import('stripe').Stripe.ApiList<import('stripe').Stripe.PaymentMethod>
+  let customer: import('stripe').Stripe.Customer
+  try {
+    const found: any = await stripe.customers.retrieve(userData.stripeCustomerId)
+    if (found?.deleted) throw Object.assign(new Error('No such customer'), { code: 'resource_missing' })
+    customer = found
+    paymentMethods = await stripe.paymentMethods.list({
+      customer: userData.stripeCustomerId,
+      type: 'card',
+    })
+  } catch (err: any) {
+    // A customer from old Stripe keys has no cards here. Forget it, so the
+    // next checkout or "add card" makes a fresh one.
+    if (!isMissingCustomer(err)) throw err
+    userData.stripeCustomerId = undefined
+    await userData.save()
+    return []
+  }
   const defaultPaymentMethodId =
     customer.invoice_settings?.default_payment_method
 
