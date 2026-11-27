@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
+import { savedDeliveryAddress } from '../order/orderAddress'
 import stripe from '../../../config/stripe'
 import ApiError from '../../../errors/ApiError'
 import { Payment } from './payment.model'
@@ -100,13 +101,7 @@ const handleCheckoutSessionCompleted = async (
         if (product) {
           const totalPaid = (sessionWithDetails.amount_total || 0) / 100
           const buyerUser = await User.findById(meta.winnerId).session(mongoSession)
-          const shippingAddress = {
-            street: buyerUser?.address?.presentAddress || '123 Collectors St',
-            city: buyerUser?.address?.city || 'Collector City',
-            state: 'AP',
-            postalCode: buyerUser?.address?.postalCode || '10001',
-            country: buyerUser?.address?.country || 'US',
-          }
+          const shippingAddress = savedDeliveryAddress(buyerUser)
 
           const auction = meta.auctionItemId
             ? await AuctionItem.findById(meta.auctionItemId).select('streamId').session(mongoSession)

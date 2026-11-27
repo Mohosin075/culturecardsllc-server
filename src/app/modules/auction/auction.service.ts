@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { savedDeliveryAddress } from '../order/orderAddress'
 import { StatusCodes } from 'http-status-codes'
 import ApiError from '../../../errors/ApiError'
 import { LiveStream, AuctionItem } from './auction.model'
@@ -731,13 +732,7 @@ const completeAuction = async (
 
   // 2. If charged successfully, create the paid Order immediately
   if (isAutoPaid) {
-    const shippingAddress = {
-      street: winner.address?.presentAddress || '123 Collectors St',
-      city: winner.address?.city || 'Collector City',
-      state: 'AP',
-      postalCode: winner.address?.postalCode || '10001',
-      country: winner.address?.country || 'US',
-    }
+    const shippingAddress = savedDeliveryAddress(winner)
 
     const orderPayload: any = {
       buyerId: auctionItem.highestBidderId,

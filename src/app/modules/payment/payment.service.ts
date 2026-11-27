@@ -81,8 +81,17 @@ const createCheckoutSession = async (
     const productId = (payload.metadata as any)?.productId
     if (productId && Types.ObjectId.isValid(String(productId))) {
       const product = await Product.findById(productId).select(
-        'sellerId buyNowPrice estValue title isTradeOnly',
+        'sellerId buyNowPrice estValue title isTradeOnly status stock',
       )
+
+      // Refuse before charging: a payment for an item that is gone would go
+      // through and only then fail to become an order.
+      if (product && (product.status !== 'active' || Number(product.stock ?? 1) <= 0)) {
+        throw new ApiError(StatusCodes.CONFLICT, 'Sorry, this item is no longer available.')
+      }
+      if (product && String(product.sellerId) === String(user.userId)) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot buy your own item.')
+      }
 
       if (product?.isTradeOnly) {
         throw new ApiError(

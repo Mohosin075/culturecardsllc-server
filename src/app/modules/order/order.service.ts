@@ -20,6 +20,7 @@ import {
   NotificationType,
 } from '../notification/notification.interface'
 import { MarketplaceCharge } from '../payment/marketplaceCharge'
+import { runInTransaction } from '../trade/tradeTransaction'
 
 /** How long a seller has to hand the parcel over before the order auto-cancels. */
 export const SHIP_WINDOW_BUSINESS_DAYS = 3
@@ -149,6 +150,13 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Product not found')
   }
 
+  // A retry of an order that already went through must read as "already
+  // recorded" (409), not "out of stock", or the app tells a buyer who has
+  // their order that it failed.
+  if (payload.paymentIntentId && (await Order.exists({ paymentIntentId: payload.paymentIntentId }))) {
+    throw new ApiError(StatusCodes.CONFLICT, 'This payment has already been used for another order.')
+  }
+
   if (product.stock <= 0 || product.status === 'sold') {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Product is out of stock.')
   }
@@ -268,10 +276,9 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     ]
   }
 
-  const session = await Order.startSession()
-  session.startTransaction()
-
-  try {
+  // A standalone MongoDB (local development) has no transactions; there the
+  // writes run one by one and a lost race removes the order it just made.
+  const { order, chat } = await runInTransaction(async session => {
     const orders = await Order.create([payload], { session })
     const order = orders[0]
 
@@ -290,6 +297,7 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
       { new: true, session },
     )
     if (!reserved) {
+      if (!session) await Order.deleteOne({ _id: order._id })
       throw new ApiError(StatusCodes.CONFLICT, 'Sorry, this item just sold out.')
     }
     if (reserved.stock <= 0) {
@@ -299,7 +307,7 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     // Use participants[] array — consistent with Chat model schema
     let chat = await Chat.findOne({
       participants: { $all: [order.buyerId, order.sellerId] },
-    })
+    }).session(session || null)
 
     if (!chat) {
       const createdChats = await Chat.create(
@@ -332,8 +340,10 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
       )
     }
 
-    await session.commitTransaction()
+    return { order, chat }
+  })
 
+  {
     // Tell the seller there is something to pack. Non-blocking: the order is
     // already committed and must not fail over a notification.
     const productImage =
@@ -350,11 +360,6 @@ const createOrder = async (payload: Partial<IOrder>): Promise<IOrder> => {
     )
 
     return order
-  } catch (error) {
-    await session.abortTransaction()
-    throw error
-  } finally {
-    session.endSession()
   }
 }
 

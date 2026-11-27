@@ -79,13 +79,15 @@ export const buildSettlementPlan = async (
     role: ITradeRole,
     itemValue: number,
     cashNet: number,
+    itemCount: number,
   ): ITradeSettlementParty => ({
     userId,
     role,
     itemValue,
     feeNet: round2((itemValue + cashNet) * (fees.tradeFeePercentPerSide / 100)),
     cashNet,
-    materialFeeNet: rules.materialFee,
+    // Packing material is for items sent to ARIES; a cash-only side sends none.
+    materialFeeNet: itemCount > 0 ? rules.materialFee : 0,
     inboundLabelNet: 0,
     outboundLabelNet: 0,
     labelsQuoted: false,
@@ -94,8 +96,8 @@ export const buildSettlementPlan = async (
   })
 
   return [
-    build(offer.senderId, 'sender', senderValue, senderCash),
-    build(offer.receiverId, 'receiver', receiverValue, receiverCash),
+    build(offer.senderId, 'sender', senderValue, senderCash, (offer.senderProductIds || []).length),
+    build(offer.receiverId, 'receiver', receiverValue, receiverCash, (offer.receiverProductIds || []).length),
   ]
 }
 
