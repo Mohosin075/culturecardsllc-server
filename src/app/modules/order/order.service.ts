@@ -47,7 +47,7 @@ export const formatShipByDate = (date?: Date): string =>
     : 'soon'
 
 /** DB notification + socket ping + FCM push so the seller is alerted immediately. */
-const notifySellerOfNewOrder = async (
+export const notifySellerOfNewOrder = async (
   order: IOrder,
   productTitle: string,
   productImage?: string,

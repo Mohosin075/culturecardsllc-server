@@ -13,6 +13,7 @@ import { Product } from '../product/product.model'
 import { User } from '../user/user.model'
 import { io } from '../../../server'
 import { Order } from '../order/order.model'
+import { notifySellerOfNewOrder } from '../order/order.service'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import { SellerServices } from '../seller/seller.service'
 import { MarketplaceCharge } from '../payment/marketplaceCharge'
@@ -754,6 +755,7 @@ const completeAuction = async (
   }
 
   let isAutoPaid = false
+  let autoPayFeeCents = 0
   let paymentIntentId: string | undefined
 
   // 1. Try automatic off-session charge if the winner has saved card details.
@@ -781,6 +783,7 @@ const completeAuction = async (
       if (charge) {
         isAutoPaid = true
         paymentIntentId = charge.paymentIntentId
+        autoPayFeeCents = charge.applicationFeeAmount || 0
         console.log(
           `[AUTO-PAY] Direct charge succeeded for Auction:${auctionItemId} on ${charge.stripeAccountId} (platform fee ${charge.applicationFeeAmount}¢)`,
         )
@@ -822,12 +825,16 @@ const completeAuction = async (
         processingFee: 0,
         charityContribution: 0,
         totalPaid: auctionItem.currentBid,
+        platformFee: autoPayFeeCents / 100,
       },
     }
 
     await initializeOrderShipping(orderPayload, product)
 
     const [order] = await Order.create([orderPayload])
+    notifySellerOfNewOrder(order as any, product.title, product.images?.[0]).catch(err =>
+      console.error('Auto-pay seller notify failed:', err),
+    )
 
     // Record partner commission (50/50 split)
     PartnerService.recordCommissionForOrder({

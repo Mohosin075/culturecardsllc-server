@@ -42,6 +42,7 @@ export type IOrder = {
     processingFee: number
     charityContribution: number
     totalPaid: number
+    platformFee?: number
   }
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded'
   paymentIntentId?: string

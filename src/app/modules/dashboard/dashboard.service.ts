@@ -1,3 +1,4 @@
+import { MarketplaceCharge } from '../payment/marketplaceCharge'
 import { User } from '../user/user.model'
 import { Order } from '../order/order.model'
 import { Payment } from '../payment/payment.model'
@@ -622,6 +623,20 @@ class DashboardService {
         .sort({ createdAt: -1 })
         .populate('userId', 'name fullName email')
 
+      // ARIES's real cut: the Stripe application fee recorded on the order,
+      // or the configured sale fee for older orders that predate recording it.
+      const fees = await MarketplaceCharge.getFeeSettings()
+      const salePct = fees.saleFeePercent / 100
+      const paidOrders = await Order.find({ paymentStatus: 'paid' })
+      const feeOfOrder = (o: any): number =>
+        o.amountDetails?.platformFee > 0
+          ? o.amountDetails.platformFee
+          : parseFloat(((o.amountDetails?.itemSubtotal || 0) * salePct).toFixed(2))
+      const orderByPaymentId = new Map<string, any>()
+      paidOrders.forEach((o: any) => {
+        if (o.paymentIntentId) orderByPaymentId.set(o.paymentIntentId, o)
+      })
+
       // Calculate totals
       let totalRevenue = 0
       let commissionEarned = 0
@@ -642,7 +657,8 @@ class DashboardService {
           commission = amount // 100% commission for trade supplement
         } else {
           txType = 'Purchase'
-          commission = parseFloat((amount * 0.05).toFixed(2)) // 5% commission
+          const order = orderByPaymentId.get(p.paymentIntentId)
+          commission = order ? feeOfOrder(order) : parseFloat((amount * salePct).toFixed(2))
         }
 
         commissionEarned += commission
@@ -659,12 +675,11 @@ class DashboardService {
       })
 
       // 2. Compute completed and pending payouts dynamically based on order delivery status
-      const paidOrders = await Order.find({ paymentStatus: 'paid' })
       let completedPayouts = 0
       let pendingPayouts = 0
 
       paidOrders.forEach((o: any) => {
-        const sellerShare = parseFloat(((o.amountDetails?.totalPaid || 0) * 0.95).toFixed(2))
+        const sellerShare = parseFloat(((o.amountDetails?.totalPaid || 0) - feeOfOrder(o)).toFixed(2))
         if (o.deliveryStatus === 'delivered') {
           completedPayouts += sellerShare
         } else {

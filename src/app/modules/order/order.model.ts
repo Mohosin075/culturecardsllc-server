@@ -45,6 +45,8 @@ const OrderSchema = new Schema<IOrder>(
       processingFee: { type: Number, default: 0, min: 0 },
       charityContribution: { type: Number, default: 0, min: 0 },
       totalPaid: { type: Number, required: true, min: 0 },
+      // ARIES's cut (Stripe application fee) taken from this sale, in dollars.
+      platformFee: { type: Number, default: 0, min: 0 },
     },
     paymentStatus: {
       type: String,

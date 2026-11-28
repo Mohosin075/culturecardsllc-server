@@ -108,7 +108,9 @@ export const initializeOrderShipping = async (orderData: any, product: any): Pro
   // own. The buyer has already been charged by this point, so overwriting
   // what they paid would leave the order — and the seller's earnings — out of
   // step with the actual Stripe charge.
-  if (orderData.amountDetails) {
+  // An auction win is charged exactly the winning bid, so there is no
+  // separate shipping charge to show.
+  if (orderData.amountDetails && orderData.purchaseType !== 'auction_win') {
     if (!orderData.amountDetails.shipping) {
       orderData.amountDetails.shipping = calculateShippingRate(
         orderData.shippingWeight,

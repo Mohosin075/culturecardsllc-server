@@ -15,6 +15,14 @@ import { User } from '../user/user.model'
 import { initializeOrderShipping } from '../../../helpers/shippingHelper'
 import { TradeVoteServices } from '../trade/tradeVote.service'
 import { PartnerService } from '../partner/partner.service'
+import { notifySellerOfNewOrder } from '../order/order.service'
+
+/** ARIES's application fee on a Stripe payment intent, in dollars. */
+const platformFeeOf = (paymentIntent: unknown): number => {
+  const cents = (paymentIntent as { application_fee_amount?: number | null } | null)
+    ?.application_fee_amount
+  return typeof cents === 'number' ? cents / 100 : 0
+}
 
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
@@ -43,6 +51,8 @@ const handleCheckoutSessionCompleted = async (
 
     const mongoSession = await Payment.startSession()
     mongoSession.startTransaction()
+    // Work that must wait until the transaction has committed.
+    const afterCommit: Array<() => Promise<void>> = []
 
     try {
       const payment = await Payment.findOne({
@@ -125,6 +135,7 @@ const handleCheckoutSessionCompleted = async (
               processingFee: 0,
               charityContribution: 0,
               totalPaid: totalPaid,
+              platformFee: platformFeeOf(sessionWithDetails.payment_intent),
             },
           }
 
@@ -132,6 +143,10 @@ const handleCheckoutSessionCompleted = async (
 
           // Create order
           const [order] = await Order.create([orderPayload], { session: mongoSession })
+          // Tell the seller right away (in-app notification, socket, push).
+          afterCommit.push(() =>
+            notifySellerOfNewOrder(order as any, product.title, product.images?.[0]),
+          )
 
           // Record partner commission (50/50 split)
           PartnerService.recordCommissionForOrder({
@@ -252,6 +267,10 @@ const handleCheckoutSessionCompleted = async (
 
       await mongoSession.commitTransaction()
       console.log(`✅ Payment processed: ${sessionWithDetails.id} [${purchaseType || 'unknown'}]`)
+
+      for (const job of afterCommit) {
+        await job().catch(err => console.error('Post-payment notify failed:', err))
+      }
 
       // Send confirmation email
       await emailHelper.sendEmail({
