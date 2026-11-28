@@ -1,0 +1,70 @@
+name: Server setup - create Stripe webhooks
+
+# Run by hand from the Actions tab. No secrets need to be copied anywhere:
+# on the server, using the server's own STRIPE_API_SECRET, it
+#   1. backs up .env
+#   2. removes earlier ARIES endpoints pointing at the live /webhook URL
+#   3. creates the platform and connected-account endpoints (all events)
+#   4. writes their signing secrets to WEBHOOK_SECRET and
+#      STRIPE_CONNECT_WEBHOOK_SECRET in .env, and reloads the API
+# Signing secrets are never printed; only endpoint ids are.
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create webhooks on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST || '34.225.44.39' }}
+          username: ${{ secrets.SERVER_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /var/www/culturecardsllc-server
+            backup=".env.bak-$(date +%Y%m%d-%H%M%S)"
+            cp -p .env "$backup"
+            echo "== backup saved: $backup"
+
+            cat > /tmp/aries-webhooks.js <<'JS'
+            require('dotenv').config()
+            const fs = require('fs')
+            const Stripe = require('stripe')
+            const stripe = new Stripe(process.env.STRIPE_API_SECRET)
+            const URL = 'https://api.areisco.com/webhook'
+            ;(async () => {
+              const list = await stripe.webhookEndpoints.list({ limit: 100 })
+              for (const e of list.data) {
+                if (e.url === URL) {
+                  await stripe.webhookEndpoints.del(e.id)
+                  console.log('removed old endpoint', e.id)
+                }
+              }
+              const platform = await stripe.webhookEndpoints.create({
+                url: URL, enabled_events: ['*'], description: 'ARIES live API - platform events',
+              })
+              const connect = await stripe.webhookEndpoints.create({
+                url: URL, enabled_events: ['*'], connect: true, description: 'ARIES live API - connected account events',
+              })
+              const set = (text, k, v) => text.split('\n').filter(l => !l.startsWith(k + '=')).join('\n').replace(/\n*$/, '\n') + k + '=' + v + '\n'
+              let env = fs.readFileSync('.env', 'utf8')
+              env = set(env, 'WEBHOOK_SECRET', platform.secret)
+              env = set(env, 'STRIPE_CONNECT_WEBHOOK_SECRET', connect.secret)
+              fs.writeFileSync('.env', env)
+              console.log('created platform endpoint', platform.id)
+              console.log('created connect endpoint', connect.id)
+            })().catch(e => { console.error('FAILED:', e.type || '', e.message); process.exit(1) })
+            JS
+            node /tmp/aries-webhooks.js
+            rm -f /tmp/aries-webhooks.js
+
+            echo "== webhook settings now present (names only):"
+            grep -oE '^(WEBHOOK_SECRET|STRIPE_CONNECT_WEBHOOK_SECRET)' .env | sort -u
+            pm2 reload culturecards-api --update-env
+            pm2 save
+            sleep 5
+            echo "== API health: $(curl -s -o /dev/null -w '%{http_code}' https://api.areisco.com/api/v1/category/popular-categories || echo unreachable)"
+            echo "== webhook without signature (expect 400): $(curl -s -o /dev/null -w '%{http_code}' -X POST https://api.areisco.com/webhook || echo unreachable)"
