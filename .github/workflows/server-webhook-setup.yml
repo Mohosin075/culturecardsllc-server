@@ -29,7 +29,7 @@ jobs:
             cp -p .env "$backup"
             echo "== backup saved: $backup"
 
-            cat > /tmp/aries-webhooks.js <<'JS'
+            cat > ./.aries-webhooks.tmp.js <<'JS'
             require('dotenv').config()
             const fs = require('fs')
             const Stripe = require('stripe')
@@ -58,8 +58,8 @@ jobs:
               console.log('created connect endpoint', connect.id)
             })().catch(e => { console.error('FAILED:', e.type || '', e.message); process.exit(1) })
             JS
-            node /tmp/aries-webhooks.js
-            rm -f /tmp/aries-webhooks.js
+            node ./.aries-webhooks.tmp.js || { rm -f ./.aries-webhooks.tmp.js; exit 1; }
+            rm -f ./.aries-webhooks.tmp.js
 
             echo "== webhook settings now present (names only):"
             grep -oE '^(WEBHOOK_SECRET|STRIPE_CONNECT_WEBHOOK_SECRET)' .env | sort -u
