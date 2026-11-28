@@ -332,6 +332,20 @@ const quickStartAuctionItem = async (
     )
   }
 
+  // A sale needs somewhere to send the money. Without a Stripe account that
+  // can take payments, the auction would run, someone would win, and then no
+  // checkout could be created. Refuse up front with a reason the host can fix.
+  const isTestEnv = process.env.TEST_MODE === 'true' && config.node_env !== 'production'
+  if (!isTestEnv) {
+    const payable = await MarketplaceCharge.findPayableConnectedAccount(sellerId)
+    if (!payable) {
+      throw new ApiError(
+        StatusCodes.CONFLICT,
+        'Finish setting up payouts before you auction: your Stripe account must be able to accept payments, or the winner cannot pay. Open Profile, then Seller status, to complete it.',
+      )
+    }
+  }
+
   // One running auction per item at a time
   const running = await AuctionItem.exists({ productId: product._id, status: 'active' })
   if (running) {
