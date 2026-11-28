@@ -1,0 +1,60 @@
+name: Server fix - switch Stripe key
+
+# Run by hand from the Actions tab, after adding the repository secret
+# NEW_STRIPE_API_SECRET (the sk_test_/sk_live_ key of the Stripe account the
+# app uses). On the server it:
+#   1. backs up .env to .env.bak-<timestamp>
+#   2. replaces only STRIPE_API_SECRET and the two Stripe Connect URLs
+#   3. reloads the API
+# Nothing else in .env is touched. The key is never printed; a short hash of
+# its account part is shown so it can be matched against the app's key.
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Stripe settings on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          NEW_STRIPE_API_SECRET: ${{ secrets.NEW_STRIPE_API_SECRET }}
+        with:
+          host: ${{ secrets.SERVER_HOST || '34.225.44.39' }}
+          username: ${{ secrets.SERVER_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          envs: NEW_STRIPE_API_SECRET
+          script: |
+            set -e
+            cd /var/www/culturecardsllc-server
+            case "$NEW_STRIPE_API_SECRET" in
+              sk_test_*|sk_live_*) ;;
+              *) echo "NEW_STRIPE_API_SECRET is missing or is not a Stripe secret key. Nothing changed."; exit 1 ;;
+            esac
+
+            backup=".env.bak-$(date +%Y%m%d-%H%M%S)"
+            cp -p .env "$backup"
+            echo "== backup saved: $backup"
+
+            setvar() {
+              k="$1"; v="$2"
+              grep -v "^$k=" .env > .env.tmp || true
+              printf '%s=%s\n' "$k" "$v" >> .env.tmp
+              cat .env.tmp > .env   # keeps the file's owner and permissions
+              rm -f .env.tmp
+            }
+            setvar STRIPE_API_SECRET "$NEW_STRIPE_API_SECRET"
+            setvar STRIPE_CONNECT_RETURN_URL "https://api.areisco.com/api/v1/seller/stripe/return"
+            setvar STRIPE_CONNECT_REFRESH_URL "https://api.areisco.com/api/v1/seller/stripe/refresh"
+
+            key=$(grep '^STRIPE_API_SECRET=' .env | head -1); key=${key#STRIPE_API_SECRET=}
+            frag=$(printf %s "$key" | sed -E 's/^(sk|rk)_(test|live)_//' | cut -c1-14)
+            echo "== new account fragment hash: $(printf %s "$frag" | sha256sum | cut -c1-16)"
+            echo "== Stripe settings now present (names only):"
+            grep -oE '^STRIPE[A-Z0-9_]*' .env | sort -u
+
+            pm2 reload culturecards-api --update-env
+            pm2 save
+            sleep 5
+            echo "== API health: $(curl -s -o /dev/null -w '%{http_code}' https://api.areisco.com/api/v1/category/popular-categories || echo unreachable)"
