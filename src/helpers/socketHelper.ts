@@ -111,8 +111,13 @@ const syncViewerCount = async (io: Server, streamId: string): Promise<number> =>
     viewersCount = io.sockets.adapter.rooms.get(streamRoom)?.size ?? 0
   }
 
-  await LiveStream.findByIdAndUpdate(streamId, { $set: { viewersCount } })
-  io.to(streamRoom).emit('viewer-count-update', { streamId, viewersCount })
+  const updated = await LiveStream.findByIdAndUpdate(
+    streamId,
+    { $set: { viewersCount } },
+    { new: true, projection: { totalJoined: 1 } },
+  ).lean()
+  const totalJoined = (updated as any)?.totalJoined ?? 0
+  io.to(streamRoom).emit('viewer-count-update', { streamId, viewersCount, totalJoined })
   return viewersCount
 }
 
@@ -128,14 +133,14 @@ const socket = (io: Server) => {
       ;(socket as any).userId = authenticatedUserId
       socket.data.userId = authenticatedUserId // survives fetchSockets() across Redis nodes
       socket.join(authenticatedUserId)
-      try {
-        await User.findByIdAndUpdate(authenticatedUserId, {
-          isOnline: true,
-          lastActive: new Date(),
-        })
-      } catch (err) {
+      // Not awaited: the event handlers below must be registered straight
+      // away, or a "join-stream" sent right after connecting is dropped.
+      User.findByIdAndUpdate(authenticatedUserId, {
+        isOnline: true,
+        lastActive: new Date(),
+      }).catch(err => {
         console.error(colors.red('Failed to mark user online:'), err)
-      }
+      })
     }
 
     // 1. Notification room registration (kept for backwards compatibility).
@@ -177,6 +182,25 @@ const socket = (io: Server) => {
               // is how the grace window checks whether the host is back.
               socket.data.hostedStreamId = streamId
               cancelHostStreamEnd(streamId)
+            }
+          }
+
+          // Count each signed-in viewer once per show, however often they
+          // rejoin, so the host sees how many people have joined in total.
+          const joinerId = (socket as any).userId
+          if (
+            stream &&
+            joinerId &&
+            Types.ObjectId.isValid(joinerId) &&
+            stream.sellerId.toString() !== joinerId
+          ) {
+            try {
+              await LiveStream.updateOne(
+                { _id: streamId, joinedUserIds: { $ne: joinerId } },
+                { $addToSet: { joinedUserIds: joinerId }, $inc: { totalJoined: 1 } },
+              )
+            } catch (err: any) {
+              console.error(colors.red('totalJoined update error:'), err?.message)
             }
           }
 

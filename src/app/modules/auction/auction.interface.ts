@@ -11,6 +11,8 @@ export type ILiveStream = {
   startedAt?: Date
   endedAt?: Date
   status: 'scheduled' | 'live' | 'ended'
+  joinedUserIds?: Schema.Types.ObjectId[]
+  totalJoined?: number
   isCelebrity?: boolean
   agoraChannelName: string
   pinnedProductId?: Schema.Types.ObjectId

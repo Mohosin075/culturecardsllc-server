@@ -89,6 +89,17 @@ const LiveStreamSchema = new Schema<ILiveStream>(
       default: [],
       select: false,
     },
+    // Everyone who has joined this show at least once (signed-in users), so
+    // the host can say "N people have joined us". Not selected by default.
+    joinedUserIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+      select: false,
+    },
+    totalJoined: {
+      type: Number,
+      default: 0,
+    },
     tipsTotal: {
       type: Number,
       default: 0,
