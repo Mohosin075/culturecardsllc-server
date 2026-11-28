@@ -5,6 +5,8 @@ export type ISystemSettingsDocument = {} & IPlatformSettings & Document
 
 const systemSettingsSchema = new Schema<ISystemSettingsDocument>(
   {
+    // Revenue figures count only from this date (earlier = testing).
+    revenueStartDate: { type: Date },
     commissionSettings: {
       purchaseCommission: { type: Number, default: 5 },
       tradeCommission: { type: Number, default: 2.5 },

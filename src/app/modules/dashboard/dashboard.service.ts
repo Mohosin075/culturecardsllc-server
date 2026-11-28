@@ -33,6 +33,51 @@ import {
 } from './dashboard.interface'
 import { USER_STATUS, USER_ROLES } from '../../../enum/user'
 
+/**
+ * Revenue figures only count money from this date on. Everything earlier was
+ * developer testing and is hidden from the totals (not deleted). Change it in
+ * SystemSettings.revenueStartDate.
+ */
+const REVENUE_START_DEFAULT = new Date('2026-11-27T18:00:00.000Z') // 28 Nov 2026, Dhaka
+const revenueStart = async (): Promise<Date> => {
+  try {
+    const s: any = await SystemSettings.findOne().select('revenueStartDate').lean()
+    return s?.revenueStartDate ? new Date(s.revenueStartDate) : REVENUE_START_DEFAULT
+  } catch {
+    return REVENUE_START_DEFAULT
+  }
+}
+/** Start of the current calendar period (UTC) and of the one before it. */
+const calendarRange = (range: string): { start: Date; priorStart: Date } | null => {
+  const now = new Date()
+  const y = now.getUTCFullYear()
+  const m = now.getUTCMonth()
+  const d = now.getUTCDate()
+  if (range === 'today') {
+    const start = new Date(Date.UTC(y, m, d))
+    return { start, priorStart: new Date(Date.UTC(y, m, d - 1)) }
+  }
+  if (range === 'week') {
+    const dow = (now.getUTCDay() + 6) % 7 // Monday = 0
+    const start = new Date(Date.UTC(y, m, d - dow))
+    return { start, priorStart: new Date(Date.UTC(y, m, d - dow - 7)) }
+  }
+  if (range === 'month') {
+    return { start: new Date(Date.UTC(y, m, 1)), priorStart: new Date(Date.UTC(y, m - 1, 1)) }
+  }
+  if (range === 'year') {
+    return { start: new Date(Date.UTC(y, 0, 1)), priorStart: new Date(Date.UTC(y - 1, 0, 1)) }
+  }
+  return null
+}
+
+/** A createdAt range that never reaches before the revenue start date. */
+const since = (start: Date, range?: { $gte?: Date; $lt?: Date }) => ({
+  ...(range || {}),
+  $gte: range?.$gte && range.$gte > start ? range.$gte : start,
+})
+
+
 class DashboardService {
   // 1. GET /overview
   async getOverviewData(): Promise<IDashboardOverviewResponse> {
@@ -64,8 +109,9 @@ class DashboardService {
         Support.countDocuments({ status: 'pending' }),
       ])
 
+      const revStart = await revenueStart()
       const revenueResult = await Order.aggregate([
-        { $match: { paymentStatus: 'paid' } },
+        { $match: { paymentStatus: 'paid', createdAt: { $gte: revStart } } },
         { $group: { _id: null, total: { $sum: '$amountDetails.totalPaid' } } },
       ])
       const totalRevenue = revenueResult[0]?.total || 0
@@ -73,7 +119,7 @@ class DashboardService {
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       const revenueLast7DaysRaw = await Order.aggregate([
         {
-          $match: { paymentStatus: 'paid', createdAt: { $gte: sevenDaysAgo } },
+          $match: { paymentStatus: 'paid', createdAt: since(revStart, { $gte: sevenDaysAgo }) },
         },
         {
           $group: {
@@ -619,7 +665,8 @@ class DashboardService {
   ): Promise<IDashboardPaymentsResponse> {
     try {
       // 1. Get all successful payments
-      const payments = await Payment.find({ status: 'succeeded' })
+      const revStart = await revenueStart()
+      const payments = await Payment.find({ status: 'succeeded', createdAt: { $gte: revStart } })
         .sort({ createdAt: -1 })
         .populate('userId', 'name fullName email')
 
@@ -627,7 +674,7 @@ class DashboardService {
       // or the configured sale fee for older orders that predate recording it.
       const fees = await MarketplaceCharge.getFeeSettings()
       const salePct = fees.saleFeePercent / 100
-      const paidOrders = await Order.find({ paymentStatus: 'paid' })
+      const paidOrders = await Order.find({ paymentStatus: 'paid', createdAt: { $gte: revStart } })
       const feeOfOrder = (o: any): number =>
         o.amountDetails?.platformFee > 0
           ? o.amountDetails.platformFee
@@ -864,7 +911,13 @@ class DashboardService {
       let priorFilter: any = {}
       const range = query.range || '30d'
 
-      if (range !== 'all') {
+      // Calendar periods (UTC): today, this week (from Monday), this month,
+      // this year — each compared with the period just before it.
+      const calendar = calendarRange(range)
+      if (calendar) {
+        dateFilter = { createdAt: { $gte: calendar.start } }
+        priorFilter = { createdAt: { $gte: calendar.priorStart, $lt: calendar.start } }
+      } else if (range !== 'all') {
         const now = new Date()
         let days = 30
         if (range === '7d') days = 7
@@ -878,12 +931,37 @@ class DashboardService {
         priorFilter = { createdAt: { $gte: priorStart, $lt: currentStart } }
       }
 
+      const revStart = await revenueStart()
+      const feeSettings = await MarketplaceCharge.getFeeSettings()
+      const platformFeeSum = async (createdAt: any) => {
+        const r = await Order.aggregate([
+          { $match: { paymentStatus: 'paid', createdAt } },
+          {
+            $group: {
+              _id: null,
+              total: {
+                $sum: {
+                  $cond: [
+                    { $gt: ['$amountDetails.platformFee', 0] },
+                    '$amountDetails.platformFee',
+                    { $multiply: [{ $ifNull: ['$amountDetails.itemSubtotal', 0] }, feeSettings.saleFeePercent / 100] },
+                  ],
+                },
+              },
+            },
+          },
+        ] as any[])
+        return parseFloat((r[0]?.total || 0).toFixed(2))
+      }
+      const platformFees = await platformFeeSum(since(revStart, dateFilter.createdAt))
+      const priorPlatformFees =
+        range !== 'all' ? await platformFeeSum(since(revStart, priorFilter.createdAt)) : 0
       // 1. Revenue & Counts (Current period)
       const currentRevenueDb = await Order.aggregate([
         {
           $match: {
             paymentStatus: 'paid',
-            ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+            createdAt: since(revStart, dateFilter.createdAt),
           },
         },
         {
@@ -905,7 +983,7 @@ class DashboardService {
           {
             $match: {
               paymentStatus: 'paid',
-              createdAt: priorFilter.createdAt,
+              createdAt: since(revStart, priorFilter.createdAt),
             },
           },
           {
@@ -960,7 +1038,7 @@ class DashboardService {
         {
           $match: {
             paymentStatus: 'paid',
-            ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+            createdAt: since(revStart, dateFilter.createdAt),
           },
         },
         {
@@ -1000,7 +1078,7 @@ class DashboardService {
         {
           $match: {
             paymentStatus: 'paid',
-            ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {}),
+            createdAt: since(revStart, dateFilter.createdAt),
           },
         },
         {
@@ -1132,6 +1210,9 @@ class DashboardService {
         summary: {
           totalSales: currentRevenue,
           totalSalesChange: salesChange,
+          platformFees,
+          platformFeesChange:
+            range !== 'all' ? calcPercentageChange(platformFees, priorPlatformFees) : '+0%',
           activeUsers: currentActiveUsers,
           activeUsersChange: activeUsersChange,
           avgTransaction: currentAvg,

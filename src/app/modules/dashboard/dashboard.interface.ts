@@ -238,6 +238,8 @@ export type IReportsAndAnalyticsResponse = {
   summary: {
     totalSales: number
     totalSalesChange: string // e.g. '+12.5%'
+    platformFees?: number // ARIES's cut (Stripe application fees) in the period
+    platformFeesChange?: string
     activeUsers: number
     activeUsersChange: string // e.g. '+19.4%'
     avgTransaction: number
@@ -263,6 +265,7 @@ export type IReportsAndAnalyticsResponse = {
 }
 
 export type IPlatformSettings = {
+  revenueStartDate?: Date
   commissionSettings: {
     purchaseCommission: number
     tradeCommission: number
