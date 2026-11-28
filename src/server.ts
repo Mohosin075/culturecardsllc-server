@@ -16,6 +16,8 @@ import { logger, errorLogger } from './shared/logger'
 import { startTradeExpiryCron } from './task/tradeExpiryCron'
 import { startOrderAutoDeliverCron } from './task/orderAutoDeliverCron'
 import { startOrderShipDeadlineCron } from './task/orderShipDeadlineCron'
+import { startAuctionCloseSweeper } from './task/auctionCloseSweeper'
+import { startStaleStreamSweeper } from './task/staleStreamSweeper'
 import { initShowReminderScheduler } from './helpers/showReminderScheduler'
 import { startDataRetentionCron } from './task/dataRetentionCron'
 
@@ -137,6 +139,8 @@ async function main() {
     startTradeExpiryCron()
     startOrderAutoDeliverCron()
     startOrderShipDeadlineCron()
+    startAuctionCloseSweeper()
+    startStaleStreamSweeper()
     initShowReminderScheduler()
     startDataRetentionCron()
 

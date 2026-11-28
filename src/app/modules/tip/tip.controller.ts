@@ -53,7 +53,19 @@ const getMySellerTips = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const getAllTipsForAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await TipServices.getAllTipsForAdmin(req.query)
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'All tips retrieved successfully.',
+    data: result,
+  })
+})
+
 export const TipController = {
+  getAllTipsForAdmin,
   createTipIntent,
   confirmTip,
   getStreamTips,

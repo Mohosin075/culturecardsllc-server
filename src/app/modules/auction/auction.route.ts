@@ -7,6 +7,10 @@ import { USER_ROLES } from '../../../enum/user'
 
 const router = express.Router()
 
+// Public: Stripe's browser redirect after checkout (no app token available).
+router.get('/checkout/return', AuctionControllers.checkoutReturn)
+router.get('/checkout/cancel', AuctionControllers.checkoutCancel)
+router.get('/wins/unpaid', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getMyUnpaidWins)
 router.get('/shipping/shows', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getCompletedShowsForShipping)
 router.get('/shipping/shows/:streamId', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getShowShipments)
 
@@ -49,6 +53,13 @@ router.get(
 
 // GET /streams — List all live streams (public)
 router.get('/streams', AuctionControllers.getLiveStreams)
+
+// GET /admin/stream/:streamId/overview — Per-show inventory, giveaways, spins and tips (admin only)
+router.get(
+  '/admin/stream/:streamId/overview',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  AuctionControllers.getStreamAdminOverview,
+)
 
 // PATCH /stream/:streamId/inventory — Update inventory products attached to a live stream (seller only)
 router.patch(

@@ -25,6 +25,7 @@ import { Payment } from '../payment/payment.model'
 import { PartnerService } from '../partner/partner.service'
 import { GiveawayService } from '../giveaway/giveaway.service'
 import { Category } from '../category/category.model'
+import { Tip } from '../tip/tip.model'
 
 const generateAgoraToken = async (
   channelName: string,
@@ -279,6 +280,12 @@ const getStreamInventory = async (streamId: string) => {
   return stream.inventoryIds || []
 }
 
+const checkoutReturnBase = () =>
+  `${(process.env.SERVER_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/v1/auctions/checkout`
+
+/** Upper limit for a single bid, to stop typos like an extra zero or three. */
+const MAX_BID = 1_000_000
+
 const quickStartAuctionItem = async (
   payload: {
     streamId: string
@@ -331,14 +338,15 @@ const quickStartAuctionItem = async (
     throw new ApiError(StatusCodes.CONFLICT, 'This item is already being auctioned.')
   }
 
-  // Create auction item via createAuctionItem helper
-  // bidIncrement is always forced to 1 (Fixed $1 Bid Increment Policy — never allow client override)
+  // The host chooses the bid step (e.g. $1, $5, $0.50); $1 if not given.
+  const step = Math.round(Number(bidIncrement) * 100) / 100
+  const increment = Number.isFinite(step) && step >= 0.01 ? Math.min(step, MAX_BID) : 1
   const auctionItem = await createAuctionItem({
     streamId: new Types.ObjectId(streamId) as any,
     productId: new Types.ObjectId(productId) as any,
     startingBid: startingBid ?? (product.startingBid || product.buyNowPrice || product.estValue || 0),
     timerDuration: timerDuration || 60,
-    bidIncrement: 1,
+    bidIncrement: increment,
   })
 
   return auctionItem
@@ -453,38 +461,37 @@ const placeBidSecure = async (
     }
   }
 
-  // Fixed $1 Bid Increment Enforcement:
-  // If no bids placed yet (!currentState.highestBidderId):
-  //   First bid equals startingBid (if currentBid > 0) or passed bidAmount or 1.
-  // Once a highest bidder exists (currentState.highestBidderId):
-  //   Target bid MUST be exactly currentBid + 1.
-  let targetBidAmount: number
-  if (!currentState.highestBidderId) {
-    targetBidAmount = bidAmount || currentState.currentBid || 1
-    if (bidAmount && currentState.currentBid > 0 && bidAmount < currentState.currentBid) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        `Bid amount cannot be lower than starting bid of $${currentState.currentBid}.`,
-      )
-    }
-  } else {
-    targetBidAmount = currentState.currentBid + 1
-    if (bidAmount && bidAmount !== targetBidAmount) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        `Fixed $1 bid increment required. Expected bid is $${targetBidAmount}.`,
-      )
-    }
+  // Bid rules. The auction's own increment applies (default $1):
+  //   first bid  → at least the starting bid;
+  //   later bids → at least current bid + increment. Higher jumps are fine.
+  // No amount sent means "the next bid" (quick bid / swipe).
+  const increment = currentState.bidIncrement > 0 ? currentState.bidIncrement : 1
+  const isFirstBid = !currentState.highestBidderId
+  const minimumBid = isFirstBid
+    ? Math.max(currentState.currentBid || 0, 1)
+    : currentState.currentBid + increment
+  const targetBidAmount =
+    bidAmount === undefined || bidAmount === null ? minimumBid : Math.round(Number(bidAmount) * 100) / 100
+  if (!Number.isFinite(targetBidAmount) || targetBidAmount <= 0 || targetBidAmount > MAX_BID) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Enter a valid bid amount.')
+  }
+  if (targetBidAmount < minimumBid) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      `Bid must be at least $${minimumBid}.`,
+    )
   }
 
-  // 1. Atomically find and update ONLY if the target bid is higher than or equal to required initial bid / higher than current bid
+  // 1. Atomic: only applies if, at write time, this bid still clears the
+  //    rules above. Two buyers bidding at once can't both win, and a slower
+  //    lower bid can't overwrite a higher one.
   const updatedAuction = await AuctionItem.findOneAndUpdate(
     {
       _id: new Types.ObjectId(auctionItemId),
       status: 'active',
       $or: [
-        { currentBid: { $lt: targetBidAmount } },
-        { highestBidderId: null },
+        { highestBidderId: null, currentBid: { $lte: targetBidAmount } },
+        { highestBidderId: { $ne: null }, currentBid: { $lte: targetBidAmount - increment } },
       ],
     },
     {
@@ -592,9 +599,57 @@ const updateLiveStreamStatus = async (
     if (io) {
       io.to(`stream:${streamId}`).emit('stream-ended', { streamId, status: 'ended' })
     }
+    // The show is over: settle any auction still open in it.
+    closeOpenAuctions({ streamId }).catch(err =>
+      console.error('Failed to close open auctions for ended stream:', err),
+    )
   }
 
   return stream
+}
+
+/**
+ * Closes auctions the host's app never closed. The app normally completes an
+ * auction when its timer ends, but if the host ends the show early, loses
+ * connection or backgrounds the app, the auction would stay "active" forever:
+ * the winner is never charged or sent a payment link, and the item can't be
+ * auctioned again. Pass a streamId to close everything open in that show
+ * (it just ended); with no streamId, closes auctions whose timer ran out more
+ * than `graceMs` ago.
+ */
+const STALE_AUCTION_MS = 30 * 60 * 1000
+
+const closeOpenAuctions = async (opts: { streamId?: string; graceMs?: number } = {}) => {
+  const filter: Record<string, unknown> = { status: 'active' }
+  if (opts.streamId) {
+    filter.streamId = new Types.ObjectId(opts.streamId)
+  } else {
+    // Long-forgotten auctions are not charged now: nobody expects a charge
+    // for a show that ended long ago. They are marked failed instead.
+    const staleBefore = new Date(Date.now() - STALE_AUCTION_MS)
+    const stale = await AuctionItem.updateMany(
+      { status: 'active', endsAt: { $ne: null, $lt: staleBefore } },
+      { $set: { status: 'failed' } },
+    )
+    if (stale.modifiedCount) {
+      console.log(`[AuctionClose] Marked ${stale.modifiedCount} long-expired auction(s) failed without charging`)
+    }
+    filter.endsAt = {
+      $gte: staleBefore,
+      $lt: new Date(Date.now() - (opts.graceMs ?? 5000)),
+    }
+  }
+  const open = await AuctionItem.find(filter).select('_id').lean()
+  for (const a of open) {
+    try {
+      await completeAuction(a._id.toString(), 'admin')
+      console.log(`[AuctionClose] Closed auction ${a._id}`)
+    } catch (err: any) {
+      // No bids / reserve not met mark it failed inside completeAuction;
+      // anything else is logged and retried on the next pass.
+      console.log(`[AuctionClose] ${a._id}: ${err?.message}`)
+    }
+  }
 }
 
 // ── Complete auction + trigger winner Stripe checkout ────────────────────────────
@@ -858,8 +913,9 @@ const completeAuction = async (
             },
           ],
           mode: 'payment',
-          success_url: `${config.clientUrl}?auction_won=true&auctionItemId=${auctionItemId}`,
-          cancel_url: `${config.clientUrl}/auction/cancel`,
+          // Stripe only takes http(s); these pages send the buyer back into the app.
+          success_url: `${checkoutReturnBase()}/return?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${checkoutReturnBase()}/cancel`,
           customer_email: winner.email,
           payment_intent_data: {
             application_fee_amount: MarketplaceCharge.calculateSaleFee(auctionItem.currentBid, fees),
@@ -1529,7 +1585,67 @@ const getStreamSummary = async (streamId: string, sellerId?: string) => {
   }
 }
 
+/**
+ * Admin view of one show: what the host had ready, what was auctioned and
+ * to whom, which giveaways and spin prizes went out, and the tips received.
+ */
+const getStreamAdminOverview = async (streamId: string) => {
+  if (!Types.ObjectId.isValid(streamId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid Stream ID')
+  }
+  const stream = await LiveStream.findById(streamId)
+    .populate('sellerId', 'name fullName email')
+    .populate('inventoryIds', 'title images price stock status isGiveaway')
+    .lean()
+  if (!stream) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Live stream not found')
+  }
+
+  const [sales, auctionItems, tips] = await Promise.all([
+    getStreamSales(streamId),
+    AuctionItem.find({ streamId })
+      .populate('productId', 'title images isGiveaway')
+      .populate('highestBidderId', 'name fullName')
+      .sort({ createdAt: 1 })
+      .lean(),
+    Tip.find({ streamId, status: 'succeeded' }).sort({ createdAt: -1 }).lean(),
+  ])
+
+  const giveaways = sales.orders.filter(o => o.isGiveaway)
+  const spinPrizes = sales.orders.filter(o => o.spinWheelPrize)
+  const tipTotal = tips.reduce((sum, t) => sum + (t.amount || 0), 0)
+
+  return {
+    stream: {
+      id: stream._id,
+      title: stream.title,
+      status: stream.status,
+      host: stream.sellerId,
+      startedAt: (stream as any).startedAt || null,
+      endedAt: (stream as any).endedAt || null,
+      viewersCount: (stream as any).viewersCount ?? 0,
+    },
+    metrics: {
+      inventoryCount: ((stream as any).inventoryIds || []).length,
+      auctionItems: auctionItems.length,
+      orders: sales.totalOrders,
+      revenue: sales.totalRevenue,
+      giveaways: giveaways.length,
+      spinPrizes: spinPrizes.length,
+      tips: tips.length,
+      tipTotal: Number(tipTotal.toFixed(2)),
+    },
+    inventory: (stream as any).inventoryIds || [],
+    auctionItems,
+    giveaways,
+    spinPrizes,
+    tips,
+  }
+}
+
 export const AuctionServices = {
+  getStreamAdminOverview,
+  closeOpenAuctions,
   generateAgoraToken,
   createLiveStream,
   startScheduledStream,

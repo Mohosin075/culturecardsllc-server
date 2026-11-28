@@ -436,6 +436,10 @@ const handlePaymentFailure = async (
 }
 
 export const WebhookService = {
+  // Also used to settle a checkout we look up directly (when a webhook was
+  // missed, or locally where Stripe can't reach the server).
+  handleCheckoutSessionCompleted,
+  handleCheckoutSessionExpired,
   handleWebhook: async (payload: {
     body: string | Buffer
     headers?: any

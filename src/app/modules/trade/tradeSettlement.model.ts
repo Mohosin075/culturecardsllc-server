@@ -47,6 +47,12 @@ export type ITradeSettlementParty = {
   stripeAccountId?: string
   status: 'pending' | 'paid'
   paidAt?: Date
+  /** Set when the trade is cancelled: return shipping this party paid for. */
+  returnShippingCents?: number
+  /** Return shipping this party still owes beyond what could be refunded. */
+  shortfallCents?: number
+  /** Why an extra charge is due: a pricier label, or a cancelled trade's returns. */
+  extraReason?: 'label_difference' | 'return_shipping'
 }
 
 export type ITradeSettlement = {
@@ -72,6 +78,9 @@ const PartySchema = new Schema<ITradeSettlementParty>(
     labelsQuoted: { type: Boolean, default: false },
     chargeCents: { type: Number, default: 0, min: 0 },
     refundedCents: { type: Number, default: 0, min: 0 },
+    returnShippingCents: { type: Number, default: 0, min: 0 },
+    shortfallCents: { type: Number, default: 0, min: 0 },
+    extraReason: { type: String, enum: ['label_difference', 'return_shipping'] },
     refundIds: { type: [String], default: [] },
     feeForfeited: { type: Boolean, default: false },
     extraChargeCents: { type: Number, default: 0, min: 0 },

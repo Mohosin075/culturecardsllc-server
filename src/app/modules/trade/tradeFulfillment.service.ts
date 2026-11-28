@@ -225,10 +225,11 @@ const notify = async (
   text: string,
   statusLabel: string,
   onlyRole?: ITradeRole,
+  opts: { chatOnly?: boolean } = {},
 ) => {
   const io = (global as any).io
   const tradeOfferId = offer._id.toString()
-  const roles: ITradeRole[] = onlyRole ? [onlyRole] : ['sender', 'receiver']
+  const roles: ITradeRole[] = opts.chatOnly ? [] : onlyRole ? [onlyRole] : ['sender', 'receiver']
 
   try {
     if (!onlyRole) {
@@ -456,12 +457,49 @@ export const authenticateItem = async (
   await offer.save()
 
   if (!passed) {
+    // The trade can't go ahead. The failed item's owner pays the returns and
+    // the $2 material fee; the other trader is reimbursed (client rule).
+    const other: ITradeRole = role === 'sender' ? 'receiver' : 'sender'
+    const faultParty: ITradeRole | 'both' = offer[itemStatusKey(other)] === 'failed' ? 'both' : role
+    const { plan } = await cancelTrade(offerId, {
+      faultParty,
+      policy: 'failed_authentication',
+      reason: `${role === 'sender' ? 'The sender' : 'The receiver'}'s item did not pass authentication${note ? ` (${note})` : ''}`,
+      actorId,
+    })
+    const owner = plan.parties.find(p => p.role === role)
+    const innocent = plan.parties.find(p => p.role === other)
     await notify(
       offer,
-      `${label(offer)}: an item did not pass authentication. ARIES will contact you about next steps.`,
-      'AUTHENTICATION ISSUE ⚠️',
+      `${label(offer)}: your item did not pass authentication${note ? ` (${note})` : ''}. It is being shipped back to you. ` +
+        `The return shipping and the $2 material fee are on you` +
+        (owner && owner.refundAmount > 0 ? `; $${owner.refundAmount.toFixed(2)} of your payment is being refunded.` : '.') +
+        (owner && owner.shortfall > 0 ? ` You owe $${owner.shortfall.toFixed(2)} more for return shipping.` : ''),
+      'AUTHENTICATION FAILED',
+      role,
     )
-    return offer
+    if (faultParty !== 'both') {
+      await notify(
+        offer,
+        `${label(offer)}: the other trader's item did not pass authentication, so the trade is cancelled. ` +
+          `Your item is coming back to you at no cost` +
+          (innocent && innocent.refundAmount > 0 ? ` and $${innocent.refundAmount.toFixed(2)} is being refunded to your card.` : '.'),
+        'TRADE CANCELLED',
+        other,
+      )
+    }
+    // A lasting record in the traders' chat (the messages above are push only).
+    await notify(
+      offer,
+      `${label(offer)} was cancelled: the ${faultParty === 'both' ? "items" : `${role}'s item`} did not pass authentication. ` +
+        (faultParty === 'both'
+          ? 'Each trader pays their own return shipping and the $2 material fee.'
+          : `The ${role} pays the return shipping and the $2 material fee; the ${other} is refunded in full.`),
+      'AUTHENTICATION FAILED',
+      undefined,
+      { chatOnly: true },
+    )
+    return (await populated(offerId)) as any
   }
 
   if (ready(offer.senderItemStatus) && ready(offer.receiverItemStatus)) {
@@ -597,6 +635,14 @@ export const completeTrade = async (offerId: string, actorId?: string) => {
 const shipped = (status?: ITradeItemStatus) =>
   !!status && ['in_transit', 'received', 'authenticated', 'failed'].includes(status)
 
+/**
+ * 'failed_authentication' (client, 2026-11-28): the owner of an item that
+ * fails authentication pays to ship things back and keeps losing the $2
+ * material fee (and the label to ARIES they used), but their 4% fee is
+ * returned. The other trader is reimbursed in full.
+ */
+export type CancelPolicy = 'default' | 'failed_authentication'
+
 export type CancelPlan = {
   faultParty?: ITradeRole | 'both'
   parties: {
@@ -625,6 +671,7 @@ export type CancelPlan = {
 const planCancellation = async (
   offer: any,
   faultParty: ITradeRole | 'both' | undefined,
+  policy: CancelPolicy = 'default',
 ): Promise<CancelPlan> => {
   const settlement = await TradeSettlement.findOne({ tradeOfferId: offer._id })
   const hub = hubAddress()
@@ -670,13 +717,22 @@ const planCancellation = async (
       gross =
         p.cashNet +
         (outboundBought ? 0 : p.outboundLabelNet || 0) +
-        (didShip ? 0 : (p.materialFeeNet || 0) + (p.inboundLabelNet || 0))
+        (didShip ? 0 : (p.materialFeeNet || 0) + (p.inboundLabelNet || 0)) +
+        (policy === 'failed_authentication' ? p.feeNet || 0 : 0)
       gross = Math.min(round2(gross), paidAmount)
     }
 
     const refundAmount = round2(Math.max(0, gross - returnShipping))
     const shortfall = round2(Math.max(0, returnShipping - gross))
-    return { role, paid: true, paidAmount, refundAmount, feeForfeited: atFault, returnShipping, shortfall }
+    return {
+      role,
+      paid: true,
+      paidAmount,
+      refundAmount,
+      feeForfeited: atFault && policy !== 'failed_authentication',
+      returnShipping,
+      shortfall,
+    }
   })
 
   return { faultParty, parties, returns }
@@ -689,6 +745,7 @@ export const cancelTrade = async (
     reason: string
     actorId?: string
     dryRun?: boolean
+    policy?: CancelPolicy
   },
 ) => {
   const offer: any = await populated(offerId)
@@ -697,7 +754,7 @@ export const cancelTrade = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Only an accepted trade can be cancelled.')
   }
 
-  const plan = await planCancellation(offer, options.faultParty)
+  const plan = await planCancellation(offer, options.faultParty, options.policy)
   if (options.dryRun) return { plan, offer }
 
   const settlement = await TradeSettlement.findOne({ tradeOfferId: offer._id })
@@ -740,6 +797,16 @@ export const cancelTrade = async (
     for (const p of plan.parties) {
       const party = settlement.parties.find(x => x.role === p.role)
       if (party && p.feeForfeited) party.feeForfeited = true
+      if (party) {
+        party.returnShippingCents = toCents(p.returnShipping)
+        party.shortfallCents = toCents(p.shortfall)
+        // Anything the refund couldn't cover becomes payable in the app.
+        if (p.shortfall > 0) {
+          party.extraChargeCents = (party.extraChargeCents || 0) + toCents(p.shortfall)
+          party.extraStatus = 'pending'
+          party.extraReason = 'return_shipping'
+        }
+      }
       if (p.refundAmount > 0) {
         try {
           await TradeSettlementServices.refundParty(settlement, p.role, toCents(p.refundAmount), options.reason)
@@ -770,7 +837,10 @@ export const cancelTrade = async (
   record(offer, `Cancelled: ${options.reason}`, options.actorId, 'cancelled')
   await offer.save()
 
-  await notify(offer, `${label(offer)} was cancelled: ${options.reason}. Any refund is on its way to your card.`, 'TRADE CANCELLED')
+  // A failed authentication sends each trader their own message instead.
+  if (options.policy !== 'failed_authentication') {
+    await notify(offer, `${label(offer)} was cancelled: ${options.reason}. Any refund is on its way to your card.`, 'TRADE CANCELLED')
+  }
   return { plan, offer }
 }
 

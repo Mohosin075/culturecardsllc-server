@@ -16,8 +16,8 @@ import { MarketplaceCharge } from '../app/modules/payment/marketplaceCharge'
  * still unshipped past its `shipByDate`, refunds the buyer, and tells both
  * sides what happened.
  */
-export const startOrderShipDeadlineCron = (): void => {
-  cron.schedule('0 * * * *', async () => {
+/** One pass over overdue orders. Exported so it can be run on demand. */
+export const runOrderShipDeadlineCheck = async (): Promise<void> => {
     try {
       const overdue = await Order.find({
         deliveryStatus: 'pending',
@@ -44,7 +44,10 @@ export const startOrderShipDeadlineCron = (): void => {
     } catch (error) {
       console.error('[OrderShipDeadlineCron] Run failed:', error)
     }
-  })
+}
+
+export const startOrderShipDeadlineCron = (): void => {
+  cron.schedule('0 * * * *', runOrderShipDeadlineCheck)
 
   console.log('⏰ Order ship-deadline cron scheduled (hourly)')
 }

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AuctionServices } from './auction.service'
+import { AuctionPaymentServices } from './auctionPayment.service'
+import { renderAppBounce } from '../../../helpers/appBounce'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
@@ -330,6 +332,16 @@ const getStreamSummary = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+const getStreamAdminOverview = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuctionServices.getStreamAdminOverview(req.params.streamId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Live stream overview retrieved successfully.',
+    data: result,
+  })
+})
+
 const getCompletedShowsForShipping = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
   const data = await AuctionServices.getCompletedShowsForShipping(user.userId)
@@ -339,10 +351,53 @@ const getCompletedShowsForShipping = catchAsync(async (req: Request, res: Respon
 const getShowShipments = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
   const data = await AuctionServices.getShowShipments(req.params.streamId, user.userId)
-  sendResponse(res, { statusCode: StatusCodes.OK, success: true, message: 'Show shipments retrieved.', data })
+  // Winners who still have to pay; their items ship once they do.
+  const awaitingPayment = await AuctionPaymentServices.getShowUnpaidWins(req.params.streamId, user.userId)
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Show shipments retrieved.',
+    data: { ...data, awaitingPayment },
+  })
+})
+
+// Stripe Checkout lands here after an auction win is paid (or abandoned).
+// Settle the order if we can, then open My purchases in the app.
+const checkoutReturn = catchAsync(async (req: Request, res: Response) => {
+  const sessionId = String(req.query.session_id || '')
+  if (sessionId.startsWith('cs_')) {
+    await AuctionPaymentServices.settleCheckout(sessionId).catch(err =>
+      console.error('[CheckoutReturn] settle failed:', err?.message),
+    )
+  }
+  renderAppBounce(res, {
+    heading: 'Payment received',
+    body: 'Thank you! Taking you back to ARIES to see your order.',
+    deepLink: 'culturecards://purchases?paid=1',
+    button: 'Open ARIES',
+  })
+})
+
+const checkoutCancel = catchAsync(async (_req: Request, res: Response) => {
+  renderAppBounce(res, {
+    heading: 'Payment not completed',
+    body: 'No money was taken. You can pay from My purchases before the link expires.',
+    deepLink: 'culturecards://purchases',
+    button: 'Back to ARIES',
+  })
+})
+
+// Auction wins the signed-in buyer still has to pay for.
+const getMyUnpaidWins = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const data = await AuctionPaymentServices.getMyUnpaidWins(user.userId)
+  sendResponse(res, { statusCode: StatusCodes.OK, success: true, message: 'Unpaid auction wins retrieved.', data })
 })
 
 export const AuctionControllers = {
+  checkoutReturn,
+  checkoutCancel,
+  getMyUnpaidWins,
   getCompletedShowsForShipping,
   getShowShipments,
   generateAgoraToken,
@@ -365,4 +420,5 @@ export const AuctionControllers = {
   spinWheel,
   getStreamSales,
   getStreamSummary,
+  getStreamAdminOverview,
 }

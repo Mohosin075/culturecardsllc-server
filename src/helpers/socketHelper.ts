@@ -187,6 +187,44 @@ const socket = (io: Server) => {
           if ((socket as any).userId) {
             (socket as any).streamUserId = (socket as any).userId
           }
+
+          // Catch the newcomer up on the conversation: the last 50 comments.
+          try {
+            const withChat = await LiveStream.findById(streamId)
+              .select({ chatMessages: { $slice: -50 } })
+              .lean()
+            const recent: any[] = (withChat as any)?.chatMessages || []
+            if (recent.length) {
+              const ids = [...new Set(recent.map(m => m.userId?.toString()).filter(Boolean))]
+              const people = await User.find({ _id: { $in: ids } }).select('image photo').lean()
+              const photo = new Map(people.map((p: any) => [p._id.toString(), p.image || p.photo || '']))
+              const me = (socket as any).userId as string | undefined
+              socket.emit('chat-history', {
+                streamId,
+                messages: recent.map(m => ({
+                  messageId: m._id?.toString(),
+                  user: {
+                    _id: m.userId?.toString() || '',
+                    name: m.user,
+                    image: photo.get(m.userId?.toString()) || '',
+                  },
+                  message: m.message,
+                  likes: (m.likedBy || []).length,
+                  likedByMe: !!me && (m.likedBy || []).some((u: any) => u.toString() === me),
+                  timestamp: m.timestamp,
+                })),
+              })
+            }
+          } catch (err: any) {
+            console.error(colors.red('chat-history error:'), err?.message)
+          }
+
+          // Tell this viewer whether they already liked the show (one like per user).
+          const uid = (socket as any).userId
+          if (stream && uid && Types.ObjectId.isValid(uid)) {
+            const liked = !!(await LiveStream.exists({ _id: streamId, likedBy: uid }))
+            socket.emit('stream-like-state', { streamId, liked, likesCount: stream.likesCount })
+          }
         }
       },
     )
@@ -397,22 +435,44 @@ const socket = (io: Server) => {
         const last = (socket as any).lastReactionAt || 0
         if (now - last < 500) return
         ;(socket as any).lastReactionAt = now
-        const count = Math.min(Math.max(Math.floor(Number(data.count) || 1), 1), 30)
+        const type = reactionType || 'heart'
+        const uid = (socket as any).userId
 
         try {
-          const stream = await LiveStream.findOneAndUpdate(
-            { _id: streamId, status: 'live' },
-            { $inc: { likesCount: count } },
-            { new: true, projection: { likesCount: 1 } },
-          )
-          if (!stream) return
+          if (type === 'heart') {
+            // A like counts once per signed-in user per show.
+            if (!uid || !Types.ObjectId.isValid(uid)) return
+            const stream = await LiveStream.findOneAndUpdate(
+              { _id: streamId, status: 'live', likedBy: { $ne: uid } },
+              { $addToSet: { likedBy: uid }, $inc: { likesCount: 1 } },
+              { new: true, projection: { likesCount: 1 } },
+            )
+            if (!stream) {
+              // Already liked (or the show is over): just confirm the state.
+              const current = await LiveStream.findById(streamId).select('likesCount').lean()
+              socket.emit('stream-like-state', {
+                streamId,
+                liked: true,
+                likesCount: current?.likesCount ?? 0,
+              })
+              return
+            }
+            io.to(`stream:${streamId}`).emit('new-reaction', {
+              streamId,
+              reactionType: 'heart',
+              count: 1,
+              fromUserId: uid,
+              likesCount: stream.likesCount,
+            })
+            return
+          }
 
+          // Other emoji reactions are just animations; they don't change the like count.
           io.to(`stream:${streamId}`).emit('new-reaction', {
             streamId,
-            reactionType: reactionType || 'heart',
-            count,
-            fromUserId: (socket as any).userId || null,
-            likesCount: stream.likesCount,
+            reactionType: type,
+            count: 1,
+            fromUserId: uid || null,
           })
         } catch (err) {
           console.error(colors.red('stream-reaction error:'), err)
@@ -532,6 +592,7 @@ const socket = (io: Server) => {
           }
 
           stream.status = 'ended'
+          stream.endedAt = new Date()
           await stream.save()
 
           // Broadcast stream closure to all clients in the room
@@ -539,6 +600,11 @@ const socket = (io: Server) => {
             streamId,
             status: 'ended',
           })
+
+          // Settle any auction still open in this show.
+          AuctionServices.closeOpenAuctions({ streamId }).catch(err =>
+            console.error('Failed to close open auctions for ended stream:', err),
+          )
 
           console.log(
             colors.red(

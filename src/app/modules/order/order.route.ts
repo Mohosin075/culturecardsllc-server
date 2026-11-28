@@ -26,6 +26,14 @@ router.get(
   OrderControllers.getOrdersForUser,
 )
 
+// GET /history — Sales (role=seller) or purchases (role=buyer) with a summary.
+// Must stay above /:id.
+router.get(
+  '/history',
+  auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  OrderControllers.getOrderHistory,
+)
+
 // GET /:id — Fetch single order by ID
 router.get(
   '/:id',

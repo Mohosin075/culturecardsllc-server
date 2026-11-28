@@ -310,7 +310,23 @@ export const getSettlementStatus = async (offerId: string) => {
       inboundLabel: p.inboundLabelNet || 0,
       outboundLabel: p.outboundLabelNet || 0,
       totalAmount: p.chargeCents / 100,
+      // What the card network takes: the total was grossed up to cover it.
+      processingFee: Math.max(
+        0,
+        Math.round(
+          p.chargeCents -
+            Math.round(
+              ((p.feeNet || 0) + (p.cashNet || 0) + (p.materialFeeNet || 0) +
+                (p.inboundLabelNet || 0) + (p.outboundLabelNet || 0)) * 100,
+            ),
+        ) / 100,
+      ),
       refundedAmount: (p.refundedCents || 0) / 100,
+      returnShipping: (p.returnShippingCents || 0) / 100,
+      // Still owed only until the extra charge is paid.
+      owed: p.extraStatus === 'paid' ? 0 : (p.shortfallCents || 0) / 100,
+      owedPaid: p.extraStatus === 'paid' && (p.shortfallCents || 0) > 0,
+      extraReason: p.extraReason || 'label_difference',
       feeForfeited: !!p.feeForfeited,
       extraDue:
         p.extraStatus === 'pending' ? (p.extraChargeCents || 0) / 100 : 0,
@@ -431,7 +447,10 @@ export const createExtraChargeIntent = async (
       amount: party.extraChargeCents,
       currency: 'usd',
       customer: customerId,
-      description: 'ARIES trade shipping adjustment',
+      description:
+        party.extraReason === 'return_shipping'
+          ? 'ARIES trade return shipping'
+          : 'ARIES trade shipping adjustment',
       metadata: {
         purchaseType: 'trade_extra',
         tradeOfferId: offerId,

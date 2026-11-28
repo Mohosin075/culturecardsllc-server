@@ -18,6 +18,7 @@ export type ILiveStream = {
   reminderSent?: boolean
   viewersCount: number
   likesCount: number
+  likedBy?: Schema.Types.ObjectId[]
   tipsTotal?: number
   tipsCount?: number
   chatMessages?: Array<{

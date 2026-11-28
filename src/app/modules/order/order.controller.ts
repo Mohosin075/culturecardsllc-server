@@ -6,6 +6,11 @@ import sendResponse from '../../../shared/sendResponse'
 import ApiError from '../../../errors/ApiError'
 import { JwtPayload } from 'jsonwebtoken'
 import { USER_ROLES } from '../../../enum/user'
+import {
+  OrderHistoryService,
+  HistoryPeriod,
+  HistoryStatus,
+} from './orderHistory.service'
 
 const isAdmin = (user: JwtPayload) =>
   user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPER_ADMIN
@@ -44,6 +49,48 @@ const getOrdersForUser = catchAsync(async (req: Request, res: Response) => {
     statusCode: StatusCodes.OK,
     success: true,
     message: 'Orders retrieved successfully.',
+    data: result,
+  })
+})
+
+const PERIODS: HistoryPeriod[] = ['7d', '30d', 'all']
+const STATUSES: HistoryStatus[] = ['paid', 'shipped', 'delivered', 'refunded']
+
+const getOrderHistory = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  // History is always the caller's own; there is no userId parameter.
+  const userId = String(user.userId || user.authId || '')
+  if (!userId) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, 'Not signed in.')
+  }
+
+  const role = req.query.role === 'seller' ? 'seller' : 'buyer'
+  const periodQ = String(req.query.period || 'all') as HistoryPeriod
+  if (!PERIODS.includes(periodQ)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'period must be 7d, 30d or all.')
+  }
+  const statusQ = req.query.status ? (String(req.query.status) as HistoryStatus) : undefined
+  if (statusQ && !STATUSES.includes(statusQ)) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'status must be paid, shipped, delivered or refunded.',
+    )
+  }
+  const page = Math.max(1, Math.floor(Number(req.query.page) || 1))
+  const limit = Math.min(100, Math.max(1, Math.floor(Number(req.query.limit) || 20)))
+
+  const result = await OrderHistoryService.getOrderHistory({
+    userId,
+    role,
+    period: periodQ,
+    status: statusQ,
+    page,
+    limit,
+  })
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Order history retrieved successfully.',
     data: result,
   })
 })
@@ -97,6 +144,7 @@ const updateOrderJourney = catchAsync(async (req: Request, res: Response) => {
 export const OrderControllers = {
   createOrder,
   getOrdersForUser,
+  getOrderHistory,
   getOrderById,
   updateOrderJourney,
 }

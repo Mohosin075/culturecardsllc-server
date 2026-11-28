@@ -365,9 +365,17 @@ const verifyAccount = async (
 
   //either newly created user or existing user
   if (!isUserExist.verified) {
+    // Spend the code: left in place, the same sign-up code could be sent
+    // again and would then be treated as a password-reset request.
     await User.findByIdAndUpdate(
       isUserExist._id,
-      { $set: { verified: true } },
+      {
+        $set: {
+          verified: true,
+          'authentication.oneTimeCode': '',
+          'authentication.expiresAt': null,
+        },
+      },
       { new: true },
     )
 

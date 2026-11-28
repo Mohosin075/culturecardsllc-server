@@ -22,6 +22,12 @@ router.post(
 )
 
 router.get(
+  '/admin/all',
+  auth(USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
+  TipController.getAllTipsForAdmin,
+)
+
+router.get(
   '/stream/:streamId',
   auth(USER_ROLES.BUYER, USER_ROLES.SELLER, USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN),
   TipController.getStreamTips,

@@ -82,6 +82,13 @@ const LiveStreamSchema = new Schema<ILiveStream>(
       default: 0,
       min: 0,
     },
+    // Who has liked this show: one like per signed-in user. Not selected by
+    // default so stream lists stay small.
+    likedBy: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+      select: false,
+    },
     tipsTotal: {
       type: Number,
       default: 0,
@@ -147,7 +154,7 @@ const AuctionItemSchema = new Schema<IAuctionItem>(
     bidIncrement: {
       type: Number,
       default: 1,
-      min: 1,
+      min: 0.01,
     },
     timerDuration: {
       type: Number,
@@ -168,6 +175,34 @@ const AuctionItemSchema = new Schema<IAuctionItem>(
     toObject: { virtuals: true },
   },
 )
+
+// ── Tell every connected app when a show starts or ends ──────────────────────
+// Shows change status from many places (the host, an admin, a seller being
+// removed, the host-disconnect grace timer). Hooking the model catches all of
+// them, so home screens can refresh their "Live now" list straight away.
+const announceLiveListChanged = (streamId?: unknown, status?: unknown) => {
+  const io = (global as any).io
+  if (!io) return
+  io.emit('live-streams-changed', {
+    streamId: streamId ? String(streamId) : undefined,
+    status: status ? String(status) : undefined,
+  })
+}
+
+LiveStreamSchema.pre('save', function (next) {
+  ;(this as any).$locals.statusChanged = this.isNew || this.isModified('status')
+  next()
+})
+
+LiveStreamSchema.post('save', function (doc) {
+  if ((doc as any).$locals?.statusChanged) announceLiveListChanged(doc._id, doc.status)
+})
+
+LiveStreamSchema.post(['updateOne', 'updateMany', 'findOneAndUpdate'], function (this: any) {
+  const update = this.getUpdate?.() || {}
+  const status = update.status ?? update.$set?.status
+  if (status !== undefined) announceLiveListChanged(this.getQuery?.()?._id, status)
+})
 
 export const LiveStream = model<ILiveStream>('LiveStream', LiveStreamSchema)
 export const AuctionItem = model<IAuctionItem>('AuctionItem', AuctionItemSchema)

@@ -91,6 +91,9 @@ const createTipIntent = async (
   }
 
   const sellerId = stream.sellerId
+  if (String(sellerId) === String(user.userId)) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'You cannot tip your own show.')
+  }
   const senderName = sender.fullName || sender.name || 'A Supporter'
   const senderImage = sender.profile || (sender as any).image || (sender as any).photo || ''
 
@@ -397,7 +400,61 @@ const getMySellerTips = async (userId: string) => {
   }
 }
 
+/**
+ * 5. Admin: every tip on the platform, newest first, with totals.
+ */
+const getAllTipsForAdmin = async (query: Record<string, any>) => {
+  const page = Math.max(parseInt(query.page) || 1, 1)
+  const limit = Math.min(Math.max(parseInt(query.limit) || 20, 1), 100)
+  const filter: Record<string, any> = {}
+  if (['pending', 'succeeded', 'failed'].includes(query.status)) {
+    filter.status = query.status
+  }
+  if (query.streamId && Types.ObjectId.isValid(query.streamId)) {
+    filter.streamId = new Types.ObjectId(query.streamId)
+  }
+
+  const [tips, total, totals] = await Promise.all([
+    Tip.find(filter)
+      .populate('streamId', 'title coverImage')
+      .populate('sellerId', 'name email')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Tip.countDocuments(filter),
+    Tip.aggregate([
+      { $match: { status: 'succeeded' } },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          tipped: { $sum: '$amount' },
+          platformFees: { $sum: '$platformFee' },
+          processingFees: { $sum: '$processingFee' },
+          sellerNet: { $sum: '$sellerNetAmount' },
+        },
+      },
+    ]),
+  ])
+
+  const t = totals[0] || {}
+  const round = (n?: number) => Number((n || 0).toFixed(2))
+  return {
+    summary: {
+      count: t.count || 0,
+      tipped: round(t.tipped),
+      platformFees: round(t.platformFees),
+      processingFees: round(t.processingFees),
+      sellerNet: round(t.sellerNet),
+    },
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    tips,
+  }
+}
+
 export const TipServices = {
+  getAllTipsForAdmin,
   createTipIntent,
   confirmTip,
   getStreamTips,
