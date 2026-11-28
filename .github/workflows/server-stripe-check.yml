@@ -1,0 +1,40 @@
+name: Server check - Stripe setup (read only)
+
+# Run by hand from the Actions tab. Changes nothing on the server.
+# Shows which Stripe account the live API uses (as a short hash, never the
+# key itself), which Stripe settings are present, and recent Stripe Connect
+# errors from the logs, so onboarding failures can be diagnosed.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect Stripe settings on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST || '34.225.44.39' }}
+          username: ${{ secrets.SERVER_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            cd /var/www/culturecardsllc-server || exit 1
+            echo "== .env present: $( [ -f .env ] && echo yes || echo NO )"
+            line=$(grep '^STRIPE_API_SECRET=' .env | head -1)
+            key=${line#STRIPE_API_SECRET=}
+            key=$(printf %s "$key" | tr -d '"'"'"' \r')
+            case "$key" in
+              sk_test_*) echo "== key mode: test" ;;
+              sk_live_*) echo "== key mode: LIVE" ;;
+              "") echo "== key mode: NOT SET" ;;
+              *) echo "== key mode: unknown format" ;;
+            esac
+            frag=$(printf %s "$key" | sed -E 's/^(sk|rk)_(test|live)_//' | cut -c1-14)
+            echo "== account fragment hash: $(printf %s "$frag" | sha256sum | cut -c1-16)"
+            echo "== Stripe settings present (names only):"
+            grep -oE '^STRIPE[A-Z0-9_]*' .env | sort -u
+            echo "== Recent Stripe Connect errors (pm2):"
+            pm2 logs culturecards-api --lines 3000 --nostream 2>/dev/null | grep -i 'SellerConnect' | tail -10 || true
+            echo "== Recent Stripe Connect errors (log files):"
+            grep -rhi 'SellerConnect' logs 2>/dev/null | tail -10 || true
