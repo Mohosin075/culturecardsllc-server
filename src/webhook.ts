@@ -8,6 +8,7 @@ import { TradeSettlementServices } from './app/modules/trade/tradeSettlement.ser
 import { TradeFulfillment } from './app/modules/trade/tradeFulfillment.service'
 import { RefundServices } from './app/modules/refund/refund.service'
 import { ShippingServices } from './app/modules/shipping/shipping.service'
+import { AuctionWinIntentServices } from './app/modules/auction/auctionWinIntent.service'
 
 const webhookApp = express()
 
@@ -106,6 +107,12 @@ webhookApp.post(
           } catch (err) {
             console.error('[TradeSettlement] webhook handling failed:', err)
           }
+        }
+        // Auction win paid in the app (PaymentSheet on the seller's account).
+        if (intent?.metadata?.purchaseType === 'auction_win' && intent.id && (event as any).account) {
+          await AuctionWinIntentServices.fulfillWinIntent(intent.id, (event as any).account).catch(err =>
+            console.error('[AuctionWin] webhook fulfil failed:', err?.message),
+          )
         }
         if (intent?.metadata?.purchaseType === 'trade_extra' && intent.id) {
           await TradeSettlementServices.markExtraPaidByIntent(intent.id).catch(

@@ -24,6 +24,110 @@ const platformFeeOf = (paymentIntent: unknown): number => {
   return typeof cents === 'number' ? cents / 100 : 0
 }
 
+/**
+ * Creates the order for a paid auction win and tells the seller. Shared by the
+ * Stripe Checkout path and the in-app PaymentSheet path. Runs inside the
+ * caller's Mongo transaction; seller alerts run after it commits.
+ */
+export const createAuctionWinOrder = async (args: {
+  meta: Record<string, string>
+  totalPaid: number
+  paymentIntentId: string
+  stripeAccountId?: string
+  platformFee: number
+  mongoSession: any
+  afterCommit: Array<() => Promise<void>>
+  shippingOverride?: Record<string, unknown>
+}): Promise<void> => {
+  const { meta, totalPaid, paymentIntentId, stripeAccountId, platformFee, mongoSession, afterCommit, shippingOverride } = args
+  const product = await Product.findById(meta.productId).session(mongoSession)
+  if (product) {
+    const buyerUser = await User.findById(meta.winnerId).session(mongoSession)
+    const shippingAddress = shippingOverride || savedDeliveryAddress(buyerUser)
+
+    const auction = meta.auctionItemId
+      ? await AuctionItem.findById(meta.auctionItemId).select('streamId').session(mongoSession)
+      : null
+
+    const orderPayload: any = {
+      buyerId: meta.winnerId,
+      sellerId: meta.sellerId,
+      streamId: auction?.streamId,
+      productId: meta.productId,
+      purchaseType: 'auction_win' as const,
+      paymentIntentId,
+      stripeAccountId,
+      paymentStatus: 'paid' as const,
+      deliveryStatus: 'pending' as const,
+      shippingAddress,
+      amountDetails: {
+        itemSubtotal: totalPaid,
+        shipping: 0,
+        taxes: 0,
+        processingFee: 0,
+        charityContribution: 0,
+        totalPaid: totalPaid,
+        platformFee,
+      },
+    }
+
+    await initializeOrderShipping(orderPayload, product)
+
+    // Create order
+    const [order] = await Order.create([orderPayload], { session: mongoSession })
+    // Tell the seller right away (in-app notification, socket, push).
+    afterCommit.push(() =>
+      notifySellerOfNewOrder(order as any, product.title, product.images?.[0]),
+    )
+
+    // Record partner commission (50/50 split)
+    PartnerService.recordCommissionForOrder({
+      buyerId: meta.winnerId,
+      orderId: (order as any)._id.toString(),
+      transactionAmount: totalPaid,
+    }).catch(err => console.error('Partner commission error in webhook:', err))
+
+    // Decrement product stock by 1; mark status as sold only when remaining stock reaches 0
+    const currentStock = typeof product.stock === 'number' ? product.stock : 1
+    const newStock = Math.max(0, currentStock - 1)
+    const newStatus = newStock > 0 ? 'active' : 'sold'
+    await Product.findByIdAndUpdate(
+      meta.productId,
+      { status: newStatus, stock: newStock },
+      { session: mongoSession },
+    )
+
+    // Chat message to seller
+    const chat = await Chat.findOne({
+      participants: { $all: [meta.winnerId, meta.sellerId] },
+    })
+    if (chat) {
+      await Message.create(
+        [
+          {
+            chatId: chat._id,
+            sender: meta.winnerId,
+            text: `🏆 Auction Won! Payment complete. Order #${(order as any)._id.toString().substring(0, 8).toUpperCase()} created.`,
+            messageType: 'order_update',
+            seen: false,
+            metadata: { orderId: (order as any)._id.toString(), statusLabel: 'AUCTION WON 🏆' },
+          },
+        ],
+        { session: mongoSession },
+      )
+    }
+
+    // Socket notify seller
+    if (io) {
+      io.to(meta.sellerId).emit('auction-payment-received', {
+        orderId: (order as any)._id.toString(),
+        productId: meta.productId,
+        message: 'Auction payment received! Order created.',
+      })
+    }
+  }
+}
+
 const handleCheckoutSessionCompleted = async (
   sessionData: Record<string, unknown> & { id: string },
   stripeAccountId?: string,
@@ -68,6 +172,23 @@ const handleCheckoutSessionCompleted = async (
 
       if (payment.status === 'succeeded') {
         await mongoSession.commitTransaction()
+        // An auction win already paid in the app (PaymentSheet) and then paid
+        // again on the old Checkout link: give the second payment back.
+        const purchase = (sessionWithDetails.metadata as any)?.purchaseType
+        if (
+          purchase === 'auction_win' &&
+          payment.paymentIntentId &&
+          payment.paymentIntentId !== lookupId &&
+          lookupId.startsWith('pi_')
+        ) {
+          await stripe.refunds
+            .create(
+              { payment_intent: lookupId, refund_application_fee: true },
+              stripeAccountId ? { stripeAccount: stripeAccountId } : undefined,
+            )
+            .then(() => console.log(`[AuctionWin] Refunded duplicate checkout payment ${lookupId}`))
+            .catch(err => console.error(`[AuctionWin] Duplicate refund failed for ${lookupId}:`, err?.message))
+        }
         return
       }
 
@@ -107,93 +228,15 @@ const handleCheckoutSessionCompleted = async (
 
       // ─── AUCTION WIN: create order + mark product sold ─────────────────────────
       if (purchaseType === 'auction_win' && meta.productId && meta.winnerId && meta.sellerId) {
-        const product = await Product.findById(meta.productId).session(mongoSession)
-        if (product) {
-          const totalPaid = (sessionWithDetails.amount_total || 0) / 100
-          const buyerUser = await User.findById(meta.winnerId).session(mongoSession)
-          const shippingAddress = savedDeliveryAddress(buyerUser)
-
-          const auction = meta.auctionItemId
-            ? await AuctionItem.findById(meta.auctionItemId).select('streamId').session(mongoSession)
-            : null
-
-          const orderPayload: any = {
-            buyerId: meta.winnerId,
-            sellerId: meta.sellerId,
-            streamId: auction?.streamId,
-            productId: meta.productId,
-            purchaseType: 'auction_win' as const,
-            paymentIntentId: lookupId,
-            stripeAccountId,
-            paymentStatus: 'paid' as const,
-            deliveryStatus: 'pending' as const,
-            shippingAddress,
-            amountDetails: {
-              itemSubtotal: totalPaid,
-              shipping: 0,
-              taxes: 0,
-              processingFee: 0,
-              charityContribution: 0,
-              totalPaid: totalPaid,
-              platformFee: platformFeeOf(sessionWithDetails.payment_intent),
-            },
-          }
-
-          await initializeOrderShipping(orderPayload, product)
-
-          // Create order
-          const [order] = await Order.create([orderPayload], { session: mongoSession })
-          // Tell the seller right away (in-app notification, socket, push).
-          afterCommit.push(() =>
-            notifySellerOfNewOrder(order as any, product.title, product.images?.[0]),
-          )
-
-          // Record partner commission (50/50 split)
-          PartnerService.recordCommissionForOrder({
-            buyerId: meta.winnerId,
-            orderId: (order as any)._id.toString(),
-            transactionAmount: totalPaid,
-          }).catch(err => console.error('Partner commission error in webhook:', err))
-
-          // Decrement product stock by 1; mark status as sold only when remaining stock reaches 0
-          const currentStock = typeof product.stock === 'number' ? product.stock : 1
-          const newStock = Math.max(0, currentStock - 1)
-          const newStatus = newStock > 0 ? 'active' : 'sold'
-          await Product.findByIdAndUpdate(
-            meta.productId,
-            { status: newStatus, stock: newStock },
-            { session: mongoSession },
-          )
-
-          // Chat message to seller
-          const chat = await Chat.findOne({
-            participants: { $all: [meta.winnerId, meta.sellerId] },
-          })
-          if (chat) {
-            await Message.create(
-              [
-                {
-                  chatId: chat._id,
-                  sender: meta.winnerId,
-                  text: `🏆 Auction Won! Payment complete. Order #${(order as any)._id.toString().substring(0, 8).toUpperCase()} created.`,
-                  messageType: 'order_update',
-                  seen: false,
-                  metadata: { orderId: (order as any)._id.toString(), statusLabel: 'AUCTION WON 🏆' },
-                },
-              ],
-              { session: mongoSession },
-            )
-          }
-
-          // Socket notify seller
-          if (io) {
-            io.to(meta.sellerId).emit('auction-payment-received', {
-              orderId: (order as any)._id.toString(),
-              productId: meta.productId,
-              message: 'Auction payment received! Order created.',
-            })
-          }
-        }
+        await createAuctionWinOrder({
+          meta,
+          totalPaid: (sessionWithDetails.amount_total || 0) / 100,
+          paymentIntentId: lookupId,
+          stripeAccountId,
+          platformFee: platformFeeOf(sessionWithDetails.payment_intent),
+          mongoSession,
+          afterCommit,
+        })
       }
 
       // ─── TRADE SUPPLEMENT: complete trade ownership swap ─────────────────────
@@ -307,7 +350,9 @@ const handleCheckoutSessionExpired = async (
       ],
     }).session(mongoSession)
 
-    if (payment) {
+    // A win paid another way (in-app PaymentSheet) is not undone when its
+    // unused Checkout link expires.
+    if (payment && payment.status !== 'succeeded') {
       payment.status = 'failed'
       payment.metadata = { ...payment.metadata, ...session, expired: true }
       await payment.save({ session: mongoSession })

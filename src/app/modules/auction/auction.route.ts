@@ -11,6 +11,9 @@ const router = express.Router()
 router.get('/checkout/return', AuctionControllers.checkoutReturn)
 router.get('/checkout/cancel', AuctionControllers.checkoutCancel)
 router.get('/wins/unpaid', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getMyUnpaidWins)
+// In-app (PaymentSheet) payment for a win: start, then confirm.
+router.post('/wins/:paymentId/intent', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.createWinIntent)
+router.post('/wins/:paymentId/confirm', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.confirmWinIntent)
 router.get('/shipping/shows', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getCompletedShowsForShipping)
 router.get('/shipping/shows/:streamId', auth(USER_ROLES.SELLER, USER_ROLES.BUYER), AuctionControllers.getShowShipments)
 

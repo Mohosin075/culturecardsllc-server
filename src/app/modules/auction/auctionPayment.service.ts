@@ -5,6 +5,7 @@ import { WebhookService } from '../payment/webhook.service'
 import { Product } from '../product/product.model'
 import { User } from '../user/user.model'
 import { AuctionItem } from './auction.model'
+import { AuctionWinIntentServices } from './auctionWinIntent.service'
 
 /**
  * Auction wins that still need paying.
@@ -46,6 +47,18 @@ type Reconciled =
 const reconcile = async (payment: any): Promise<Reconciled> => {
   const sessionId = payment.metadata?.checkoutSessionId
   const account = payment.metadata?.stripeAccountId
+  // Paid in the app but the order wasn't made yet (webhook missed): make it.
+  const sheetIntentId = payment.metadata?.sheetIntentId
+  if (sheetIntentId && account) {
+    try {
+      if ((await AuctionWinIntentServices.fulfillWinIntent(sheetIntentId, account)) === 'paid') {
+        return { state: 'paid' }
+      }
+    } catch (err: any) {
+      // Fall through to the Checkout link's state.
+      console.error(`[UnpaidWins] In-app payment check failed for ${sheetIntentId}:`, err?.message)
+    }
+  }
   if (!sessionId) return { state: 'unknown' }
   try {
     const session = await stripe.checkout.sessions.retrieve(

@@ -962,7 +962,7 @@ const completeAuction = async (
   await Product.findByIdAndUpdate(product._id, { status: newStatus, stock: newStock })
 
   // Create Payment record for tracking & webhook safety
-  await Payment.create({
+  const paymentRecord = await Payment.create({
     userId: auctionItem.highestBidderId,
     userEmail: winner.email,
     amount: auctionItem.currentBid,
@@ -988,6 +988,8 @@ const completeAuction = async (
       productTitle: product.title,
       winningBid: auctionItem.currentBid,
       checkoutUrl: stripeSession.url,
+      // Lets the app pay in-app (PaymentSheet) instead of opening the link.
+      paymentId: (paymentRecord as any)._id.toString(),
       message: `🏆 You won the auction for ${product.title}! Please complete your payment.`,
     })
   }

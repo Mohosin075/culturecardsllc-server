@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AuctionServices } from './auction.service'
 import { AuctionPaymentServices } from './auctionPayment.service'
+import { AuctionWinIntentServices } from './auctionWinIntent.service'
 import { renderAppBounce } from '../../../helpers/appBounce'
 import catchAsync from '../../../shared/catchAsync'
 import sendResponse from '../../../shared/sendResponse'
@@ -387,6 +388,27 @@ const checkoutCancel = catchAsync(async (_req: Request, res: Response) => {
   })
 })
 
+const createWinIntent = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const data = await AuctionWinIntentServices.createWinIntent(
+    user.userId,
+    String(req.params.paymentId),
+    req.body?.shippingAddress,
+  )
+  sendResponse(res, { statusCode: StatusCodes.OK, success: true, message: 'Payment ready.', data })
+})
+
+const confirmWinIntent = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload
+  const data = await AuctionWinIntentServices.confirmWinIntent(user.userId, String(req.params.paymentId))
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: data.status === 'paid' ? 'Payment confirmed. Your order is placed.' : 'Payment is still processing.',
+    data,
+  })
+})
+
 // Auction wins the signed-in buyer still has to pay for.
 const getMyUnpaidWins = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload
@@ -398,6 +420,8 @@ export const AuctionControllers = {
   checkoutReturn,
   checkoutCancel,
   getMyUnpaidWins,
+  createWinIntent,
+  confirmWinIntent,
   getCompletedShowsForShipping,
   getShowShipments,
   generateAgoraToken,
