@@ -1,0 +1,56 @@
+name: Server fix - set Stripe webhook secrets
+
+# Run by hand from the Actions tab, after adding the repository secrets
+# NEW_WEBHOOK_SECRET (platform endpoint) and NEW_CONNECT_WEBHOOK_SECRET
+# (connected-accounts endpoint), both whsec_ values. On the server it backs up
+# .env, replaces only WEBHOOK_SECRET and STRIPE_CONNECT_WEBHOOK_SECRET, and
+# reloads the API. Secrets are never printed.
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update webhook secrets on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          NEW_WEBHOOK_SECRET: ${{ secrets.NEW_WEBHOOK_SECRET }}
+          NEW_CONNECT_WEBHOOK_SECRET: ${{ secrets.NEW_CONNECT_WEBHOOK_SECRET }}
+        with:
+          host: ${{ secrets.SERVER_HOST || '34.225.44.39' }}
+          username: ${{ secrets.SERVER_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          envs: NEW_WEBHOOK_SECRET,NEW_CONNECT_WEBHOOK_SECRET
+          script: |
+            set -e
+            cd /var/www/culturecardsllc-server
+            for v in "$NEW_WEBHOOK_SECRET" "$NEW_CONNECT_WEBHOOK_SECRET"; do
+              case "$v" in
+                whsec_*) ;;
+                *) echo "A webhook secret is missing or is not a whsec_ value. Nothing changed."; exit 1 ;;
+              esac
+            done
+
+            backup=".env.bak-$(date +%Y%m%d-%H%M%S)"
+            cp -p .env "$backup"
+            echo "== backup saved: $backup"
+
+            setvar() {
+              k="$1"; v="$2"
+              grep -v "^$k=" .env > .env.tmp || true
+              printf '%s=%s\n' "$k" "$v" >> .env.tmp
+              cat .env.tmp > .env
+              rm -f .env.tmp
+            }
+            setvar WEBHOOK_SECRET "$NEW_WEBHOOK_SECRET"
+            setvar STRIPE_CONNECT_WEBHOOK_SECRET "$NEW_CONNECT_WEBHOOK_SECRET"
+            echo "== webhook settings now present (names only):"
+            grep -oE '^(WEBHOOK_SECRET|STRIPE_CONNECT_WEBHOOK_SECRET)' .env | sort -u
+
+            pm2 reload culturecards-api --update-env
+            pm2 save
+            sleep 5
+            echo "== API health: $(curl -s -o /dev/null -w '%{http_code}' https://api.areisco.com/api/v1/category/popular-categories || echo unreachable)"
+            echo "== webhook endpoint without signature (expect 400): $(curl -s -o /dev/null -w '%{http_code}' -X POST https://api.areisco.com/webhook || echo unreachable)"
