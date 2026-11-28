@@ -7,10 +7,21 @@ import { StatusCodes } from 'http-status-codes'
  * return URLs, so it lands here first and this page opens the app's
  * `culturecards://…` link, with a button in case the browser asks first.
  */
+const ANDROID_PACKAGE = 'com.culturecards.app'
+
 export const renderAppBounce = (
   res: Response,
   opts: { heading: string; body: string; deepLink: string; button?: string },
 ): void => {
+  // Android browsers (Chrome Custom Tabs) often ignore a script jump to a
+  // custom scheme; an intent:// link aimed at our package opens the app
+  // reliably and can't be picked up by another app.
+  const ua = String(res.req?.headers?.['user-agent'] || '')
+  const deepLink =
+    /Android/i.test(ua) && opts.deepLink.startsWith('culturecards://')
+      ? `intent://${opts.deepLink.slice('culturecards://'.length)}#Intent;scheme=culturecards;package=${ANDROID_PACKAGE};end`
+      : opts.deepLink
+  opts = { ...opts, deepLink }
   const esc = (s: string) =>
     s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
   res.status(StatusCodes.OK).send(`<!doctype html>
@@ -42,7 +53,7 @@ export const renderAppBounce = (
     <p>${esc(opts.body)}</p>
     <a href="${esc(opts.deepLink)}">${esc(opts.button || 'Return to ARIES')}</a>
   </div>
-  <script>setTimeout(function () { window.location.replace(${JSON.stringify(opts.deepLink)}) }, 400)</script>
+  <script>window.location.replace(${JSON.stringify(opts.deepLink)}); setTimeout(function () { window.location.replace(${JSON.stringify(opts.deepLink)}) }, 600)</script>
 </body>
 </html>`)
 }
